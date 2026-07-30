@@ -66,6 +66,13 @@ and it iterates the identical pages and slots the comic view does. That makes
 discipline — a panel kind that renders nothing in plain view shows up
 immediately.
 
+**Flats come in two weights.** A panel is `tint` or `solid`. Tint is a wash
+over the paper, for panels carrying body copy; solid lays the flat down at full
+strength with the lettering inverted on top. The loud panels are what stop a
+page of accents from reading as beige. Panels also take `shape: 'canted'` — a
+clip-path corner cut with an inked diagonal across it — and a sub-degree
+`tilt`, so the page is not a grid of identical rectangles.
+
 **Color exists in exactly one file.** `src/lib/tokens.ts` defines both palettes;
 the root layout emits them as custom properties. A lint rule fails on a hex
 literal anywhere else in `src/`, because noir is only a day's work for as long
@@ -90,12 +97,23 @@ state is the CSS default, so a page whose script never runs is fully readable.
 **Contrast was measured, not assumed.** `tests/contrast.mjs` loads every route
 in both themes, makes all text transparent, screenshots, and samples the real
 composited pixel behind each glyph — a halftone dot over a flat, which is darker
-than either token alone. It found 17 failures on the first run. The outcome:
-subtitles are set in ink rather than a spot color (no accent in either palette
-clears 4.5:1 at 14px over a dot screen), metric numerals are ink with a hard
-accent shadow rather than accent with an ink outline (WCAG gives no credit for
-outlines), and the flat and screen weights came down. 286 text elements now pass
-AA in both themes.
+than either token alone. It found 17 failures on the first run, and it has
+driven most of the art direction since:
+
+- Subtitles are set in ink, not a spot color. No accent in either palette clears
+  4.5:1 at 14px over a halftone dot.
+- On tinted panels, metric numerals are ink with a hard accent shadow rather
+  than accent with an ink outline. WCAG gives no credit for outlines.
+- Solid flats carry no halftone at all. Tinted either way, the dots drag the
+  ground toward one of the two type colors.
+- The rays on a solid metric panel are masked out of the middle. Any opacity
+  high enough to read as gold rather than olive also pushed the numeral under
+  3:1, because a ray crossing a glyph sets that glyph's worst-case background.
+  Clearing an ellipse removes the overlap instead of trading against it.
+- The metric label sits on its own ink plate, which is one rule that holds for
+  every accent in both themes rather than a gradient retuned per panel.
+
+288 text elements now pass AA in both themes.
 
 ```bash
 npm run build && npm start &
@@ -125,7 +143,8 @@ input that could not be derived from a resume.
 1. **How many pages?** Four — Origin, Work, Builds, Contact, as recommended.
 2. **Noir's spot color?** A sodium-vapor amber rather than the obvious
    desaturated red. Streetlight through a blind: it does not borrow the
-   four-color red, and it clears AA on near-black.
+   four-color red, and it clears AA on near-black. Its second accent is a dark
+   structural steel, dark enough to take light lettering as a solid ground.
 3. **A cover page?** No separate cover. The hero panel of page one carries the
    issue number and the corner box, which was the PRD's own suggested compromise
    and keeps an interstitial out of the recruiter's way.
@@ -137,6 +156,12 @@ input that could not be derived from a resume.
 5. **Case study depth?** Panel plus external links, per the recommendation.
 6. **Custom domain and cutover.** Still open. Set `NEXT_PUBLIC_SITE_URL` when it
    is decided.
+
+One requirement is deliberately not implemented as written. MODE-8 asked for
+`prefers-color-scheme: dark` to select noir on a first visit; four-color is the
+unconditional default instead. Most people browse in dark mode, so honouring the
+OS preference meant the palette the portfolio leads with was the one most
+first-time visitors never saw. An explicit choice still wins and still persists.
 
 Availability is set to `selective` in `src/content/issue.ts`, which drives the
 CTA copy. One enum change swaps it.
