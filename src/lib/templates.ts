@@ -24,7 +24,11 @@ export type Template = {
   areas: string[];
   /** Column track sizing. */
   columns: string;
-  /** Row track sizing. */
+  /**
+   * Row track sizing. Fractional so a page fills the window on a large screen
+   * rather than sitting in its top third; the minimums keep a band readable
+   * when the viewport is short.
+   */
   rows: string;
   /**
    * Canonical order. This is DOM order, tab order, guided-view order, and the
@@ -39,7 +43,7 @@ export const TEMPLATES = {
     name: 'Hero, two, three',
     areas: ['hero  hero  hero', 'left  left  right', 'a     b     c'],
     columns: 'repeat(3, minmax(0, 1fr))',
-    rows: 'minmax(250px, auto) minmax(200px, auto) minmax(200px, auto)',
+    rows: 'minmax(230px, 0.9fr) minmax(190px, 1fr) minmax(190px, 1fr)',
     slots: ['hero', 'left', 'right', 'a', 'b', 'c'],
   },
   'stack-3': {
@@ -47,7 +51,7 @@ export const TEMPLATES = {
     name: 'Three bands',
     areas: ['a', 'b', 'c'],
     columns: 'minmax(0, 1fr)',
-    rows: 'repeat(3, minmax(200px, auto))',
+    rows: 'repeat(3, minmax(190px, 1fr))',
     slots: ['a', 'b', 'c'],
   },
   'stack-4': {
@@ -55,7 +59,7 @@ export const TEMPLATES = {
     name: 'Four bands',
     areas: ['a', 'b', 'c', 'd'],
     columns: 'minmax(0, 1fr)',
-    rows: 'repeat(4, minmax(200px, auto))',
+    rows: 'repeat(4, minmax(190px, 1fr))',
     slots: ['a', 'b', 'c', 'd'],
   },
   'splash-4': {
@@ -63,7 +67,7 @@ export const TEMPLATES = {
     name: 'Splash four',
     areas: ['a b', 'c d'],
     columns: 'repeat(2, minmax(0, 1fr))',
-    rows: 'repeat(2, minmax(260px, auto))',
+    rows: 'repeat(2, minmax(240px, 1fr))',
     slots: ['a', 'b', 'c', 'd'],
   },
   'hero-2': {
@@ -71,7 +75,7 @@ export const TEMPLATES = {
     name: 'Hero and two',
     areas: ['hero hero', 'a    b'],
     columns: 'repeat(2, minmax(0, 1fr))',
-    rows: 'minmax(300px, auto) minmax(220px, auto)',
+    rows: 'minmax(280px, 1.1fr) minmax(210px, 1fr)',
     slots: ['hero', 'a', 'b'],
   },
   'full-bleed': {
@@ -79,7 +83,7 @@ export const TEMPLATES = {
     name: 'Full bleed',
     areas: ['a'],
     columns: 'minmax(0, 1fr)',
-    rows: 'minmax(420px, auto)',
+    rows: 'minmax(400px, 1fr)',
     slots: ['a'],
   },
 } satisfies Record<string, Template>;
