@@ -20,10 +20,10 @@ type PanelProps = {
 /**
  * The panel shell: four layers in the order a comic page is actually made.
  *
- * The border is an SVG rect with `pathLength="100"` rather than a CSS border,
- * because that is the only way to animate the ink drawing itself. It also
- * means the border renders identically whether or not the animation ever
- * runs — the finished state is the default state.
+ * The border is four rules rather than a CSS border or an SVG stroke, so the
+ * ink can be drawn on one edge at a time. Its resting state is the finished
+ * state, so the border renders identically whether or not the animation ever
+ * runs — see the note in globals.css.
  */
 export function Panel({
   slot,

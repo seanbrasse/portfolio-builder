@@ -11,8 +11,8 @@ export const OG_CONTENT_TYPE = 'image/png';
 
 /**
  * Satori rasterises with a real font file rather than a CSS stack, and it
- * cannot read woff2 — hence the TTF alongside the two woff2 subsets the site
- * itself loads. Same typeface, different container.
+ * cannot read woff2 — hence this TTF alongside the woff2 the site itself
+ * loads. Same typeface, same subset, different container.
  */
 async function displayFont(): Promise<ArrayBuffer> {
   const path = join(process.cwd(), 'src/assets/bangers.ttf');
