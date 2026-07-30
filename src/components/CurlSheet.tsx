@@ -74,9 +74,14 @@ export function CurlSheet({ dir, durationMs, pageW, face }: CurlSheetProps) {
 
     const segs = Array.from(root.querySelectorAll<HTMLElement>('.curl-seg'));
     const shades = Array.from(root.querySelectorAll<HTMLElement>('.curl-shade'));
-    // The sign flips for a backward turn; the geometry is otherwise identical.
-    const way = dir === 'forward' ? -1 : 1;
     const animations: Animation[] = [];
+
+    // One sign for both directions. A backward turn is a forward turn seen in
+    // a mirror, and the sheet is already mirrored in CSS — flipping the sign
+    // here as well undid the mirror, so the bend fought the sweep going one
+    // way and reinforced it going the other. The two turns were not opposites
+    // of each other; they were different animations.
+    const way = -1;
 
     for (let i = 0; i < segs.length; i++) {
       const angles: string[] = [];
@@ -87,18 +92,24 @@ export function CurlSheet({ dir, durationMs, pageW, face }: CurlSheetProps) {
         const sweep = easeSweep(t) * 180;
         const bend = bendAt(t);
 
-        // The first strip carries the whole sweep about the spine, minus its
-        // share of the bend; the rest each add one share back. The far edge
-        // therefore trails the fold, which is the way a lifted page hangs.
+        // The strip at the spine carries the sweep exactly; every strip after
+        // it adds a share of the bend, so the outer edge runs ahead by the
+        // whole bend. That is the order a page actually moves in — you lift
+        // the outer corner and the spine end follows.
+        //
+        // The spine strip used to carry `sweep - bend/2`, which is negative
+        // early on because the bend ramps up faster than the sweep does: the
+        // page swung a few degrees the *wrong way* before setting off. Anchor
+        // it to the sweep and there is nothing to go negative.
         const share = bend / (SEGMENTS - 1);
-        const deg = i === 0 ? way * (sweep - bend / 2) : way * share;
+        const deg = i === 0 ? way * sweep : way * share;
         angles.push(`rotateY(${deg.toFixed(3)}deg)`);
 
         // Shade from this strip's *absolute* angle, accumulated the same way
         // the transforms are. Deriving it per-strip from the sweep alone gave
         // every strip its own ramp, and twelve independent ramps side by side
         // read as vertical stripes rather than as one curved surface.
-        const absolute = ((sweep - bend / 2 + i * share) * Math.PI) / 180;
+        const absolute = ((sweep + i * share) * Math.PI) / 180;
 
         // Darkest edge-on, and bright again once the sheet has gone over.
         // `(1 - cos)/2` keeps climbing to 180° and painted the reverse of the
