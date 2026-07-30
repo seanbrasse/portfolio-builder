@@ -198,7 +198,9 @@ function MetricPanel({ id }: { id: string }) {
         })}
       </svg>
       <p className="metric-value">{metric.value}</p>
-      <h2 className="metric-label">{metric.label}</h2>
+      <h2 className="metric-label">
+        <span className="metric-label-text">{metric.label}</span>
+      </h2>
     </>
   );
 }

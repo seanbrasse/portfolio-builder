@@ -43,7 +43,7 @@ export const TEMPLATES = {
     name: 'Hero, two, three',
     areas: ['hero  hero  hero', 'left  left  right', 'a     b     c'],
     columns: 'repeat(3, minmax(0, 1fr))',
-    rows: 'minmax(230px, 0.9fr) minmax(190px, 1fr) minmax(190px, 1fr)',
+    rows: '0.92fr 1.02fr 1.06fr',
     slots: ['hero', 'left', 'right', 'a', 'b', 'c'],
   },
   'stack-3': {
@@ -51,7 +51,7 @@ export const TEMPLATES = {
     name: 'Three bands',
     areas: ['a', 'b', 'c'],
     columns: 'minmax(0, 1fr)',
-    rows: 'repeat(3, minmax(190px, 1fr))',
+    rows: 'repeat(3, 1fr)',
     slots: ['a', 'b', 'c'],
   },
   'stack-4': {
@@ -59,7 +59,7 @@ export const TEMPLATES = {
     name: 'Four bands',
     areas: ['a', 'b', 'c', 'd'],
     columns: 'minmax(0, 1fr)',
-    rows: 'repeat(4, minmax(190px, 1fr))',
+    rows: '1.12fr 1.02fr 0.98fr 0.88fr',
     slots: ['a', 'b', 'c', 'd'],
   },
   'splash-4': {
@@ -67,7 +67,7 @@ export const TEMPLATES = {
     name: 'Splash four',
     areas: ['a b', 'c d'],
     columns: 'repeat(2, minmax(0, 1fr))',
-    rows: 'repeat(2, minmax(240px, 1fr))',
+    rows: 'repeat(2, 1fr)',
     slots: ['a', 'b', 'c', 'd'],
   },
   'hero-2': {
@@ -75,7 +75,7 @@ export const TEMPLATES = {
     name: 'Hero and two',
     areas: ['hero hero', 'a    b'],
     columns: 'repeat(2, minmax(0, 1fr))',
-    rows: 'minmax(280px, 1.1fr) minmax(210px, 1fr)',
+    rows: '1.15fr 1fr',
     slots: ['hero', 'a', 'b'],
   },
   'full-bleed': {
@@ -83,7 +83,7 @@ export const TEMPLATES = {
     name: 'Full bleed',
     areas: ['a'],
     columns: 'minmax(0, 1fr)',
-    rows: 'minmax(400px, 1fr)',
+    rows: '1fr',
     slots: ['a'],
   },
 } satisfies Record<string, Template>;
