@@ -19,6 +19,22 @@ import { getTemplate } from './templates';
 export const PAGE_W = 880;
 export const PAGE_H = 1140;
 
+/**
+ * The one-leaf canvas, which is taller because a phone is.
+ *
+ * Width is the binding constraint on a phone — a page can never be scaled past
+ * the screen's width without overflowing it — so the only lever on how big the
+ * page *reads* is how much of the height it also fills. At the spread's 0.77
+ * the page came out about 500px tall on an 840px screen and left a third of it
+ * empty, which is what made the mobile view feel like a postcard.
+ *
+ * 0.56 is close to the aspect of the area a phone actually leaves once the
+ * rail is accounted for, so the page fills the screen instead of floating in
+ * it. The templates size their rows fractionally, so the bands simply take the
+ * extra height; nothing needed re-composing.
+ */
+export const PAGE_H_NARROW = 1560;
+
 export type Leaf =
   | { kind: 'cover' }
   | { kind: 'page'; page: Page };

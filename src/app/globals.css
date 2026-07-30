@@ -34,30 +34,28 @@
   --font-quote: ui-serif, Georgia, 'Times New Roman', serif;
 
   /* ---------------------------------------------------------------------
-     Motion (PRD section 9). Six numbers drive the entire entrance feel.
+     Motion (PRD section 9). Two numbers drive the entrance.
+
+     The page's *structure* does not animate — the panel grid is simply there,
+     because a comic page is laid out before it is lettered and a reader
+     watching an empty sheet acquire its own layout is watching the wrong
+     thing. What draws in is the contents, panel by panel, in reading order and
+     across the spread.
 
      MOTION-2 asks for a 60ms stagger and a six-panel page resolving inside
-     500ms, and this deliberately overruns the cap — the second override of
-     the PRD in this project, after MODE-8.
-
-     The reason is that the brief changed: the page is meant to look like it is
-     being *drawn* as the reader arrives at it, panel after panel, rather than
-     assembling itself as fast as it can. At 44ms a page did not read as being
-     inked; it read as popping in. A spread of eight panels now takes about
-     1.3s (7 gutters x 130ms + 380ms of panel), which is slow enough to watch a
-     pen move across the paper and short enough that nobody waits for it —
-     every panel is legible the moment its lettering lands, and the reader is
-     still on the left page while the right one is being drawn.
+     500ms, and this deliberately overruns the cap — the second override of the
+     PRD here, after MODE-8. At the 44ms stagger the cap forces, a page did not
+     read as being lettered; it read as popping in. An eight-panel spread takes
+     about 1.1s (7 gutters x 130ms + 190ms), which is slow enough to watch and
+     short enough that nobody waits for it: every panel is legible the moment
+     its copy lands, and the reader is still on the left page while the right
+     one is being written.
 
      Anyone who has asked not to be animated at gets none of this: the reduced
      motion block collapses the whole sequence to one short fade.
   --------------------------------------------------------------------- */
-  --stage-ink: 170ms;
-  --stage-fill: 90ms;
-  --stage-screen: 55ms;
-  --stage-letter: 65ms;
+  --stage-letter: 190ms;
   --gutter-beat: 130ms;
-  --panel-total: 380ms;
 
   --dur-hover: 140ms;
   --dur-stamp: 320ms;
@@ -256,7 +254,7 @@ main {
  *
  * The duration is set inline from `TURN_MS` in Book.tsx, because the same
  * number decides when the pages are released to ink themselves in. */
-.turn-sheet {
+.curl-sheet {
   position: absolute;
   top: 0;
   width: var(--page-w);
@@ -264,43 +262,106 @@ main {
   transform-style: preserve-3d;
   /* Above both static halves: a turning page occludes whatever it swings over. */
   z-index: 4;
-  animation-timing-function: cubic-bezier(0.42, 0.02, 0.32, 1);
-  animation-fill-mode: both;
+  pointer-events: none;
 }
 
-.turn-sheet[data-dir='forward'] {
+.curl-sheet[data-dir='forward'] {
   right: 0;
-  transform-origin: left center;
-  animation-name: sheet-forward;
 }
 
-.turn-sheet[data-dir='back'] {
+.curl-sheet[data-dir='back'] {
   left: 0;
-  transform-origin: right center;
-  animation-name: sheet-back;
+  /* The mirror image: a backward turn pivots on the outer edge, so the strips
+     are stacked from the spine outward in the other direction. */
+  transform: scaleX(-1);
 }
 
-.turn-face {
+/* One strip. Its rotation is about its inner edge and composes with every
+   strip before it, which is what turns eight flat planes into a curve. */
+.curl-seg {
   position: absolute;
-  inset: 0;
-  width: auto;
-  height: auto;
+  top: 0;
+  height: 100%;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.curl-window {
+  position: absolute;
+  /* Bled a fraction past the strip's outer edge. A strip is page width over
+     twelve, which does not land on whole pixels, and the rounding left a
+     hairline of background showing down every crease. The sliver is a
+     duplicate of what the next strip draws at its own inner edge, so the bleed
+     costs nothing and the seams close. */
+  inset: 0 -0.7px 0 0;
+  overflow: hidden;
   backface-visibility: hidden;
 }
 
-.turn-face--back {
+.curl-window--back {
   transform: rotateY(180deg);
 }
 
-@keyframes sheet-forward {
-  to {
-    transform: rotateY(-180deg);
-  }
+/* The page, shifted so this strip's slice of it lands in the window. */
+.curl-page {
+  position: absolute;
+  top: 0;
+  left: var(--shift);
+  width: var(--page-w);
+  height: var(--page-h);
 }
 
-@keyframes sheet-back {
-  to {
-    transform: rotateY(180deg);
+.curl-page--blank {
+  background: var(--paper);
+  border: var(--border-ink) solid var(--ink);
+}
+
+/* Shading. A curve is only legible if the light changes across it — without
+   this the strips read as eight flat cards rather than one bent sheet. */
+.curl-shade {
+  position: absolute;
+  inset: 0;
+  background: var(--shadow-ink);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.curl-sheet[data-dir='back'] .curl-page {
+  /* Undo the mirror on the content, or the lettering turns backwards. */
+  transform: scaleX(-1);
+}
+
+/* The shadow the lifted leaf throws across the spread. Deepest at the spine,
+   because that is where the paper is closest to the page under it, and it
+   peaks mid-turn when the leaf is standing up. */
+.turn-cast {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  animation-name: cast-fade;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+
+.turn-cast[data-dir='forward'] {
+  /* Forward, the leaf swings left, so the shadow lands on the left page. */
+  background: linear-gradient(to right, rgb(0 0 0 / 30%), rgb(0 0 0 / 0%) 46%);
+}
+
+.turn-cast[data-dir='back'] {
+  background: linear-gradient(to left, rgb(0 0 0 / 30%), rgb(0 0 0 / 0%) 46%);
+}
+
+@keyframes cast-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  46% {
+    opacity: 1;
   }
 }
 
@@ -351,18 +412,25 @@ main {
 }
 
 @media (max-width: 899px) {
+  /* No arrow gutter, because there are no arrows. Width is the only thing
+     limiting how large a page can be drawn on a phone, so 84px of chrome down
+     the sides was costing more than any other single rule here: giving it back
+     is most of the difference between a postcard and a page. */
   .book {
-    padding: 8px 42px 4px;
+    padding: 6px 6px 2px;
   }
 
+  /* Turning is a swipe, which is how a phone turns anything. Two tap targets
+     hovering over the paper to do what the paper already does is chrome the
+     format can spend elsewhere. `display: none` rather than hiding it: an
+     invisible but focusable button is worse than no button. */
   .book-turn {
-    width: 32px;
-    height: 62px;
-    font-size: 24px;
+    display: none;
   }
 
-  .book-turn--back { right: calc(50% + var(--stage-w, 0px) / 2 + 8px); }
-  .book-turn--next { left: calc(50% + var(--stage-w, 0px) / 2 + 8px); }
+  .book-progress {
+    font-size: 10px;
+  }
 }
 
 .comic-page {
@@ -1286,62 +1354,21 @@ main {
    page, and never removed.
 --------------------------------------------------------------------------- */
 
-/* The ink travels clockwise: each rule starts where the previous one ended,
-   so the four quarters read as one continuous pen stroke. */
-.is-inking .panel-rule {
-  animation-duration: calc(var(--stage-ink) / 4);
-  animation-timing-function: linear;
-  animation-fill-mode: both;
-}
-
-.is-inking .panel-rule--t,
-.is-inking .panel-rule--b {
-  animation-name: rule-x;
-}
-
-.is-inking .panel-rule--r,
-.is-inking .panel-rule--l {
-  animation-name: rule-y;
-}
-
-.is-inking .panel-rule--t {
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat));
-}
-
-.is-inking .panel-rule--r {
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-ink) / 4);
-}
-
-.is-inking .panel-rule--b {
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-ink) / 2);
-}
-
-.is-inking .panel-rule--l {
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-ink) * 0.75);
-}
-
-/* The cut diagonal draws with the top edge it interrupts. Its own keyframe,
-   because the shared one would drop the 45deg rotation. */
-.is-inking .panel-rule--cut {
-  animation-name: rule-cut;
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat));
-}
-
-.is-inking .panel-fill {
-  animation: ink-appear var(--stage-fill) ease-out both;
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-ink));
-}
-
-.is-inking .panel-screen {
-  animation: ink-screen var(--stage-screen) ease-out both;
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-ink) + var(--stage-fill));
-}
-
+/* The panels themselves do not draw in — the *contents* do.
+ *
+ * The border, the flat and the screen are the page's structure, and staggering
+ * those meant a reader watched an empty sheet acquire its own layout before
+ * anything readable arrived. A comic page is laid out first and lettered
+ * after; the panel grid is the thing that says "this is a page", so it is
+ * simply there, and what fills in is what a reader is actually waiting for.
+ *
+ * That is also why the stack of `.panel-rule` / `.panel-fill` / `.panel-screen`
+ * animations that used to live here is gone rather than merely retimed: their
+ * resting state is the finished state, so removing the animation *is* the
+ * fix. */
 .is-inking .panel-body {
   animation: ink-letter var(--stage-letter) ease-out both;
-  animation-delay: calc(
-    var(--i, 0) * var(--gutter-beat) + var(--stage-ink) + var(--stage-fill) + var(--stage-screen)
-  );
+  animation-delay: calc(var(--i, 0) * var(--gutter-beat));
 }
 
 .is-inking .sfx {
@@ -1351,7 +1378,7 @@ main {
      fallback of three regardless of where its panel actually was in the
      sequence — early on a long page, late on a short one. Its own `--i` is the
      number it always wanted. */
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--panel-total));
+  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-letter));
 }
 
 @keyframes rule-x {
@@ -1413,7 +1440,7 @@ main {
    so it reads as lettering appearing rather than a fade. */
 .is-inking .balloon[data-type-on='true'] .balloon-quote {
   animation: type-on 700ms steps(40, end) both;
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--panel-total));
+  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-letter));
 }
 
 @keyframes type-on {
@@ -1438,9 +1465,6 @@ main {
     scroll-behavior: auto;
   }
 
-  .is-inking .panel-rule,
-  .is-inking .panel-fill,
-  .is-inking .panel-screen,
   .is-inking .panel-body,
   .is-inking .sfx,
   .is-inking .balloon[data-type-on='true'] .balloon-quote {
@@ -1535,7 +1559,7 @@ main {
  */
 @media (max-width: 767px) {
   .issue-shell {
-    padding: 12px 0 28px;
+    padding: 12px 0 8px;
   }
 }
 
@@ -1620,6 +1644,54 @@ main {
 .mode-button:hover {
   background: var(--rail-fg);
   color: var(--rail-bg);
+}
+
+/* The rail on a phone.
+ *
+ * Wrapped onto three rows it was taking a third of the screen to do a job the
+ * page should have that space for. It is one row now that scrolls sideways if
+ * it has to — a strip of tabs, which is what a phone expects — and the height
+ * it gives back goes to the paper.
+ *
+ * The "Issue index" label goes: the row is self-evidently an index, and on a
+ * 390px screen a heading for it costs a whole page tab. Nothing is removed
+ * from the rail itself, so every destination is still one tap away. */
+@media (max-width: 899px) {
+  .issue-index {
+    margin-top: 6px;
+    padding: 0 6px;
+  }
+
+  .issue-index-inner {
+    /* Wraps rather than scrolls sideways. A scrolling strip is compact, but it
+       pushed the theme switch and the plain-text link off the edge with
+       nothing to say they were there — smaller is the goal, hidden is not. At
+       this size the five page tabs make one row and the two mode buttons make
+       a second, which is about half the height of the three rows this used to
+       wrap into and still shows everything. */
+    gap: 6px;
+    padding: 6px 8px;
+    border-width: 3px;
+  }
+
+  /* The row is self-evidently an index, and on a 390px screen a heading for it
+     costs a whole page tab. */
+  .issue-index-label,
+  .index-spacer {
+    display: none;
+  }
+
+  .index-link,
+  .mode-button {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    padding: 6px 9px;
+    border-width: 2px;
+  }
+
+  .mode-controls {
+    gap: 6px;
+  }
 }
 
 /* ---------------------------------------------------------------------------
