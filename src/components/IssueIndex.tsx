@@ -1,10 +1,14 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 
-import { GOTO_EVENT, TURNED_EVENT } from '@/components/Book';
+import {
+  GOTO_EVENT,
+  getOpenPages,
+  getServerOpenPages,
+  subscribeToOpenPages,
+} from '@/components/Book';
 import type { Theme } from '@/lib/tokens';
 
 type IndexPage = { slug: string; title: string; href: string };
@@ -43,37 +47,19 @@ function readServerTheme(): Theme {
  * The issue index rail: page navigation, the theme switch, and the link out to
  * plain view.
  *
- * All of the client behavior in the public site lives here, in one component,
- * because it all needs the same thing — the current route. That includes the
- * page transition, which needs to resolve its promise only once the new route
- * has actually rendered. Doing that per-link would mean each link racing its
- * own navigation.
+ * It reads two things it does not own — the theme, which belongs to the
+ * document, and which pages are open, which belongs to the book — and both are
+ * read the same way, as external stores. Neither is state this component can
+ * hold without fighting whoever actually sets it.
  */
 export function IssueIndex({ pages, plainHref }: IssueIndexProps) {
-  const pathname = usePathname();
   const theme = useSyncExternalStore(subscribeToTheme, readTheme, readServerTheme);
 
-  // The rail sits outside the book, so it tracks which page is open rather
-  // than owning it. `replaceState` from the book does not fire a router
-  // update, so the current slug is read from the URL on every turn instead.
-  const [slug, setSlug] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fromUrl = () => {
-      const path = window.location.pathname.replace(/^\//, '');
-      setSlug(path === '' ? null : path);
-    };
-    const fromBook = (event: Event) => {
-      setSlug((event as CustomEvent<{ slug: string | null }>).detail?.slug ?? null);
-    };
-    fromUrl();
-    window.addEventListener('popstate', fromUrl);
-    window.addEventListener(TURNED_EVENT, fromBook);
-    return () => {
-      window.removeEventListener('popstate', fromUrl);
-      window.removeEventListener(TURNED_EVENT, fromBook);
-    };
-  }, [pathname]);
+  // The rail sits outside the book, so it tracks what is open rather than
+  // owning it — and the book owns that, not the URL. A list, not a single
+  // slug: a desktop spread has two pages in front of the reader, and marking
+  // only one of them makes the other look shut. `null` is the cover.
+  const open = useSyncExternalStore(subscribeToOpenPages, getOpenPages, getServerOpenPages);
 
   const goto = (event: React.MouseEvent<HTMLAnchorElement>, target: string | null) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
@@ -108,11 +94,15 @@ export function IssueIndex({ pages, plainHref }: IssueIndexProps) {
       <div className="issue-index-inner">
         <span className="issue-index-label">Issue index</span>
 
+        {/* `aria-current` goes on every open page for the same reason the
+            highlight does — both really are the current page when a spread is
+            showing, and announcing one of the two would contradict what is on
+            screen. */}
         <Link
           href="/"
           className="index-link"
-          data-current={slug === null || undefined}
-          aria-current={slug === null ? 'page' : undefined}
+          data-current={open.includes(null) || undefined}
+          aria-current={open.includes(null) ? 'page' : undefined}
           onClick={(event) => goto(event, null)}
         >
           Cover
@@ -123,8 +113,8 @@ export function IssueIndex({ pages, plainHref }: IssueIndexProps) {
             key={page.slug}
             href={`/${page.slug}`}
             className="index-link"
-            data-current={slug === page.slug || undefined}
-            aria-current={slug === page.slug ? 'page' : undefined}
+            data-current={open.includes(page.slug) || undefined}
+            aria-current={open.includes(page.slug) ? 'page' : undefined}
             onClick={(event) => goto(event, page.slug)}
           >
             {page.title}

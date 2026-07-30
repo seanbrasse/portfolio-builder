@@ -42,23 +42,28 @@ needed for a custom domain.
 | Comic chrome, motion, print | `src/app/globals.css` |
 | Panel kinds | `src/components/panels/index.tsx` |
 
-Four pages — Origin, Work, Builds, Contact — plus `/plain`. Five templates.
+Four pages — Origin, Work, Builds, Contact — plus `/plain`. Six templates.
 Every public route is statically generated, so a visitor's page load touches no
 data source.
 
 ## The decisions worth knowing about
 
-**Templates, not a canvas.** Each template declares a desktop
-`grid-template-areas` map and an ordered slot list. Panels are emitted by
-walking that slot list, so DOM order, tab order, guided-view order, and the
-animation stagger are all the same sequence by construction — there is no way to
-author a page whose visual order and DOM order disagree. Adding a template is a
-deploy, which keeps art direction under version control.
+**Templates, not a canvas.** Each template declares a `grid-template-areas` map
+and an ordered slot list. Panels are emitted by walking that slot list, so DOM
+order, tab order, and the animation stagger are all the same sequence by
+construction — there is no way to author a page whose visual order and DOM order
+disagree. Adding a template is a deploy, which keeps art direction under version
+control.
 
-**Guided view is CSS.** Below 768px the grid becomes a horizontal scroll-snap
-container, one panel per screen, in the template's declared mobile order.
-Swiping works with JavaScript disabled; script only reports position to the
-progress indicator.
+**Nothing inside a leaf reacts to the viewport.** A leaf is a fixed 880×1140
+canvas that gets scaled to fit, so its width has no relationship to the
+window's. Viewport units and width media queries are therefore bugs in here, not
+responsiveness: `vw` sizing rendered type at window scale inside a page that
+does not track the window, and a `max-width: 767px` rule left over from the
+pre-book guided view turned the page grid into a horizontal scroll-snap strip —
+on a fixed 880px canvas that laid the panels out in a row and pushed everything
+after the first off the edge of the paper. The book already answers "this is a
+small screen" by turning to one leaf at a time.
 
 **Plain view walks the same panels.** `/plain` is its own server-rendered route,
 and it iterates the identical pages and slots the comic view does. That makes
@@ -122,7 +127,7 @@ scrolls inside `main`, so an element past that container's edge still reports
 coordinates inside the viewport, and sampling them reads the rail painted
 underneath rather than the text.
 
-440 text elements now pass AA in both themes.
+448 text elements now pass AA in both themes.
 
 ```bash
 npm run build && npm start &

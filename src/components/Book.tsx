@@ -10,8 +10,45 @@ import { BookLeaf } from './BookLeaf';
 
 /** The rail lives outside the book, so it asks to move rather than routing. */
 export const GOTO_EVENT = 'comic-portfolio:goto';
-/** ...and the book says where it ended up, so the rail can follow. */
-export const TURNED_EVENT = 'comic-portfolio:turned';
+
+/**
+ * ...and what is currently open is published as a store rather than an event,
+ * because an event only reaches listeners that already exist. The book
+ * announces its opening position from a mount effect, which can land before
+ * the rail has subscribed; the rail would then fall back to the URL, and the
+ * URL can only ever name one page even when a spread is showing two.
+ *
+ * `useSyncExternalStore` re-reads the snapshot after subscribing, so a reader
+ * that arrives late still sees the current value.
+ */
+const CLOSED: (string | null)[] = [null];
+let openPages: (string | null)[] = CLOSED;
+const openListeners = new Set<() => void>();
+
+export function subscribeToOpenPages(onChange: () => void) {
+  openListeners.add(onChange);
+  return () => {
+    openListeners.delete(onChange);
+  };
+}
+
+/** Must stay referentially stable while unchanged, or it re-renders forever. */
+export function getOpenPages() {
+  return openPages;
+}
+
+/** The server cannot know which spread is open, so it renders the cover. */
+export function getServerOpenPages() {
+  return CLOSED;
+}
+
+function setOpenPages(next: (string | null)[]) {
+  const same =
+    next.length === openPages.length && next.every((slug, i) => slug === openPages[i]);
+  if (same) return;
+  openPages = next;
+  for (const listener of openListeners) listener();
+}
 
 type BookProps = {
   pages: Page[];
@@ -78,6 +115,9 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
       const viewport = viewportRef.current;
       if (!viewport) return;
 
+      // The viewport is the free area itself — no padding of its own, and the
+      // progress line is outside it — so these are the real bounds rather than
+      // a box the stage has to be trusted not to overflow.
       const width = viewport.clientWidth;
       const height = viewport.clientHeight;
       const stageW = PAGE_W * pagesWide;
@@ -120,16 +160,23 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
   // Keep the URL honest without routing, so a flip is not a page load and the
   // reader can still copy a link to where they are (ACC-8 companion).
   useEffect(() => {
-    const leaf = single
-      ? leaves[index]
-      : (spreads[index]?.right ?? spreads[index]?.left ?? null);
-    const slug = leaf?.kind === 'page' ? leaf.page.slug : null;
+    // A spread shows two pages at once, so what is open is a list rather than
+    // a single slug — the rail marks every page currently in front of the
+    // reader. `null` stands for the cover, which has no slug of its own.
+    const open = single ? [leaves[index]] : [spreads[index]?.left, spreads[index]?.right];
+    const slugs = open
+      .filter((leaf) => leaf != null)
+      .map((leaf) => (leaf.kind === 'page' ? leaf.page.slug : null));
+
+    // The URL names the rightmost page, which is the one a reader would say
+    // they are on when two are open.
+    const slug = slugs.length > 0 ? slugs[slugs.length - 1] : null;
     const path = slug ? `/${slug}` : '/';
     if (window.location.pathname !== path) {
       window.history.replaceState(null, '', path + window.location.search);
     }
     // A turn is not a navigation, so nothing else would learn about it.
-    window.dispatchEvent(new CustomEvent(TURNED_EVENT, { detail: { slug } }));
+    setOpenPages(slugs);
   }, [index, single]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ACC-8: arrows turn pages. Ignores anything typed into a field.
@@ -187,57 +234,67 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
 
   const current = single ? null : spreads[index];
 
-  return (
-    <div className="book" ref={viewportRef} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      {fit > 0 ? (
-        <div
-          className="book-stage"
-          ref={stageRef}
-          style={stageStyle}
-          data-turning={turning ?? undefined}
-        >
-          {single ? (
-            <div className="book-leaf is-inking" key={index}>
-              <BookLeaf leaf={leaves[index]} />
-            </div>
-          ) : (
-            <>
-              {current?.left ? (
-                <div className="book-leaf book-leaf--left is-inking" key={`l${index}`}>
-                  <BookLeaf leaf={current.left} />
-                </div>
-              ) : null}
-              {current?.right ? (
-                <div className="book-leaf book-leaf--right is-inking" key={`r${index}`}>
-                  <BookLeaf leaf={current.right} />
-                </div>
-              ) : null}
-              {current?.left && current?.right ? (
-                <span className="book-spine" aria-hidden="true" />
-              ) : null}
-            </>
-          )}
-        </div>
-      ) : null}
+  // The rendered width of the open book, which is what the turn arrows sit
+  // beside. They belong to the pages, not to the window: pinned to the screen
+  // edges they drift half a metre away from a book that is scaled down to fit
+  // a wide monitor.
+  const viewportStyle = {
+    ['--stage-w' as string]: `${PAGE_W * pagesWide * fit}px`,
+  } as CSSProperties;
 
-      <button
-        type="button"
-        className="book-turn book-turn--back"
-        onClick={() => go(index - 1)}
-        disabled={index === 0}
-        aria-label="Previous page"
-      >
-        ‹
-      </button>
-      <button
-        type="button"
-        className="book-turn book-turn--next"
-        onClick={() => go(index + 1)}
-        disabled={index >= count - 1}
-        aria-label="Next page"
-      >
-        ›
-      </button>
+  return (
+    <div className="book" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="book-viewport" ref={viewportRef} style={viewportStyle}>
+        {fit > 0 ? (
+          <div
+            className="book-stage"
+            ref={stageRef}
+            style={stageStyle}
+            data-turning={turning ?? undefined}
+          >
+            {single ? (
+              <div className="book-leaf is-inking" key={index}>
+                <BookLeaf leaf={leaves[index]} />
+              </div>
+            ) : (
+              <>
+                {current?.left ? (
+                  <div className="book-leaf book-leaf--left is-inking" key={`l${index}`}>
+                    <BookLeaf leaf={current.left} />
+                  </div>
+                ) : null}
+                {current?.right ? (
+                  <div className="book-leaf book-leaf--right is-inking" key={`r${index}`}>
+                    <BookLeaf leaf={current.right} />
+                  </div>
+                ) : null}
+                {current?.left && current?.right ? (
+                  <span className="book-spine" aria-hidden="true" />
+                ) : null}
+              </>
+            )}
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          className="book-turn book-turn--back"
+          onClick={() => go(index - 1)}
+          disabled={index === 0}
+          aria-label="Previous page"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          className="book-turn book-turn--next"
+          onClick={() => go(index + 1)}
+          disabled={index >= count - 1}
+          aria-label="Next page"
+        >
+          ›
+        </button>
+      </div>
 
       <p className="book-progress" aria-live="polite">
         {single ? `Page ${index + 1} of ${count}` : `Spread ${index + 1} of ${count}`}

@@ -162,7 +162,29 @@ main {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 56px 8px;
+  /* The side padding is the arrow gutter and nothing else. */
+  padding: 10px 60px 8px;
+}
+
+/* The free area the book has to fit inside, and the thing that gets measured.
+   It carries no padding of its own and the progress line sits outside it, so
+   its box is the real bound rather than one the scale has to be trusted not to
+   overflow — `.book`'s own client box includes the gutter, and scaling against
+   that put the pages underneath the arrows. */
+.book-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-self: stretch;
+  /* Flex, not grid. `transform: scale()` does not shrink the layout box, so
+     the stage is laid out at its full 1140px and is always taller than this
+     container. A grid row auto-sizes to that and starts at the top, leaving
+     `place-items: center` nothing to centre and pushing the pages off the
+     bottom; flex centring overflows in both directions, which is what makes
+     the scaled stage land centred. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .book-stage {
@@ -260,8 +282,13 @@ main {
   z-index: 5;
 }
 
-.book-turn--back { left: 6px; }
-.book-turn--next { right: 6px; }
+/* Anchored to the edges of the open book, not the edges of the screen. The
+   stage is centred in the viewport, so half its rendered width out from the
+   centre is exactly the paper's edge — and `--stage-w` changes with both the
+   fit scale and whether one leaf is showing or two, so the arrows follow the
+   book instead of sitting a hand's width away from it on a wide monitor. */
+.book-turn--back { right: calc(50% + var(--stage-w, 0px) / 2 + 14px); }
+.book-turn--next { left: calc(50% + var(--stage-w, 0px) / 2 + 14px); }
 
 .book-turn:disabled {
   opacity: 0.28;
@@ -286,7 +313,7 @@ main {
 
 @media (max-width: 899px) {
   .book {
-    padding: 8px 40px 4px;
+    padding: 8px 42px 4px;
   }
 
   .book-turn {
@@ -295,8 +322,8 @@ main {
     font-size: 24px;
   }
 
-  .book-turn--back { left: 2px; }
-  .book-turn--next { right: 2px; }
+  .book-turn--back { right: calc(50% + var(--stage-w, 0px) / 2 + 8px); }
+  .book-turn--next { left: calc(50% + var(--stage-w, 0px) / 2 + 8px); }
 }
 
 .comic-page {
@@ -717,10 +744,15 @@ main {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 62%;
-  z-index: 0;
+  /* Auto, not a percentage: the viewBox aspect ratio sizes the box, so `meet`
+     has nothing left to crop and a spire can never be sliced off the top. */
+  height: auto;
+  /* Negative rather than 0. At 0 this is a positioned element and would paint
+     above the in-flow lockup beside it — the same trap the ray layer fell into
+     over the metric label. */
+  z-index: -1;
   color: var(--ink);
-  opacity: 0.17;
+  opacity: 0.2;
   pointer-events: none;
 }
 
@@ -1438,84 +1470,22 @@ main {
    reporting position to the progress indicator.
 --------------------------------------------------------------------------- */
 
+/* Nothing inside a leaf may react to the viewport.
+ *
+ * A leaf is a fixed 880×1140 canvas that gets scaled; its width has no
+ * relationship to the window's. This block used to turn `.comic-page` into a
+ * horizontal scroll-snap carousel on phones — the guided view from before the
+ * book existed — which on a fixed canvas laid the panels out in an 880px-wide
+ * row and pushed everything after the first one off the edge of the paper. A
+ * phone showed one panel and a page of blank newsprint.
+ *
+ * The book already answers "this is a small screen" by turning to one leaf at
+ * a time, so the page composition does not need a second answer. What is left
+ * here only touches chrome that genuinely lives in the viewport.
+ */
 @media (max-width: 767px) {
-  :root {
-    --gutter: 10px;
-    --border-ink: 4px;
-  }
-
   .issue-shell {
     padding: 12px 0 28px;
-  }
-
-  .comic-page {
-    display: flex;
-    grid-template-areas: none !important;
-    grid-template-columns: none !important;
-    grid-template-rows: none !important;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    scroll-padding: var(--gutter);
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .comic-page::-webkit-scrollbar {
-    display: none;
-  }
-
-  .comic-page > .panel {
-    grid-area: auto !important;
-    flex: 0 0 100%;
-    scroll-snap-align: center;
-    scroll-snap-stop: always;
-    min-height: min(72vh, 560px);
-  }
-
-  .panel-body {
-    padding: 18px;
-  }
-
-  .page-caption {
-    margin-left: 12px;
-  }
-}
-
-.guided-progress {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px 0;
-  font-family: var(--font-display);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink);
-}
-
-.guided-pips {
-  display: flex;
-  gap: 5px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.guided-pips li {
-  width: 9px;
-  height: 9px;
-  border: 2px solid var(--ink);
-  background: transparent;
-}
-
-.guided-pips li[data-current='true'] {
-  background: var(--accent-a);
-}
-
-@media (min-width: 768px) {
-  .guided-progress {
-    display: none;
   }
 }
 
