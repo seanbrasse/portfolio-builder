@@ -15,7 +15,7 @@ export const OG_CONTENT_TYPE = 'image/png';
  * loads. Same typeface, same subset, different container.
  */
 async function displayFont(): Promise<ArrayBuffer> {
-  const path = join(process.cwd(), 'src/assets/bangers.ttf');
+  const path = join(process.cwd(), 'src/assets/display.ttf');
   const file = await readFile(path);
   return Uint8Array.from(file).buffer;
 }
@@ -52,7 +52,7 @@ export async function renderOgImage({
           flexDirection: 'column',
           background: palette.paper,
           padding: 40,
-          fontFamily: 'Bangers',
+          fontFamily: 'Display',
         }}
       >
         <div
@@ -89,7 +89,7 @@ export async function renderOgImage({
             style={{
               display: 'flex',
               color: palette.accentB,
-              fontSize: 128,
+              fontSize: 104,
               lineHeight: 1,
               marginTop: 28,
             }}
@@ -129,7 +129,7 @@ export async function renderOgImage({
     ),
     {
       ...OG_SIZE,
-      fonts: [{ name: 'Bangers', data: font, style: 'normal', weight: 400 }],
+      fonts: [{ name: 'Display', data: font, style: 'normal', weight: 400 }],
     },
   );
 }
