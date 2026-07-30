@@ -9,12 +9,14 @@ import {
   PAGE_W,
   buildLeaves,
   buildSpreads,
+  PAGE_H_NARROW,
   leafIndexForSlug,
   leafPanelCount,
   spreadIndexForSlug,
 } from '@/lib/book';
 
 import { BookLeaf } from './BookLeaf';
+import { CurlSheet } from './CurlSheet';
 
 /** The rail lives outside the book, so it asks to move rather than routing. */
 export const GOTO_EVENT = 'comic-portfolio:goto';
@@ -144,6 +146,9 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
   // spread is one leaf wide; every spread after it is two.
   const pagesWide = single || !spreads[index]?.left ? 1 : 2;
 
+  // A phone reads one tall leaf; a desktop reads two of the printed shape.
+  const pageH = single ? PAGE_H_NARROW : PAGE_H;
+
   // Layout effect: the first paint already has the right scale, so the book
   // does not visibly resize itself on load.
   useLayoutEffect(() => {
@@ -160,7 +165,7 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
 
       // Contain, never cover: a page that overflowed its box would need
       // scrolling, which is the one thing this format cannot have.
-      setFit(Math.min(width / stageW, height / PAGE_H));
+      setFit(Math.min(width / stageW, height / pageH));
     };
 
     measure();
@@ -172,7 +177,7 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
       window.removeEventListener('resize', measure);
     };
     // Re-measures on turn too, because the opening spread is narrower.
-  }, [pagesWide]);
+  }, [pagesWide, pageH]);
 
   const go = useCallback(
     (next: number) => {
@@ -265,10 +270,10 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
 
   const stageStyle = {
     width: PAGE_W * pagesWide,
-    height: PAGE_H,
+    height: pageH,
     transform: `scale(${fit})`,
     ['--page-w' as string]: `${PAGE_W}px`,
-    ['--page-h' as string]: `${PAGE_H}px`,
+    ['--page-h' as string]: `${pageH}px`,
   } as CSSProperties;
 
   const current = single ? null : spreads[index];
@@ -314,8 +319,6 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
 
   // The right page continues the left page's count rather than starting over.
   const rightInkOffset = leafPanelCount(current?.left ?? null);
-
-  const sheetStyle = { animationDuration: `${TURN_MS}ms` } as CSSProperties;
 
   // The rendered width of the open book, which is what the turn arrows sit
   // beside. They belong to the pages, not to the window: pinned to the screen
@@ -368,21 +371,22 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
               </>
             )}
 
-            {/* The leaf in flight. Two faces on one sheet rotating about the
-                spine, so what a reader sees is a page going over rather than a
-                new one fading up. Its reverse is bare stock — see above. */}
+            {/* The leaf in flight: a sheet that bows as it goes over, rather
+                than a rigid plane pivoting. Its reverse is bare stock, because
+                the page being turned to has not been drawn yet. */}
             {turning ? (
-              <div
-                className="turn-sheet"
-                data-dir={turning.dir}
-                style={sheetStyle}
-                aria-hidden="true"
-              >
-                <div className="book-leaf turn-face turn-face--front">
-                  {sheetLeaf ? <BookLeaf leaf={sheetLeaf} /> : null}
-                </div>
-                <div className="book-leaf turn-face turn-face--back" />
-              </div>
+              <CurlSheet
+                dir={turning.dir}
+                durationMs={TURN_MS}
+                pageW={PAGE_W}
+                face={
+                  sheetLeaf ? (
+                    <div className="book-leaf">
+                      <BookLeaf leaf={sheetLeaf} />
+                    </div>
+                  ) : null
+                }
+              />
             ) : null}
           </div>
         ) : null}

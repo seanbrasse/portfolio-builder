@@ -65,6 +65,18 @@ on a fixed 880px canvas that laid the panels out in a row and pushed everything
 after the first off the edge of the paper. The book already answers "this is a
 small screen" by turning to one leaf at a time.
 
+**The phone gets a taller canvas.** One leaf is laid out at 880×1560 rather
+than the spread's 880×1140. Width is the binding constraint on a phone — a page
+can never be scaled past the screen's width without overflowing it — so the
+only lever on how big the page reads is how much of the height it also fills,
+and at the spread's 0.77 aspect it came out about 500px tall on an 840px screen
+with a third of the screen left empty. 0.56 is close to what a phone actually
+leaves once the rail is accounted for. The templates size their rows
+fractionally, so the bands take the extra height and nothing needed
+re-composing. Turning is a swipe, so the arrows are not rendered below 900px
+and the 84px of gutter they occupied goes back to the paper — which is most of
+the difference between a postcard and a page.
+
 **Plain view walks the same panels.** `/plain` is its own server-rendered route,
 and it iterates the identical pages and slots the comic view does. That makes
 "everything in comic view is in plain view" a structural property rather than a
@@ -92,27 +104,44 @@ stroke per-axis, so a wide panel draws a thick slab down each side and a
 hairline across the top. Four scaled rules are crisp at any panel size and
 animate `transform` only, which `stroke-dashoffset` cannot.
 
-**The page draws itself.** A spread inks in panel by panel in the template's
-declared reading order, and the right page continues the left page's count
-rather than starting alongside it — so the sequence crosses the spine the way a
-reader does. Border first, drawn as four rules travelling clockwise, then the
-flat, then the screen, then the lettering.
+**The contents draw themselves; the page does not.** The panel grid — borders,
+flats, screens — is simply there. A comic page is laid out before it is
+lettered, and staggering the structure meant a reader watched an empty sheet
+acquire its own layout before anything readable arrived. What fills in is the
+copy, panel by panel in the template's declared reading order, and the right
+page continues the left page's count rather than starting alongside it, so the
+sequence crosses the spine the way a reader does.
 
 This **deliberately overruns MOTION-2**, which asks for a six-panel page inside
 500ms. It is the second override of the PRD here, after MODE-8. At the 44ms
-stagger that cap forces, a page did not read as being inked — it read as
+stagger that cap forces, a page did not read as being lettered — it read as
 popping in, which is the opposite of the brief. The stagger is 130ms and an
-eight-panel spread takes about 1.3s. Nothing is gated on it: every panel is
-legible the moment its lettering lands, and the reader is still on the left
-page while the right one is being drawn. Reduced motion collapses the whole
+eight-panel spread takes about 1.1s. Nothing is gated on it: every panel is
+legible the moment its copy lands, and the reader is still on the left page
+while the right one is being written. Reduced motion collapses the whole
 sequence to one short fade.
 
-**The turn is a real leaf.** A sheet with two faces rotates 180° about the
-spine — the page being left behind on the front, bare stock on the back — while
-the half it is swinging over keeps its old content and the half it lifts off is
-already blank. That blankness is the point: the page you turn to has not been
-drawn yet, and inks itself in once the leaf lands. No paper-curl simulation;
-the PRD is right that it reads as a 2011 tablet demo.
+**The turning leaf bends.** No CSS transform curves an element — `rotateY`
+pivots a rigid plane — so `CurlSheet` cuts the page into twelve vertical strips
+and nests them, each rotated a few degrees about its own inner edge. The
+rotations compose into a polygonal approximation of a cylinder, which is a real
+bow rather than a hinge. Every strip renders the same page shifted sideways and
+clipped to its own width, so the content stays live DOM: selectable, themed,
+crisp. Angles and per-strip shading come from the Web Animations API, because
+each strip needs its own curve and CSS keyframes cannot describe the shape of a
+bend.
+
+The two alternatives were both worse here. A rigid rotation about a moving
+crease — what StPageFlip calls a soft page — is far cheaper but it is a fold,
+not a curl. A WebGL mesh deforms properly but means rasterising the page and
+giving up live text.
+
+Shading is the other half of the illusion: without it twelve strips read as
+twelve flat cards. Each strip darkens by `1 - |cos θ|` of its accumulated
+angle, so the sheet is darkest edge-on and lit again once it has gone over, and
+a gradient tracks the shadow the raised leaf throws across the spread. The back
+of the sheet is bare stock, because the page being turned to has not been drawn
+yet — it letters itself in once the leaf lands.
 
 Everything animates on entrance and on interaction, then stops — nothing loops.
 The finished state is the CSS default, so a page whose script never runs is
