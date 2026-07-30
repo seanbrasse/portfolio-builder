@@ -1,0 +1,80 @@
+import type { CSSProperties, ReactNode } from 'react';
+
+import type { PanelOverrides, Sfx } from '@/content/types';
+
+type PanelProps = {
+  /** Named grid area from the page template. */
+  slot: string;
+  /** Reading-order index. Drives the animation stagger and nothing else. */
+  index: number;
+  overrides?: PanelOverrides;
+  /** Panels that contain a link get the hover lift (MOTION-5). */
+  interactive?: boolean;
+  /** Rendered with no lettering, for a deliberately quiet slot (COMP-4). */
+  empty?: boolean;
+  className?: string;
+  sfx?: Sfx;
+  children?: ReactNode;
+};
+
+/**
+ * The panel shell: four layers in the order a comic page is actually made.
+ *
+ * The border is an SVG rect with `pathLength="100"` rather than a CSS border,
+ * because that is the only way to animate the ink drawing itself. It also
+ * means the border renders identically whether or not the animation ever
+ * runs — the finished state is the default state.
+ */
+export function Panel({
+  slot,
+  index,
+  overrides,
+  interactive = false,
+  empty = false,
+  className,
+  sfx,
+  children,
+}: PanelProps) {
+  const accent = overrides?.accent ?? 'a';
+  const showScreen = overrides?.screen !== false;
+
+  const style = {
+    gridArea: slot,
+    '--i': index,
+  } as CSSProperties;
+
+  return (
+    <article
+      className={['panel', className].filter(Boolean).join(' ')}
+      style={style}
+      data-accent={accent}
+      data-interactive={interactive || undefined}
+      data-empty={empty || undefined}
+    >
+      <span className="panel-fill" aria-hidden="true" />
+      {showScreen ? <span className="panel-screen" aria-hidden="true" /> : null}
+
+      {/* The border, as four rules rather than an SVG stroke. Each one scales
+          in from the corner the previous one finished at, so the ink travels
+          around the panel clockwise. See the note in globals.css for why this
+          beat a dashed stroke. */}
+      <span className="panel-rule panel-rule--t" aria-hidden="true" />
+      <span className="panel-rule panel-rule--r" aria-hidden="true" />
+      <span className="panel-rule panel-rule--b" aria-hidden="true" />
+      <span className="panel-rule panel-rule--l" aria-hidden="true" />
+
+      <div className="panel-body">{children}</div>
+
+      {/* ACC-6: decoration. A screen reader announcing "SHIP IT!" is noise. */}
+      {sfx ? (
+        <span
+          className="sfx"
+          aria-hidden="true"
+          style={{ '--sfx-rotate': `${sfx.rotate ?? -11}deg` } as CSSProperties}
+        >
+          {sfx.text}
+        </span>
+      ) : null}
+    </article>
+  );
+}
