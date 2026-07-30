@@ -40,8 +40,15 @@ export type Palette = {
   screen: string;
   /** Speech balloon fill. */
   balloon: string;
-  /** Text that sits on top of a saturated `accentA` fill. */
+  /** Text on a saturated `accentA` fill. */
   onAccent: string;
+  /**
+   * Text on a saturated `accentB` fill. Separate from `onAccent` because the
+   * two accents sit on opposite sides of the lightness midpoint in noir —
+   * amber takes dark type, steel takes light — so one shared value cannot
+   * serve both.
+   */
+  onAccentB: string;
   /**
    * Text on an `accentC` fill — caption boxes, the CTA button, chip hovers.
    * Separate from `onAccent` because yellow and amber are light surfaces in
@@ -86,12 +93,16 @@ const fourColor: Palette = {
   paperLit: '#FBF4E3',
   ink: '#14110F',
   inkMuted: '#57514A',
-  accentA: '#D6291F', // red    — fills, flags, bullet markers
+  // Deepened from a brighter pillarbox red. As a solid flat it has to carry
+  // cream lettering *and* the gold rays crossing behind it, and the brighter
+  // value left no headroom once the rays lightened the ground.
+  accentA: '#C4201A', // red    — fills, flags, bullet markers
   accentB: '#154A9E', // blue   — display type and links
   accentC: '#F5C518', // yellow — backgrounds and shadows, never text
   screen: '#1B57B5',
   balloon: '#FDF9EF',
   onAccent: '#FBF4E3',
+  onAccentB: '#FBF4E3',
   onAccentC: '#14110F',
   titleAccent: '#154A9E',
   railBg: '#14110F',
@@ -119,19 +130,22 @@ const noir: Palette = {
   ink: '#E8E3D8',
   inkMuted: '#8B867C',
   accentA: '#C98F2E', // sodium amber — the one spot color
-  accentB: '#6E7681', // cold steel, for structure rather than emphasis
+  // Dark enough to take light lettering as a solid flat. A mid steel looked
+  // fine as a tint and failed as a ground.
+  accentB: '#3B424C', // cold steel, for structure rather than emphasis
   accentC: '#C98F2E',
   screen: '#3A3D44',
   balloon: '#24242A',
   onAccent: '#131315',
+  onAccentB: '#E8E3D8',
   onAccentC: '#131315',
   // Bone, not amber: noir gets one spot color and the SFX earns it. A name
   // set in the accent would spend the budget on the quietest element.
   titleAccent: '#E8E3D8',
   railBg: '#0B0B0C',
   railFg: '#E8E3D8',
-  // Noir's `accentB` is deliberately dark structural steel, which lands at
-  // 4.0:1 on the page — under AA. Links get the amber instead.
+  // Noir's `accentB` is dark structural steel, far under AA as body text.
+  // Links get the amber instead.
   link: '#C98F2E',
   metricShadow: '#0B0B0C',
   focus: '#C98F2E',
@@ -155,6 +169,7 @@ const CUSTOM_PROPERTY: Record<keyof Palette, string> = {
   screen: '--screen',
   balloon: '--balloon',
   onAccent: '--on-accent',
+  onAccentB: '--on-accent-b',
   onAccentC: '--on-accent-c',
   titleAccent: '--title-accent',
   railBg: '--rail-bg',

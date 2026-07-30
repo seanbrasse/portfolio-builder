@@ -163,7 +163,7 @@ const pages: Issue['pages'] = [
     templateId: 'hero-2-3',
     status: 'published',
     panels: [
-      { slot: 'hero', content: { type: 'hero' }, overrides: { accent: 'b' } },
+      { slot: 'hero', content: { type: 'hero' }, overrides: { accent: 'b', shape: 'canted' } },
       {
         slot: 'left',
         content: {
@@ -182,9 +182,23 @@ const pages: Issue['pages'] = [
         },
         overrides: { accent: 'c' },
       },
-      { slot: 'a', content: { type: 'metric', ref: 'qbo-merchants' }, overrides: { accent: 'b' } },
-      { slot: 'b', content: { type: 'metric', ref: 'arr-unlocked' }, overrides: { accent: 'a' } },
-      { slot: 'c', content: { type: 'metric', ref: 'optin-lift' }, overrides: { accent: 'c' } },
+      // The three loud panels on the page. Solid flats, inverted lettering,
+      // radiating rays — this is the row a recruiter remembers.
+      {
+        slot: 'a',
+        content: { type: 'metric', ref: 'qbo-merchants' },
+        overrides: { accent: 'b', fill: 'solid', tilt: -0.5 },
+      },
+      {
+        slot: 'b',
+        content: { type: 'metric', ref: 'arr-unlocked' },
+        overrides: { accent: 'a', fill: 'solid' },
+      },
+      {
+        slot: 'c',
+        content: { type: 'metric', ref: 'optin-lift' },
+        overrides: { accent: 'c', fill: 'solid', tilt: 0.5 },
+      },
     ],
   },
   {
@@ -197,9 +211,9 @@ const pages: Issue['pages'] = [
     ogTagline: 'Mailchimp, PayPal, and a ten-year-old defense simulator.',
     sfx: { text: 'SHIP IT!', slot: 'a', rotate: -11 },
     panels: [
-      { slot: 'a', content: { type: 'experience', ref: 'mailchimp' }, overrides: { accent: 'a' } },
-      { slot: 'b', content: { type: 'experience', ref: 'paypal' }, overrides: { accent: 'b' } },
-      { slot: 'c', content: { type: 'experience', ref: 'avarint' }, overrides: { accent: 'c' } },
+      { slot: 'a', content: { type: 'experience', ref: 'mailchimp' }, overrides: { accent: 'a', tilt: -0.35 } },
+      { slot: 'b', content: { type: 'experience', ref: 'paypal' }, overrides: { accent: 'b', shape: 'canted' } },
+      { slot: 'c', content: { type: 'experience', ref: 'avarint' }, overrides: { accent: 'c', tilt: 0.35 } },
     ],
   },
   {
@@ -211,10 +225,18 @@ const pages: Issue['pages'] = [
     status: 'published',
     ogTagline: 'Four things built to find out whether they could be.',
     panels: [
-      { slot: 'a', content: { type: 'project', ref: 'pass-the-interview' }, overrides: { accent: 'a' } },
+      {
+        slot: 'a',
+        content: { type: 'project', ref: 'pass-the-interview' },
+        overrides: { accent: 'a', shape: 'canted' },
+      },
       { slot: 'b', content: { type: 'project', ref: 'cadence' }, overrides: { accent: 'b' } },
       { slot: 'c', content: { type: 'project', ref: 'life-os' }, overrides: { accent: 'c' } },
-      { slot: 'd', content: { type: 'project', ref: 'knowledge-engine' }, overrides: { accent: 'b' } },
+      {
+        slot: 'd',
+        content: { type: 'project', ref: 'knowledge-engine' },
+        overrides: { accent: 'b', fill: 'solid', tilt: 0.4 },
+      },
     ],
   },
   {
@@ -226,7 +248,7 @@ const pages: Issue['pages'] = [
     status: 'published',
     ogTagline: 'Open to senior frontend and full-stack work in New York.',
     panels: [
-      { slot: 'hero', content: { type: 'cta' }, overrides: { accent: 'a' } },
+      { slot: 'hero', content: { type: 'cta' }, overrides: { accent: 'a', fill: 'solid' } },
       {
         slot: 'a',
         content: {
@@ -234,7 +256,7 @@ const pages: Issue['pages'] = [
           heading: "What I'm after",
           body: 'Senior frontend or full-stack work where I own a surface end to end: the technical design, the implementation, and the rollout. The problems I like best are the ones where the constraint is legal, cross-team, or ten years old.',
         },
-        overrides: { accent: 'b' },
+        overrides: { accent: 'b', tilt: -0.4 },
       },
       {
         slot: 'b',
@@ -243,7 +265,7 @@ const pages: Issue['pages'] = [
           heading: 'How I work',
           body: 'I tend to write the test suite nobody assigned. At Mailchimp that meant scoping the end-to-end coverage gap across the Forms platform, authoring the first Playwright suite, and mentoring a contract engineer through delivery — 0% to 85%. Shipping is the part after the feature works.',
         },
-        overrides: { accent: 'c' },
+        overrides: { accent: 'c', shape: 'canted' },
       },
     ],
   },

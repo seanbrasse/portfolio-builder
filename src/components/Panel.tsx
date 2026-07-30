@@ -37,10 +37,13 @@ export function Panel({
 }: PanelProps) {
   const accent = overrides?.accent ?? 'a';
   const showScreen = overrides?.screen !== false;
+  const fill = overrides?.fill ?? 'tint';
+  const shape = overrides?.shape ?? 'rect';
 
   const style = {
     gridArea: slot,
     '--i': index,
+    ...(overrides?.tilt ? { '--tilt': `${overrides.tilt}deg` } : {}),
   } as CSSProperties;
 
   return (
@@ -48,6 +51,8 @@ export function Panel({
       className={['panel', className].filter(Boolean).join(' ')}
       style={style}
       data-accent={accent}
+      data-fill={fill}
+      data-shape={shape}
       data-interactive={interactive || undefined}
       data-empty={empty || undefined}
     >
@@ -62,6 +67,11 @@ export function Panel({
       <span className="panel-rule panel-rule--r" aria-hidden="true" />
       <span className="panel-rule panel-rule--b" aria-hidden="true" />
       <span className="panel-rule panel-rule--l" aria-hidden="true" />
+      {/* The inked edge across a cut corner. The panel's clip-path removes the
+          corner; this draws the diagonal that replaces it. */}
+      {shape === 'canted' ? (
+        <span className="panel-rule panel-rule--cut" aria-hidden="true" />
+      ) : null}
 
       <div className="panel-body">{children}</div>
 

@@ -103,10 +103,23 @@ export type Metric = {
 export type PanelOverrides = {
   /** Which of the three spot colors this panel flats with. */
   accent?: 'a' | 'b' | 'c';
+  /**
+   * How heavily the flat is laid down.
+   *
+   * `tint` is a wash over the paper, for panels carrying body copy.
+   * `solid` is the flat at full strength with the lettering inverted on top —
+   * the loud panels a comic page needs so it does not read as beige. Contrast
+   * is easier on a solid panel than a tinted one, not harder: light type on a
+   * saturated flat clears AA comfortably, where dark type over a pale wash and
+   * a halftone dot does not.
+   */
+  fill?: 'tint' | 'solid';
   /** Halftone screen on or off for this panel. */
   screen?: boolean;
-  /** SFX only: rotation in degrees. */
-  rotate?: number;
+  /** A cut corner, so the page is not a grid of identical boxes. */
+  shape?: 'rect' | 'canted';
+  /** Degrees of tilt. Small values only — this is a printing skew, not a fan. */
+  tilt?: number;
 };
 
 export type PanelContent =

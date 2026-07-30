@@ -160,6 +160,17 @@ a {
   background: var(--paper-lit);
   padding: 0;
   overflow: hidden;
+  --cut: 0px;
+  /* A printing skew, not a fan. Under a degree, so the page reads as laid up
+     by hand rather than as a broken grid. */
+  transform: rotate(var(--tilt, 0deg));
+}
+
+/* A cut corner. The clip removes it; `.panel-rule--cut` inks the diagonal that
+   replaces it, and the clip also trims that bar's overhanging ends. */
+.panel[data-shape='canted'] {
+  --cut: 46px;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
 }
 
 .panel-fill,
@@ -174,7 +185,7 @@ a {
    flat, not the flat itself. These weights are set from that measurement — see
    the contrast audit in tests/. */
 .panel-fill {
-  opacity: 0.11;
+  opacity: 0.16;
 }
 
 .panel[data-accent='a'] .panel-fill {
@@ -187,7 +198,7 @@ a {
 
 .panel[data-accent='c'] .panel-fill {
   background: var(--accent-c);
-  opacity: 0.18;
+  opacity: 0.24;
 }
 
 /* The halftone. Never above 0.3 — past that it stops reading as a printing
@@ -255,6 +266,18 @@ a {
   transform-origin: center bottom;
 }
 
+/* Width is the hypotenuse of the cut (cut x sqrt2); the offsets place its
+   midpoint exactly on the diagonal before the 45deg rotation. transform-origin
+   must stay centred or the rotation lands the bar somewhere else. */
+.panel-rule--cut {
+  height: var(--panel-ink);
+  width: calc(var(--cut) * 1.4143);
+  top: calc(var(--cut) / 2 - var(--panel-ink) / 2);
+  right: calc(var(--cut) * -0.2072);
+  transform: rotate(45deg);
+  transform-origin: center;
+}
+
 .panel-body {
   position: relative;
   z-index: 1;
@@ -274,7 +297,7 @@ a {
 
   .panel[data-interactive='true']:hover,
   .panel[data-interactive='true']:focus-within {
-    transform: translate(-2px, -2px);
+    transform: rotate(var(--tilt, 0deg)) translate(-2px, -2px);
     box-shadow: 6px 6px 0 var(--ink);
   }
 }
@@ -494,6 +517,122 @@ a {
   pointer-events: none;
 }
 
+/* ---------------------------------------------------------------------------
+   Solid flats
+
+   A page of tinted washes reads as beige. These are the loud panels: the flat
+   at full strength with the lettering inverted on top.
+
+   Counter-intuitively this is the *easier* case for contrast. Dark type over a
+   pale wash plus a halftone dot was the combination that failed the audit;
+   light type on a saturated flat clears AA with room to spare, which is why
+   comics have always lettered this way.
+--------------------------------------------------------------------------- */
+
+.panel[data-fill='solid'] .panel-fill {
+  opacity: 1;
+}
+
+/* No halftone on a solid flat. The reference page does the same, and the
+   reason is contrast rather than taste: whichever way the dots are tinted they
+   drag the ground toward one of the two type colors, and the worst-case pixel
+   behind a glyph is what the audit measures. Rays carry the texture instead. */
+.panel[data-fill='solid'] .panel-screen {
+  display: none;
+}
+
+.panel[data-fill='solid'][data-accent='a'] .panel-title,
+.panel[data-fill='solid'][data-accent='a'] .panel-subtitle,
+.panel[data-fill='solid'][data-accent='a'] .panel-kicker,
+.panel[data-fill='solid'][data-accent='a'] .panel-prose,
+.panel[data-fill='solid'][data-accent='a'] .metric-value,
+.panel[data-fill='solid'][data-accent='a'] .panel-bullets li {
+  color: var(--on-accent);
+}
+
+.panel[data-fill='solid'][data-accent='b'] .panel-title,
+.panel[data-fill='solid'][data-accent='b'] .panel-subtitle,
+.panel[data-fill='solid'][data-accent='b'] .panel-kicker,
+.panel[data-fill='solid'][data-accent='b'] .panel-prose,
+.panel[data-fill='solid'][data-accent='b'] .metric-value,
+.panel[data-fill='solid'][data-accent='b'] .panel-bullets li {
+  color: var(--on-accent-b);
+}
+
+.panel[data-fill='solid'][data-accent='c'] .panel-title,
+.panel[data-fill='solid'][data-accent='c'] .panel-subtitle,
+.panel[data-fill='solid'][data-accent='c'] .panel-kicker,
+.panel[data-fill='solid'][data-accent='c'] .panel-prose,
+.panel[data-fill='solid'][data-accent='c'] .metric-value,
+.panel[data-fill='solid'][data-accent='c'] .panel-bullets li {
+  color: var(--on-accent-c);
+}
+
+.panel[data-fill='solid'] .tech-list li,
+.panel[data-fill='solid'] .cover-box {
+  background: var(--paper-lit);
+  color: var(--ink);
+}
+
+/* The hard offset is dropped on a solid ground. It has to contrast with the
+   numeral, the numeral flips per accent and per theme, and there is no one
+   value that works for all six combinations — 82px of inverted display type
+   carries the panel without it. */
+.panel[data-fill='solid'] .metric-value {
+  text-shadow: none;
+}
+
+/* Radiating rays instead of a flat ground, as on the reference page. The
+   rays burst behind the numeral and fade out above the label. That is the
+   right composition anyway — the label wants clear ground — and it is also
+   what makes the contrast work, since rays crossing behind 15px lettering
+   lighten the worst-case pixel under it. */
+/* Rays radiate *around* the lettering, not through it.
+   Two earlier attempts failed for the same underlying reason: a ray crossing a
+   glyph sets that glyph's worst-case background, so any opacity high enough to
+   read as gold rather than olive also pushed the numeral under 3:1. Clearing an
+   ellipse in the middle removes the overlap instead of trading against it,
+   which lets the rays go nearly opaque — and a starburst breaking out from
+   behind the number is the composition the reference page uses anyway. */
+.panel[data-fill='solid'] .speed-lines {
+  opacity: 0.85;
+  -webkit-mask-image: radial-gradient(
+    ellipse 58% 52% at 50% 52%,
+    transparent 0 58%,
+    black 100%
+  );
+  mask-image: radial-gradient(ellipse 58% 52% at 50% 52%, transparent 0 58%, black 100%);
+}
+
+/* The label gets its own plate rather than sitting on the flat. It is
+   deliberately absent from the per-accent color rules above — the plate owns
+   both its background and its lettering, and those rules are more specific, so
+   listing it there would win and paint ink on ink. */
+/* (Continued.) The reason for the plate:
+   Chasing this with ray opacity and a mask gradient was the wrong fix: the
+   label's ground then depends on the accent, the ray color, and exactly where
+   the text lands, and it went back under AA the moment any of the three moved.
+   Ink-on-plate is one rule that holds for every accent in both themes, and it
+   reads as the caption box under a panel, which is where a comic would put
+   it anyway. */
+.panel[data-fill='solid'] .metric-label {
+  align-self: center;
+  background: var(--ink);
+  color: var(--paper-lit);
+  border: 2px solid var(--ink);
+  padding: 4px 11px;
+  margin-top: 12px;
+}
+
+.panel[data-fill='solid'] .speed-lines line {
+  stroke: var(--accent-c);
+  stroke-width: 5;
+}
+
+.panel[data-fill='solid'][data-accent='c'] .speed-lines line {
+  stroke: var(--ink);
+}
+
 /* Speech balloons. The tail is a rotated square rather than an SVG path so it
    inherits the border and fill without a second set of tokens. */
 .balloon {
@@ -655,6 +794,13 @@ a {
   animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-ink) * 0.75);
 }
 
+/* The cut diagonal draws with the top edge it interrupts. Its own keyframe,
+   because the shared one would drop the 45deg rotation. */
+.is-inking .panel-rule--cut {
+  animation-name: rule-cut;
+  animation-delay: calc(var(--i, 0) * var(--gutter-beat));
+}
+
 .is-inking .panel-fill {
   animation: ink-appear var(--stage-fill) ease-out both;
   animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-ink));
@@ -687,6 +833,12 @@ a {
 @keyframes rule-y {
   from {
     transform: scaleY(0);
+  }
+}
+
+@keyframes rule-cut {
+  from {
+    transform: rotate(45deg) scaleX(0);
   }
 }
 
@@ -775,7 +927,7 @@ a {
 
   .panel[data-interactive='true']:hover,
   .panel[data-interactive='true']:focus-within {
-    transform: none;
+    transform: rotate(var(--tilt, 0deg));
   }
 
   .cta-button {
