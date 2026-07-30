@@ -42,10 +42,18 @@ let checked = 0;
 
 for (const theme of THEMES) {
   for (const route of ROUTES) {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+    const ctx = await browser.newContext({
+      viewport: { width: 1280, height: 1000 },
+      // The audit measures the resting state, and the ink-in sequence now
+      // takes well over a second to reach it — a fixed sleep would be a race
+      // that gets re-tuned every time the timing changes. Reduced motion
+      // collapses the entrance to one short fade and lands on the same pixels,
+      // so what is sampled is the finished page by construction.
+      reducedMotion: 'reduce',
+    });
     const page = await ctx.newPage();
     await page.goto(`${BASE}${route}?theme=${theme}`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(600);
 
     const items = await page.evaluate(() => {
       const out = [];

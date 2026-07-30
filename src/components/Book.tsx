@@ -4,7 +4,15 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import type { CSSProperties } from 'react';
 
 import type { Page } from '@/content/types';
-import { PAGE_H, PAGE_W, buildLeaves, buildSpreads, leafIndexForSlug, spreadIndexForSlug } from '@/lib/book';
+import {
+  PAGE_H,
+  PAGE_W,
+  buildLeaves,
+  buildSpreads,
+  leafIndexForSlug,
+  leafPanelCount,
+  spreadIndexForSlug,
+} from '@/lib/book';
 
 import { BookLeaf } from './BookLeaf';
 
@@ -57,6 +65,29 @@ type BookProps = {
 
 const NARROW = '(max-width: 899px)';
 
+/**
+ * How long a leaf takes to swing through 180°. Held here rather than in CSS
+ * because the same number decides when the turn is over and the new pages may
+ * start drawing themselves; two copies of it would drift.
+ */
+const TURN_MS = 620;
+
+/**
+ * Read at the moment of the turn rather than subscribed to, because it is only
+ * ever consulted here and a stale value would hold a page blank.
+ *
+ * Reduced motion skips the swinging leaf entirely instead of shortening it.
+ * Zeroing the animation in CSS would not be enough: the hold that keeps the
+ * new pages bare is a timer, so the leaf would vanish and leave the reader
+ * looking at blank stock for half a second — worse than the motion it removed.
+ */
+function prefersReducedMotion() {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
 function subscribeToWidth(onChange: () => void) {
   const query = window.matchMedia(NARROW);
   query.addEventListener('change', onChange);
@@ -100,7 +131,12 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
   const [index, setIndex] = useState(() =>
     single ? leafIndexForSlug(leaves, initialSlug) : spreadIndexForSlug(spreads, initialSlug),
   );
-  const [turning, setTurning] = useState<'forward' | 'back' | null>(null);
+  // A turn has to remember where it came from: the sheet swinging about the
+  // spine is the page being left behind, so its content outlives the index
+  // change that started the turn.
+  const [turning, setTurning] = useState<{ dir: 'forward' | 'back'; from: number } | null>(
+    null,
+  );
 
   const count = single ? leaves.length : spreads.length;
 
@@ -143,19 +179,22 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
       setIndex((current) => {
         const clamped = Math.max(0, Math.min(next, count - 1));
         if (clamped === current) return current;
-        setTurning(clamped > current ? 'forward' : 'back');
+        if (!prefersReducedMotion()) {
+          setTurning({ dir: clamped > current ? 'forward' : 'back', from: current });
+        }
         return clamped;
       });
     },
     [count],
   );
 
-  // The turn is a CSS animation; this only clears the flag when it ends.
+  // The turn is a CSS animation; this only clears the flag when it ends, which
+  // is also what releases the new pages to start inking themselves in.
   useEffect(() => {
     if (!turning) return;
-    const timer = window.setTimeout(() => setTurning(null), 420);
+    const timer = window.setTimeout(() => setTurning(null), TURN_MS);
     return () => window.clearTimeout(timer);
-  }, [turning, index]);
+  }, [turning]);
 
   // Keep the URL honest without routing, so a flip is not a page load and the
   // reader can still copy a link to where they are (ACC-8 companion).
@@ -233,6 +272,50 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
   } as CSSProperties;
 
   const current = single ? null : spreads[index];
+  const previous = turning && !single ? spreads[turning.from] : null;
+
+  /**
+   * What the stage shows while a leaf is mid-swing.
+   *
+   * Turning forward, the sheet is the old right page rotating onto the left,
+   * so the left half keeps the page it is about to bury and the right half is
+   * already bare — the new page is revealed by the sheet lifting off it. Back
+   * is the mirror of that.
+   *
+   * Bare means bare on purpose. The pages a reader turns to have not been
+   * drawn yet; they ink themselves in once the leaf lands, which is the whole
+   * conceit and also why the sheet's reverse is blank stock rather than a
+   * preview of a page that is about to draw itself.
+   */
+  const leftLeaf = turning
+    ? turning.dir === 'forward'
+      ? (previous?.left ?? null)
+      : null
+    : (current?.left ?? null);
+  const rightLeaf = turning
+    ? turning.dir === 'forward'
+      ? null
+      : (previous?.right ?? null)
+    : (current?.right ?? null);
+
+  // The face of the sheet: the page being turned away from.
+  const sheetLeaf = turning
+    ? single
+      ? (leaves[turning.from] ?? null)
+      : turning.dir === 'forward'
+        ? (previous?.right ?? null)
+        : (previous?.left ?? null)
+    : null;
+
+  // Remounting is what replays a CSS animation, so the key has to change when
+  // the turn ends and the pages are released to draw.
+  const inkKey = `${index}-${turning ? 'held' : 'ink'}`;
+  const inking = !turning;
+
+  // The right page continues the left page's count rather than starting over.
+  const rightInkOffset = leafPanelCount(current?.left ?? null);
+
+  const sheetStyle = { animationDuration: `${TURN_MS}ms` } as CSSProperties;
 
   // The rendered width of the open book, which is what the turn arrows sit
   // beside. They belong to the pages, not to the window: pinned to the screen
@@ -250,29 +333,57 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
             className="book-stage"
             ref={stageRef}
             style={stageStyle}
-            data-turning={turning ?? undefined}
+            data-turning={turning?.dir ?? undefined}
           >
             {single ? (
-              <div className="book-leaf is-inking" key={index}>
-                <BookLeaf leaf={leaves[index]} />
+              <div
+                className={`book-leaf${inking ? ' is-inking' : ''}`}
+                key={`s${inkKey}`}
+              >
+                {inking ? <BookLeaf leaf={leaves[index]} /> : null}
               </div>
             ) : (
               <>
-                {current?.left ? (
-                  <div className="book-leaf book-leaf--left is-inking" key={`l${index}`}>
-                    <BookLeaf leaf={current.left} />
+                {/* A closed book has one board, so the left leaf exists only
+                    once the book is open. Both leaves are always *rendered*
+                    past that point, though — an open spread mid-turn has a
+                    bare half, and bare stock is a page, not a gap. */}
+                {pagesWide === 2 ? (
+                  <div
+                    className={`book-leaf book-leaf--left${inking ? ' is-inking' : ''}`}
+                    key={`l${inkKey}`}
+                  >
+                    {leftLeaf ? <BookLeaf leaf={leftLeaf} /> : null}
                   </div>
                 ) : null}
-                {current?.right ? (
-                  <div className="book-leaf book-leaf--right is-inking" key={`r${index}`}>
-                    <BookLeaf leaf={current.right} />
-                  </div>
-                ) : null}
-                {current?.left && current?.right ? (
-                  <span className="book-spine" aria-hidden="true" />
-                ) : null}
+                <div
+                  className={`book-leaf book-leaf--right${inking ? ' is-inking' : ''}`}
+                  key={`r${inkKey}`}
+                >
+                  {rightLeaf ? (
+                    <BookLeaf leaf={rightLeaf} inkOffset={inking ? rightInkOffset : 0} />
+                  ) : null}
+                </div>
+                {pagesWide === 2 ? <span className="book-spine" aria-hidden="true" /> : null}
               </>
             )}
+
+            {/* The leaf in flight. Two faces on one sheet rotating about the
+                spine, so what a reader sees is a page going over rather than a
+                new one fading up. Its reverse is bare stock — see above. */}
+            {turning ? (
+              <div
+                className="turn-sheet"
+                data-dir={turning.dir}
+                style={sheetStyle}
+                aria-hidden="true"
+              >
+                <div className="book-leaf turn-face turn-face--front">
+                  {sheetLeaf ? <BookLeaf leaf={sheetLeaf} /> : null}
+                </div>
+                <div className="book-leaf turn-face turn-face--back" />
+              </div>
+            ) : null}
           </div>
         ) : null}
 

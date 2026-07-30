@@ -36,18 +36,28 @@
   /* ---------------------------------------------------------------------
      Motion (PRD section 9). Six numbers drive the entire entrance feel.
 
-     MOTION-2 asks for a 60ms stagger *and* a six-panel page resolving inside
-     500ms. At six panels those two cannot both hold, and the cap is the
-     binding constraint — a hard ceiling beats a preferred interval. The
-     stagger is 44ms so the arithmetic lands exactly on the cap:
-     5 gutters x 44ms + 280ms of panel = 500ms.
+     MOTION-2 asks for a 60ms stagger and a six-panel page resolving inside
+     500ms, and this deliberately overruns the cap — the second override of
+     the PRD in this project, after MODE-8.
+
+     The reason is that the brief changed: the page is meant to look like it is
+     being *drawn* as the reader arrives at it, panel after panel, rather than
+     assembling itself as fast as it can. At 44ms a page did not read as being
+     inked; it read as popping in. A spread of eight panels now takes about
+     1.3s (7 gutters x 130ms + 380ms of panel), which is slow enough to watch a
+     pen move across the paper and short enough that nobody waits for it —
+     every panel is legible the moment its lettering lands, and the reader is
+     still on the left page while the right one is being drawn.
+
+     Anyone who has asked not to be animated at gets none of this: the reduced
+     motion block collapses the whole sequence to one short fade.
   --------------------------------------------------------------------- */
-  --stage-ink: 120ms;
-  --stage-fill: 70ms;
-  --stage-screen: 45ms;
-  --stage-letter: 45ms;
-  --gutter-beat: 44ms;
-  --panel-total: 280ms;
+  --stage-ink: 170ms;
+  --stage-fill: 90ms;
+  --stage-screen: 55ms;
+  --stage-letter: 65ms;
+  --gutter-beat: 130ms;
+  --panel-total: 380ms;
 
   --dur-hover: 140ms;
   --dur-stamp: 320ms;
@@ -236,32 +246,61 @@ main {
   );
 }
 
-/* The turn. A rotation about the spine with a hard edge, not a curl — the PRD
-   is right that a simulated paper warp reads as a 2011 tablet demo. This is
-   the leaf swinging, and nothing else. */
-.book-stage[data-turning='forward'] .book-leaf--right,
-.book-stage[data-turning='forward'] .book-leaf:only-child {
+/* The turn.
+ *
+ * A leaf swinging about the spine with a hard edge, not a curl — the PRD is
+ * right that a simulated paper warp reads as a 2011 tablet demo. What makes it
+ * read as a *page* rather than a crossfade is that the sheet has two sides and
+ * goes all the way over: the page you are leaving is on the front, and the
+ * back is the bare stock of the page you are turning to.
+ *
+ * The duration is set inline from `TURN_MS` in Book.tsx, because the same
+ * number decides when the pages are released to ink themselves in. */
+.turn-sheet {
+  position: absolute;
+  top: 0;
+  width: var(--page-w);
+  height: var(--page-h);
+  transform-style: preserve-3d;
+  /* Above both static halves: a turning page occludes whatever it swings over. */
+  z-index: 4;
+  animation-timing-function: cubic-bezier(0.42, 0.02, 0.32, 1);
+  animation-fill-mode: both;
+}
+
+.turn-sheet[data-dir='forward'] {
+  right: 0;
   transform-origin: left center;
-  animation: leaf-in-forward 380ms cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  animation-name: sheet-forward;
 }
 
-.book-stage[data-turning='back'] .book-leaf--left,
-.book-stage[data-turning='back'] .book-leaf:only-child {
+.turn-sheet[data-dir='back'] {
+  left: 0;
   transform-origin: right center;
-  animation: leaf-in-back 380ms cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  animation-name: sheet-back;
 }
 
-@keyframes leaf-in-forward {
-  from {
-    transform: rotateY(-72deg);
-    opacity: 0.2;
+.turn-face {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  backface-visibility: hidden;
+}
+
+.turn-face--back {
+  transform: rotateY(180deg);
+}
+
+@keyframes sheet-forward {
+  to {
+    transform: rotateY(-180deg);
   }
 }
 
-@keyframes leaf-in-back {
-  from {
-    transform: rotateY(72deg);
-    opacity: 0.2;
+@keyframes sheet-back {
+  to {
+    transform: rotateY(180deg);
   }
 }
 
@@ -1307,8 +1346,12 @@ main {
 
 .is-inking .sfx {
   animation: sfx-stamp var(--dur-stamp) var(--ease-stamp) both;
-  /* Lands after the panels have settled. */
-  animation-delay: calc(var(--panel-count, 3) * var(--gutter-beat) + var(--panel-total));
+  /* Stamped onto its own panel once that panel is finished. This used to wait
+     on a `--panel-count` that nothing ever set, so every SFX fired on the
+     fallback of three regardless of where its panel actually was in the
+     sequence — early on a long page, late on a short one. Its own `--i` is the
+     number it always wanted. */
+  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--panel-total));
 }
 
 @keyframes rule-x {
@@ -1406,6 +1449,13 @@ main {
     animation: ink-appear var(--dur-reduced) ease-out both !important;
     animation-delay: 0s !important;
     clip-path: none !important;
+  }
+
+  /* Belt and braces. Book.tsx does not render a turning leaf under this
+     setting at all, so this only matters if that check ever regresses. */
+  .turn-sheet {
+    animation: none !important;
+    display: none;
   }
 
   .panel[data-interactive='true'] {

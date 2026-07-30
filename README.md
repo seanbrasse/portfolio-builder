@@ -92,12 +92,32 @@ stroke per-axis, so a wide panel draws a thick slab down each side and a
 hairline across the top. Four scaled rules are crisp at any panel size and
 animate `transform` only, which `stroke-dashoffset` cannot.
 
-**Motion timing.** MOTION-2 asks for a 60ms stagger *and* a six-panel page
-resolving inside 500ms; at six panels those cannot both hold. The cap is the
-binding constraint, so the stagger is 44ms and the arithmetic lands exactly on
-500ms. Everything animates on entrance and on interaction, then stops — nothing
-loops, and panels fire once rather than replaying on scroll-back. The finished
-state is the CSS default, so a page whose script never runs is fully readable.
+**The page draws itself.** A spread inks in panel by panel in the template's
+declared reading order, and the right page continues the left page's count
+rather than starting alongside it — so the sequence crosses the spine the way a
+reader does. Border first, drawn as four rules travelling clockwise, then the
+flat, then the screen, then the lettering.
+
+This **deliberately overruns MOTION-2**, which asks for a six-panel page inside
+500ms. It is the second override of the PRD here, after MODE-8. At the 44ms
+stagger that cap forces, a page did not read as being inked — it read as
+popping in, which is the opposite of the brief. The stagger is 130ms and an
+eight-panel spread takes about 1.3s. Nothing is gated on it: every panel is
+legible the moment its lettering lands, and the reader is still on the left
+page while the right one is being drawn. Reduced motion collapses the whole
+sequence to one short fade.
+
+**The turn is a real leaf.** A sheet with two faces rotates 180° about the
+spine — the page being left behind on the front, bare stock on the back — while
+the half it is swinging over keeps its old content and the half it lifts off is
+already blank. That blankness is the point: the page you turn to has not been
+drawn yet, and inks itself in once the leaf lands. No paper-curl simulation;
+the PRD is right that it reads as a 2011 tablet demo.
+
+Everything animates on entrance and on interaction, then stops — nothing loops.
+The finished state is the CSS default, so a page whose script never runs is
+fully readable, and the ink-in is opacity and transform only, so content is in
+the accessibility tree the whole time it is being drawn.
 
 **Contrast was measured, not assumed.** `tests/contrast.mjs` loads every route
 in both themes, makes all text transparent, screenshots, and samples the real
@@ -171,11 +191,18 @@ input that could not be derived from a resume.
 6. **Custom domain and cutover.** Still open. Set `NEXT_PUBLIC_SITE_URL` when it
    is decided.
 
-One requirement is deliberately not implemented as written. MODE-8 asked for
-`prefers-color-scheme: dark` to select noir on a first visit; four-color is the
-unconditional default instead. Most people browse in dark mode, so honouring the
-OS preference meant the palette the portfolio leads with was the one most
-first-time visitors never saw. An explicit choice still wins and still persists.
+Two requirements are deliberately not implemented as written.
+
+**MODE-8** asked for `prefers-color-scheme: dark` to select noir on a first
+visit; four-color is the unconditional default instead. Most people browse in
+dark mode, so honouring the OS preference meant the palette the portfolio leads
+with was the one most first-time visitors never saw. An explicit choice still
+wins and still persists.
+
+**MOTION-2**'s 500ms cap is overrun, for the reason given under motion timing
+above: the page is meant to look drawn rather than assembled, and a cap that
+forces a 44ms stagger cannot deliver that. Reduced motion is still honoured in
+full.
 
 Availability is set to `selective` in `src/content/issue.ts`, which drives the
 CTA copy. One enum change swaps it.
