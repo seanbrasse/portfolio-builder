@@ -129,18 +129,23 @@ const fourColor: Palette = {
  * desaturated red being the obvious answer is itself a reason to look
  * elsewhere. This uses a sodium-vapor amber — streetlight through a window
  * blind. It reads as noir without borrowing the four-color red, and it is
- * warm enough to stay legible on near-black at 11.9:1.
+ * warm enough to stay legible on the near-black paper at 7.5:1.
+ *
+ * It was lifted a step once the cover title was measured against the cover's
+ * steel ground rather than against paper: at 116px the threshold is 3:1 and
+ * the old amber came in at 2.98. A spot color that fails on the largest word
+ * on the cover is not a spot color worth keeping two decimal places for.
  */
 const noir: Palette = {
   paper: '#131315',
   paperLit: '#1C1C1F',
   ink: '#E8E3D8',
   inkMuted: '#8B867C',
-  accentA: '#C98F2E', // sodium amber — the one spot color
+  accentA: '#D69A33', // sodium amber — the one spot color
   // Dark enough to take light lettering as a solid flat. A mid steel looked
   // fine as a tint and failed as a ground.
   accentB: '#3B424C', // cold steel, for structure rather than emphasis
-  accentC: '#C98F2E',
+  accentC: '#D69A33',
   screen: '#3A3D44',
   balloon: '#24242A',
   onAccent: '#131315',
@@ -153,12 +158,12 @@ const noir: Palette = {
   railFg: '#E8E3D8',
   // Noir's `accentB` is dark structural steel, far under AA as body text.
   // Links get the amber instead.
-  link: '#C98F2E',
+  link: '#D69A33',
   metricShadow: '#0B0B0C',
   shadowInk: '#08080A',
-  focus: '#C98F2E',
+  focus: '#D69A33',
   duotoneDark: '#0B0B0C',
-  duotoneLight: '#C98F2E',
+  duotoneLight: '#D69A33',
 };
 
 export const PALETTES: Record<Theme, Palette> = {
