@@ -70,6 +70,12 @@ export type Palette = {
    * four-color numerals, a dark one under noir's bone.
    */
   metricShadow: string;
+  /**
+   * A hard offset that must stay dark in both palettes. `ink` inverts to bone
+   * in noir, which turns a drop shadow into a highlight and takes the cover
+   * lockup under AA.
+   */
+  shadowInk: string;
   /** Focus ring (ACC-7). */
   focus: string;
   /** Duotone shadow/highlight pair applied to screenshots (MODE-6). */
@@ -109,6 +115,7 @@ const fourColor: Palette = {
   railFg: '#FBF4E3',
   link: '#154A9E',
   metricShadow: '#F5C518',
+  shadowInk: '#14110F',
   focus: '#154A9E',
   duotoneDark: '#14110F',
   duotoneLight: '#D6291F',
@@ -148,6 +155,7 @@ const noir: Palette = {
   // Links get the amber instead.
   link: '#C98F2E',
   metricShadow: '#0B0B0C',
+  shadowInk: '#08080A',
   focus: '#C98F2E',
   duotoneDark: '#0B0B0C',
   duotoneLight: '#C98F2E',
@@ -176,6 +184,7 @@ const CUSTOM_PROPERTY: Record<keyof Palette, string> = {
   railFg: '--rail-fg',
   link: '--link',
   metricShadow: '--metric-shadow',
+  shadowInk: '--shadow-ink',
   focus: '--focus',
   duotoneDark: '--duotone-dark',
   duotoneLight: '--duotone-light',

@@ -1,9 +1,10 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { startTransition, useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
+import { GOTO_EVENT, TURNED_EVENT } from '@/components/Book';
 import type { Theme } from '@/lib/tokens';
 
 type IndexPage = { slug: string; title: string; href: string };
@@ -49,54 +50,38 @@ function readServerTheme(): Theme {
  * own navigation.
  */
 export function IssueIndex({ pages, plainHref }: IssueIndexProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const theme = useSyncExternalStore(subscribeToTheme, readTheme, readServerTheme);
-  const pendingTransition = useRef<(() => void) | null>(null);
 
-  // MOTION-1: hold the view transition open until the destination has
-  // committed, then let it animate. Resolving early cross-fades the old page
-  // against itself.
+  // The rail sits outside the book, so it tracks which page is open rather
+  // than owning it. `replaceState` from the book does not fire a router
+  // update, so the current slug is read from the URL on every turn instead.
+  const [slug, setSlug] = useState<string | null>(null);
+
   useEffect(() => {
-    pendingTransition.current?.();
-    pendingTransition.current = null;
+    const fromUrl = () => {
+      const path = window.location.pathname.replace(/^\//, '');
+      setSlug(path === '' ? null : path);
+    };
+    const fromBook = (event: Event) => {
+      setSlug((event as CustomEvent<{ slug: string | null }>).detail?.slug ?? null);
+    };
+    fromUrl();
+    window.addEventListener('popstate', fromUrl);
+    window.addEventListener(TURNED_EVENT, fromBook);
+    return () => {
+      window.removeEventListener('popstate', fromUrl);
+      window.removeEventListener(TURNED_EVENT, fromBook);
+    };
   }, [pathname]);
 
-  const navigate = useCallback(
-    (href: string) => {
-      if (typeof document.startViewTransition !== 'function') {
-        router.push(href);
-        return;
-      }
-      document.startViewTransition(
-        () =>
-          new Promise<void>((resolve) => {
-            pendingTransition.current = resolve;
-            startTransition(() => router.push(href));
-            // Never leave the document frozen if a navigation stalls.
-            window.setTimeout(() => {
-              pendingTransition.current?.();
-              pendingTransition.current = null;
-            }, 800);
-          }),
-      );
-    },
-    [router],
-  );
-
-  const onLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (
-      event.defaultPrevented ||
-      event.button !== 0 ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey
-    ) {
+  const goto = (event: React.MouseEvent<HTMLAnchorElement>, target: string | null) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
       return;
     }
     event.preventDefault();
-    navigate(href);
+    // The book owns the URL; the rail only asks it to turn.
+    window.dispatchEvent(new CustomEvent(GOTO_EVENT, { detail: { slug: target } }));
   };
 
   const toggleTheme = () => {
@@ -104,7 +89,7 @@ export function IssueIndex({ pages, plainHref }: IssueIndexProps) {
     document.documentElement.dataset.theme = next;
     window.dispatchEvent(new Event(THEME_EVENT));
 
-    // MODE-8: an explicit choice outranks prefers-color-scheme from here on.
+    // MODE-8: an explicit choice outranks any default from here on.
     try {
       localStorage.setItem(THEME_KEY, next);
     } catch {
@@ -112,52 +97,35 @@ export function IssueIndex({ pages, plainHref }: IssueIndexProps) {
     }
 
     // Section 7: the mode is reflected in the URL so a shared link preserves
-    // it. replaceState rather than a router push — this is not a navigation
-    // and should not create a history entry per toggle.
+    // it. replaceState rather than a push — this is not a navigation.
     const url = new URL(window.location.href);
     url.searchParams.set('theme', next);
     window.history.replaceState(null, '', url);
   };
-
-  // ACC-8: arrow keys move page to page.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-
-      const target = event.target as HTMLElement | null;
-      if (target?.isContentEditable) return;
-      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
-
-      const current = pages.findIndex((page) => page.href === pathname);
-      if (current === -1) return;
-
-      const delta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-      if (delta === 0) return;
-
-      const next = pages[current + delta];
-      if (!next) return;
-
-      event.preventDefault();
-      navigate(next.href);
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [pages, pathname, navigate]);
 
   return (
     <nav className="issue-index" aria-label="Issue index">
       <div className="issue-index-inner">
         <span className="issue-index-label">Issue index</span>
 
+        <Link
+          href="/"
+          className="index-link"
+          data-current={slug === null || undefined}
+          aria-current={slug === null ? 'page' : undefined}
+          onClick={(event) => goto(event, null)}
+        >
+          Cover
+        </Link>
+
         {pages.map((page) => (
           <Link
             key={page.slug}
-            href={page.href}
+            href={`/${page.slug}`}
             className="index-link"
-            data-current={page.href === pathname || undefined}
-            aria-current={page.href === pathname ? 'page' : undefined}
-            onClick={(event) => onLinkClick(event, page.href)}
+            data-current={slug === page.slug || undefined}
+            aria-current={slug === page.slug ? 'page' : undefined}
+            onClick={(event) => goto(event, page.slug)}
           >
             {page.title}
           </Link>

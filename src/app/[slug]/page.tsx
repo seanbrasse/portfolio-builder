@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { ComicPage } from '@/components/ComicPage';
+import { Book } from '@/components/Book';
 import { PageDepth } from '@/components/PageDepth';
 import { getPages, getSettings } from '@/content';
 
@@ -11,9 +11,8 @@ export const dynamicParams = false;
 type RouteParams = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
-  // Every published page is deep-linkable at its own slug, including the first
-  // one — links in old applications should not break because the issue got
-  // reordered. The first page canonicalises to `/`.
+  // Every page is deep-linkable, and opening one opens the book to the spread
+  // it sits on rather than to a different document.
   return getPages().map((page) => ({ slug: page.slug }));
 }
 
@@ -30,11 +29,8 @@ export async function generateMetadata({ params }: RouteParams): Promise<Metadat
   return {
     title: page.title,
     description,
-    alternates: { canonical: index === 0 ? '/' : `/${page.slug}` },
-    openGraph: {
-      title: `${page.title} — ${settings.displayName}`,
-      description,
-    },
+    alternates: { canonical: `/${page.slug}` },
+    openGraph: { title: `${page.title} — ${settings.displayName}`, description },
   };
 }
 
@@ -44,12 +40,10 @@ export default async function IssuePage({ params }: RouteParams) {
   const index = pages.findIndex((page) => page.slug === slug);
   if (index === -1) notFound();
 
-  const page = pages[index];
-
   return (
     <>
-      <ComicPage page={page} pageNumber={index + 1} totalPages={pages.length} />
-      <PageDepth slug={page.slug} pageNumber={index + 1} />
+      <Book pages={pages} initialSlug={slug} />
+      <PageDepth slug={slug} pageNumber={index + 2} />
     </>
   );
 }

@@ -80,8 +80,14 @@ for (const theme of THEMES) {
     });
 
     await page.addStyleTag({
-      content: `*, *::before, *::after { color: transparent !important;
-        -webkit-text-stroke-color: transparent !important; }`,
+      content: `*, *::before, *::after, *::marker {
+          color: transparent !important;
+          -webkit-text-stroke-color: transparent !important;
+          text-shadow: none !important;
+        }
+        /* Markers are painted in the text colour and would read as a glyph's
+           own background. Hiding them by colour keeps the layout identical;
+           list-style none would reflow the page that was just measured. */`,
     });
     await page.waitForTimeout(150);
     const buf = await page.screenshot({ fullPage: false });
