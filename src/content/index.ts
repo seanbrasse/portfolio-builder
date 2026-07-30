@@ -81,12 +81,12 @@ export function getProjects(): Project[] {
 export type ContentProblem = { where: string; problem: string };
 
 /**
- * The field caps from the PRD, checked as a unit test rather than trusted.
+ * The field caps from the PRD, checked rather than trusted.
  *
  * In Phase 2 these same caps live in the admin as character counters
  * (ADMIN-5); until then this is what stops a 300-character summary from
  * silently overflowing a panel. Returns problems rather than throwing so the
- * test can report all of them at once.
+ * caller can report all of them at once.
  */
 export function validateIssue(content: Issue = issue): ContentProblem[] {
   const problems: ContentProblem[] = [];
