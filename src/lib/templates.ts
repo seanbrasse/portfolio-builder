@@ -50,6 +50,14 @@ export const TEMPLATES = {
     rows: 'repeat(3, minmax(200px, auto))',
     slots: ['a', 'b', 'c'],
   },
+  'stack-4': {
+    id: 'stack-4',
+    name: 'Four bands',
+    areas: ['a', 'b', 'c', 'd'],
+    columns: 'minmax(0, 1fr)',
+    rows: 'repeat(4, minmax(200px, auto))',
+    slots: ['a', 'b', 'c', 'd'],
+  },
   'splash-4': {
     id: 'splash-4',
     name: 'Splash four',

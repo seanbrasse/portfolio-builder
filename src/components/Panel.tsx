@@ -39,6 +39,7 @@ export function Panel({
   const showScreen = overrides?.screen !== false;
   const fill = overrides?.fill ?? 'tint';
   const shape = overrides?.shape ?? 'rect';
+  const rays = overrides?.rays === true;
 
   const style = {
     gridArea: slot,
@@ -53,6 +54,7 @@ export function Panel({
       data-accent={accent}
       data-fill={fill}
       data-shape={shape}
+      data-rays={rays || undefined}
       data-interactive={interactive || undefined}
       data-empty={empty || undefined}
     >

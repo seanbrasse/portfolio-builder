@@ -187,7 +187,7 @@ const pages: Issue['pages'] = [
       {
         slot: 'a',
         content: { type: 'metric', ref: 'qbo-merchants' },
-        overrides: { accent: 'b', fill: 'solid', tilt: -0.5 },
+        overrides: { accent: 'b', fill: 'solid', rays: true, tilt: -0.5 },
       },
       {
         slot: 'b',
@@ -206,7 +206,7 @@ const pages: Issue['pages'] = [
     slug: 'work',
     title: 'Work',
     caption: 'FOUR YEARS EARLIER...',
-    templateId: 'stack-3',
+    templateId: 'stack-4',
     status: 'published',
     ogTagline: 'Mailchimp, PayPal, and a ten-year-old defense simulator.',
     sfx: { text: 'SHIP IT!', slot: 'a', rotate: -11 },
@@ -214,6 +214,13 @@ const pages: Issue['pages'] = [
       { slot: 'a', content: { type: 'experience', ref: 'mailchimp' }, overrides: { accent: 'a', tilt: -0.35 } },
       { slot: 'b', content: { type: 'experience', ref: 'paypal' }, overrides: { accent: 'b', shape: 'canted' } },
       { slot: 'c', content: { type: 'experience', ref: 'avarint' }, overrides: { accent: 'c', tilt: 0.35 } },
+      // Professional side projects belong with the professional work, not
+      // filed under nights-and-weekends.
+      {
+        slot: 'd',
+        content: { type: 'project', ref: 'knowledge-engine' },
+        overrides: { accent: 'b', fill: 'solid' },
+      },
     ],
   },
   {
@@ -221,9 +228,9 @@ const pages: Issue['pages'] = [
     slug: 'builds',
     title: 'Builds',
     caption: 'NIGHTS AND WEEKENDS...',
-    templateId: 'splash-4',
+    templateId: 'stack-3',
     status: 'published',
-    ogTagline: 'Four things built to find out whether they could be.',
+    ogTagline: 'Three things built to find out whether they could be.',
     panels: [
       {
         slot: 'a',
@@ -231,12 +238,7 @@ const pages: Issue['pages'] = [
         overrides: { accent: 'a', shape: 'canted' },
       },
       { slot: 'b', content: { type: 'project', ref: 'cadence' }, overrides: { accent: 'b' } },
-      { slot: 'c', content: { type: 'project', ref: 'life-os' }, overrides: { accent: 'c' } },
-      {
-        slot: 'd',
-        content: { type: 'project', ref: 'knowledge-engine' },
-        overrides: { accent: 'b', fill: 'solid', tilt: 0.4 },
-      },
+      { slot: 'c', content: { type: 'project', ref: 'life-os' }, overrides: { accent: 'c', tilt: 0.4 } },
     ],
   },
   {

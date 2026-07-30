@@ -13,18 +13,19 @@
 --------------------------------------------------------------------------- */
 
 @font-face {
-  font-family: 'Bangers';
+  font-family: 'Display';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  /* Subset to the glyphs this site actually sets — 9KB rather than 40KB across
-     two files. Regenerate with fonttools if the content grows a character the
-     subset does not cover; the fallback stack catches anything missing. */
-  src: url('/fonts/bangers.woff2') format('woff2');
+  /* Archivo Black, subset to the glyphs this site sets. Replaced a comic face
+     whose condensed, irregular letterforms were hard to read at the 12-15px
+     the captions and labels run at. A heavy grotesque holds up at every size
+     the page uses and is closer to the reference art anyway. */
+  src: url('/fonts/display.woff2') format('woff2');
 }
 
 :root {
-  --font-display: 'Bangers', Impact, 'Haettenschweiler', 'Arial Black', sans-serif;
+  --font-display: 'Display', 'Arial Black', 'Helvetica Neue', Impact, sans-serif;
   --font-body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
   --font-quote: ui-serif, Georgia, 'Times New Roman', serif;
 
@@ -53,7 +54,7 @@
   --border-ink: 5px;
   --panel-ink: 5px;
   --gutter: 14px;
-  --page-max: 1180px;
+  --page-max: 1440px;
 
   color-scheme: light;
 }
@@ -318,9 +319,9 @@ a {
 
 .panel-title {
   font-family: var(--font-display);
-  font-size: clamp(26px, 4vw, 44px);
-  line-height: 1.02;
-  letter-spacing: 0.01em;
+  font-size: clamp(22px, 2.9vw, 38px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
   margin: 0 0 4px;
   color: var(--ink);
 }
@@ -382,6 +383,35 @@ a {
   padding-top: 14px;
 }
 
+/* An experience band: the copy, and the thing that shipped beside it.
+   Falls back to a single column when there is no media, so a band without a
+   screenshot is not a half-empty two-column layout. */
+.experience-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 26px;
+  width: 100%;
+  height: 100%;
+}
+
+.experience-copy {
+  flex: 1 1 28rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.experience-media {
+  flex: 1 1 22rem;
+  min-width: 0;
+  display: flex;
+}
+
+.experience-media .panel-image-frame {
+  width: 100%;
+  min-height: 200px;
+}
+
 /* Hero: the name lockup, plus the corner box a comic cover carries its issue
    number in. Without a second column a full-width hero is mostly dead paper,
    which reads as an unfinished layout rather than a quiet one. */
@@ -421,8 +451,8 @@ a {
 
 .cover-box-value {
   font-family: var(--font-display);
-  font-size: 19px;
-  line-height: 1.15;
+  font-size: 16px;
+  line-height: 1.2;
   margin: 0 0 12px;
   color: var(--ink);
 }
@@ -493,8 +523,9 @@ a {
    its own, since an outline is not something WCAG gives credit for. */
 .metric-value {
   font-family: var(--font-display);
-  font-size: clamp(46px, 8vw, 82px);
-  line-height: 0.95;
+  font-size: clamp(38px, 5.6vw, 72px);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
   color: var(--ink);
   text-shadow: 3px 3px 0 var(--metric-shadow);
   margin: 0;
@@ -515,6 +546,13 @@ a {
   z-index: 0;
   opacity: 0.28;
   pointer-events: none;
+  /* Opt-in. Three bursting panels in a row is three focal points, which is
+     none — the reference page spends this once. */
+  display: none;
+}
+
+.panel[data-rays='true'] .speed-lines {
+  display: block;
 }
 
 /* ---------------------------------------------------------------------------
@@ -595,13 +633,13 @@ a {
    which lets the rays go nearly opaque — and a starburst breaking out from
    behind the number is the composition the reference page uses anyway. */
 .panel[data-fill='solid'] .speed-lines {
-  opacity: 0.85;
+  opacity: 0.9;
   -webkit-mask-image: radial-gradient(
-    ellipse 58% 52% at 50% 52%,
-    transparent 0 58%,
-    black 100%
+    ellipse 62% 56% at 50% 50%,
+    transparent 0 54%,
+    black 94%
   );
-  mask-image: radial-gradient(ellipse 58% 52% at 50% 52%, transparent 0 58%, black 100%);
+  mask-image: radial-gradient(ellipse 62% 56% at 50% 50%, transparent 0 54%, black 94%);
 }
 
 /* The label gets its own plate rather than sitting on the flat. It is
@@ -624,13 +662,16 @@ a {
   margin-top: 12px;
 }
 
-.panel[data-fill='solid'] .speed-lines line {
-  stroke: var(--accent-c);
-  stroke-width: 5;
+.speed-lines polygon {
+  fill: var(--ink);
 }
 
-.panel[data-fill='solid'][data-accent='c'] .speed-lines line {
-  stroke: var(--ink);
+.panel[data-fill='solid'] .speed-lines polygon {
+  fill: var(--accent-c);
+}
+
+.panel[data-fill='solid'][data-accent='c'] .speed-lines polygon {
+  fill: var(--ink);
 }
 
 /* Speech balloons. The tail is a rotated square rather than an SVG path so it
@@ -741,7 +782,7 @@ a {
   bottom: 10%;
   z-index: 3;
   font-family: var(--font-display);
-  font-size: clamp(34px, 5.5vw, 62px);
+  font-size: clamp(28px, 4vw, 52px);
   color: var(--accent-c);
   -webkit-text-stroke: 3px var(--ink);
   paint-order: stroke fill;

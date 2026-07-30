@@ -26,6 +26,14 @@ export type AssetTreatment = 'duotone' | 'grayscale' | 'none';
 export type Asset = {
   id: string;
   src: string;
+  /**
+   * `video` renders a muted, looping, inline clip — a screen recording of the
+   * thing working, which for shipped product work says more than a still.
+   * Under `prefers-reduced-motion` it does not autoplay and shows controls.
+   */
+  media?: 'image' | 'video';
+  /** Video only: a still shown before the clip loads. */
+  poster?: string;
   /** ACC-2 / MEDIA-3: not optional, at the type level. */
   alt: string;
   width: number;
@@ -62,6 +70,13 @@ export type Experience = {
   /** Max 3, each cap 120. */
   impactBullets: string[];
   logo?: Asset;
+  /**
+   * Screenshots or screen recordings of the shipped work. The first is the
+   * panel's media; the rest are held for a lightbox.
+   */
+  media?: Asset[];
+  /** Anything public — a press link, a docs page, a live surface. */
+  links?: Link[];
 };
 
 export type Project = {
@@ -116,6 +131,8 @@ export type PanelOverrides = {
   fill?: 'tint' | 'solid';
   /** Halftone screen on or off for this panel. */
   screen?: boolean;
+  /** Radiating rays behind the content. One per page at most. */
+  rays?: boolean;
   /** A cut corner, so the page is not a grid of identical boxes. */
   shape?: 'rect' | 'canted';
   /** Degrees of tilt. Small values only — this is a printing skew, not a fan. */

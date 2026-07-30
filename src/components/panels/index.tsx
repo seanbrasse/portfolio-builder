@@ -6,8 +6,10 @@ import {
   getSettings,
   getTestimonial,
 } from '@/content';
-import type { Asset, PanelContent, Project } from '@/content/types';
+import type { Link as ContentLink, PanelContent, Project } from '@/content/types';
 import { availabilityCopy, availabilityLabel, formatRange, isoRange } from '@/lib/format';
+
+import { PanelMedia } from '../PanelMedia';
 
 /**
  * Panel content renderers.
@@ -31,25 +33,15 @@ function TechList({ tech }: { tech: string[] }) {
   );
 }
 
-function ProjectImage({ image }: { image: Asset }) {
-  const { x = 0.5, y = 0.5 } = image.focalPoint ?? {};
+function PanelLinks({ links }: { links: ContentLink[] }) {
+  if (links.length === 0) return null;
   return (
-    <div className="panel-image-frame">
-      {/* Plain <img>: these are decorative-adjacent screenshots inside a fixed
-          panel, and next/image's wrapper fights `object-fit` inside a grid
-          area that is already sized by the template. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        className="panel-image"
-        src={image.src}
-        alt={image.alt}
-        width={image.width}
-        height={image.height}
-        loading="lazy"
-        decoding="async"
-        data-treatment={image.treatment ?? 'duotone'}
-        style={{ objectPosition: `${x * 100}% ${y * 100}%` }}
-      />
+    <div className="panel-links">
+      {links.map((link) => (
+        <a key={link.url} className="panel-link" href={link.url} target="_blank" rel="noreferrer">
+          {link.label} ↗
+        </a>
+      ))}
     </div>
   );
 }
@@ -91,26 +83,40 @@ function ExperiencePanel({ id }: { id: string }) {
   const experience = getExperience(id);
   if (!experience) return null;
 
+  const [cover] = experience.media ?? [];
+  const links = experience.links ?? [];
+
   return (
-    <>
-      <p className="panel-kicker">
-        <time dateTime={isoRange(experience.startDate, experience.endDate)}>
-          {formatRange(experience.startDate, experience.endDate)}
-        </time>
-        {' · '}
-        {experience.location}
-      </p>
-      <h2 className="panel-title">{experience.company}</h2>
-      <p className="panel-subtitle">{experience.role}</p>
-      <p className="panel-prose">{experience.summary}</p>
-      {experience.impactBullets.length > 0 ? (
-        <ul className="panel-bullets">
-          {experience.impactBullets.map((bullet) => (
-            <li key={bullet}>{bullet}</li>
-          ))}
-        </ul>
+    <div className="experience-layout" data-has-media={cover ? 'true' : undefined}>
+      <div className="experience-copy">
+        <p className="panel-kicker">
+          <time dateTime={isoRange(experience.startDate, experience.endDate)}>
+            {formatRange(experience.startDate, experience.endDate)}
+          </time>
+          {' · '}
+          {experience.location}
+        </p>
+        <h2 className="panel-title">{experience.company}</h2>
+        <p className="panel-subtitle">{experience.role}</p>
+        <p className="panel-prose">{experience.summary}</p>
+        {experience.impactBullets.length > 0 ? (
+          <ul className="panel-bullets">
+            {experience.impactBullets.map((bullet) => (
+              <li key={bullet}>{bullet}</li>
+            ))}
+          </ul>
+        ) : null}
+        <PanelLinks links={links} />
+      </div>
+
+      {/* The shipped surface, when there is one to show. Professional work is
+          the part a recruiter most wants to see and least often can. */}
+      {cover ? (
+        <div className="experience-media">
+          <PanelMedia asset={cover} />
+        </div>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -124,26 +130,12 @@ function ProjectPanel({ project }: { project: Project }) {
         {project.context === 'professional' && employer ? `Built at ${employer.company}` : 'Personal'}
       </p>
       <h2 className="panel-title">{project.title}</h2>
-      {cover ? <ProjectImage image={cover} /> : null}
+      {cover ? <PanelMedia asset={cover} /> : null}
       <p className="impact-flag">{project.impact}</p>
       <p className="panel-prose">{project.summary}</p>
       <div className="panel-foot">
         <TechList tech={project.tech} />
-        {project.links.length > 0 ? (
-          <div className="panel-links">
-            {project.links.map((link) => (
-              <a
-                key={link.url}
-                className="panel-link"
-                href={link.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {link.label} ↗
-              </a>
-            ))}
-          </div>
-        ) : null}
+        <PanelLinks links={project.links} />
       </div>
     </>
   );
@@ -172,26 +164,35 @@ function MetricPanel({ id }: { id: string }) {
 
   return (
     <>
-      {/* Radial speed lines. Decorative, so it is inert to assistive tech and
-          the number below is the actual content. */}
+      {/* A starburst, drawn as tapering wedges rather than strokes. Lines of
+          even weight read as scattered bars; wedges that narrow toward the
+          centre read as a burst, which is what the reference page has.
+          Decorative, so it is inert to assistive tech and the number below is
+          the actual content. */}
       <svg
         className="speed-lines"
         viewBox="0 0 100 100"
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMidYMid slice"
         aria-hidden="true"
         focusable="false"
       >
-        {Array.from({ length: 12 }, (_, i) => {
-          const angle = (i / 12) * Math.PI * 2;
+        {Array.from({ length: 14 }, (_, i) => {
+          const step = (Math.PI * 2) / 14;
+          const mid = i * step;
+          // Narrow at the origin, wide at the rim.
+          const inner = 0.06;
+          const outer = 0.34;
+          const point = (angle: number, radius: number) =>
+            `${50 + Math.cos(angle) * radius},${50 + Math.sin(angle) * radius}`;
           return (
-            <line
+            <polygon
               key={i}
-              x1="50"
-              y1="50"
-              x2={50 + Math.cos(angle) * 90}
-              y2={50 + Math.sin(angle) * 90}
-              stroke="var(--ink)"
-              strokeWidth="2.5"
+              points={[
+                point(mid - step * inner, 6),
+                point(mid - step * outer, 95),
+                point(mid + step * outer, 95),
+                point(mid + step * inner, 6),
+              ].join(' ')}
             />
           );
         })}
@@ -282,7 +283,7 @@ export function PanelContentView({ content }: { content: PanelContent }) {
     case 'image': {
       const project = getProjects().find((p) => p.images.some((image) => image.id === content.ref));
       const image = project?.images.find((candidate) => candidate.id === content.ref);
-      return image ? <ProjectImage image={image} /> : null;
+      return image ? <PanelMedia asset={image} /> : null;
     }
     case 'empty':
       return null;
