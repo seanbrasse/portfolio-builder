@@ -4,8 +4,9 @@ with Reserved Font Name "Bangers".
 Licensed under the SIL Open Font License, Version 1.1.
 Full license text: https://openfontlicense.org
 
-This font is bundled here as a placeholder display face. To swap in a
-licensed comic-lettering face (Blambot or otherwise), drop the woff2 files
-into this directory and update the single @font-face block plus the
-`--font-display` custom property in src/app/globals.css. Nothing else in the
-codebase names a font family.
+Bundled here as a placeholder display face, subset to the glyphs this site
+sets. To swap in a licensed comic-lettering face (Blambot or otherwise),
+replace bangers.woff2 here and src/assets/bangers.ttf (the OG image generator
+rasterises through Satori, which cannot read woff2), then update the single
+@font-face block in src/app/globals.css. Nothing else in the codebase names a
+font family.

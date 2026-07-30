@@ -129,9 +129,11 @@ input that could not be derived from a resume.
 3. **A cover page?** No separate cover. The hero panel of page one carries the
    issue number and the corner box, which was the PRD's own suggested compromise
    and keeps an interstitial out of the recruiter's way.
-4. **Display typeface?** Bangers (OFL), self-hosted in `public/fonts`. Swapping
-   in a licensed comic-lettering face means replacing those files and the one
-   `@font-face` block — nothing else in the codebase names a font family.
+4. **Display typeface?** Bangers (OFL), self-hosted and subset to 9KB in
+   `public/fonts`, with a matching TTF in `src/assets` for the OG generator
+   (Satori cannot read woff2). Swapping in a licensed comic-lettering face
+   means replacing those two files and the one `@font-face` block — nothing
+   else in the codebase names a font family.
 5. **Case study depth?** Panel plus external links, per the recommendation.
 6. **Custom domain and cutover.** Still open. Set `NEXT_PUBLIC_SITE_URL` when it
    is decided.
