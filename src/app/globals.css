@@ -709,6 +709,36 @@ main {
   min-height: 200px;
 }
 
+/* The skyline sits behind the whole hero panel, bleeding off the bottom edge
+   the way a background plate would. Ink at low strength: present enough to set
+   the place, quiet enough that the lockup still reads as the subject. */
+.skyline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 62%;
+  z-index: 0;
+  color: var(--ink);
+  opacity: 0.17;
+  pointer-events: none;
+}
+
+.skyline path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.skyline-profile {
+  stroke-width: 4;
+}
+
+.skyline-detail {
+  stroke-width: 2.5;
+}
+
 /* Hero: the name lockup, plus the corner box a comic cover carries its issue
    number in. Without a second column a full-width hero is mostly dead paper,
    which reads as an unfinished layout rather than a quiet one. */
@@ -723,6 +753,8 @@ main {
 }
 
 .hero-lockup {
+  position: relative;
+  z-index: 1;
   flex: 1 1 22rem;
   display: flex;
   flex-direction: column;
@@ -743,6 +775,8 @@ main {
 }
 
 .cover-box {
+  position: relative;
+  z-index: 1;
   flex: 0 1 17rem;
   border: 4px solid var(--ink);
   background: var(--paper);

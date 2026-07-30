@@ -10,6 +10,7 @@ import type { Link as ContentLink, PanelContent, Project } from '@/content/types
 import { availabilityCopy, availabilityLabel, formatRange, isoRange } from '@/lib/format';
 
 import { PanelMedia } from '../PanelMedia';
+import { Skyline } from '../Skyline';
 
 /**
  * Panel content renderers.
@@ -51,6 +52,9 @@ function HeroPanel() {
 
   return (
     <div className="hero-layout">
+      {/* The establishing shot. Sits behind the lockup, not beside it. */}
+      <Skyline />
+
       <div className="hero-lockup">
         <p className="panel-kicker">Issue {settings.issueNumber}</p>
         {/* The page's h1 sits above this in the DOM and carries the name

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties } from 'react';
 
 import type { Page } from '@/content/types';
@@ -18,17 +18,51 @@ type BookProps = {
   initialSlug: string | null;
 };
 
+const NARROW = '(max-width: 899px)';
+
+function subscribeToWidth(onChange: () => void) {
+  const query = window.matchMedia(NARROW);
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+}
+
+/**
+ * Which reading mode we are in is owned by the browser, not by React, so it is
+ * read as an external store rather than synced into state by an effect. The
+ * inner book is keyed on it: crossing the breakpoint is a different book with
+ * a different pagination, and remounting derives the opening position cleanly
+ * instead of correcting it after a paint.
+ */
 export function Book({ pages, initialSlug }: BookProps) {
+  const single = useSyncExternalStore(
+    subscribeToWidth,
+    () => window.matchMedia(NARROW).matches,
+    () => false,
+  );
+
+  return (
+    <BookInner
+      key={single ? 'single' : 'spread'}
+      pages={pages}
+      initialSlug={initialSlug}
+      single={single}
+    />
+  );
+}
+
+function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean }) {
   const leaves = buildLeaves(pages);
   const spreads = buildSpreads(leaves);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
 
-  // `null` until measured, so the book never paints at the wrong size first.
-  const [single, setSingle] = useState<boolean | null>(null);
   const [fit, setFit] = useState(0);
-  const [index, setIndex] = useState(0);
+  // Derived once, at mount, from the URL — the component is remounted when the
+  // mode changes, so there is nothing to re-sync later.
+  const [index, setIndex] = useState(() =>
+    single ? leafIndexForSlug(leaves, initialSlug) : spreadIndexForSlug(spreads, initialSlug),
+  );
   const [turning, setTurning] = useState<'forward' | 'back' | null>(null);
 
   const count = single ? leaves.length : spreads.length;
@@ -44,12 +78,9 @@ export function Book({ pages, initialSlug }: BookProps) {
       const viewport = viewportRef.current;
       if (!viewport) return;
 
-      const isSingle = window.matchMedia('(max-width: 899px)').matches;
-      setSingle(isSingle);
-
       const width = viewport.clientWidth;
       const height = viewport.clientHeight;
-      const stageW = PAGE_W * (isSingle || !spreads[index]?.left ? 1 : 2);
+      const stageW = PAGE_W * pagesWide;
 
       // Contain, never cover: a page that overflowed its box would need
       // scrolling, which is the one thing this format cannot have.
@@ -65,20 +96,7 @@ export function Book({ pages, initialSlug }: BookProps) {
       window.removeEventListener('resize', measure);
     };
     // Re-measures on turn too, because the opening spread is narrower.
-  }, [index]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Open to whatever the URL asked for, once we know which mode we are in, and
-  // re-derive when a resize crosses the breakpoint so the reader stays on the
-  // same content. Adjusted during render rather than in an effect: the value is
-  // derived from props and mode, and an effect would paint the wrong page
-  // first and then correct it.
-  const [derivedFor, setDerivedFor] = useState<boolean | null>(null);
-  if (single !== null && single !== derivedFor) {
-    setDerivedFor(single);
-    setIndex(
-      single ? leafIndexForSlug(leaves, initialSlug) : spreadIndexForSlug(spreads, initialSlug),
-    );
-  }
+  }, [pagesWide]);
 
   const go = useCallback(
     (next: number) => {
@@ -102,7 +120,6 @@ export function Book({ pages, initialSlug }: BookProps) {
   // Keep the URL honest without routing, so a flip is not a page load and the
   // reader can still copy a link to where they are (ACC-8 companion).
   useEffect(() => {
-    if (single === null) return;
     const leaf = single
       ? leaves[index]
       : (spreads[index]?.right ?? spreads[index]?.left ?? null);
@@ -138,7 +155,6 @@ export function Book({ pages, initialSlug }: BookProps) {
   // The rail asks the book to move rather than navigating, so jumping to a
   // page from outside the book is the same motion as turning to it.
   useEffect(() => {
-    if (single === null) return;
     const onGoto = (event: Event) => {
       const slug = (event as CustomEvent<{ slug: string | null }>).detail?.slug ?? null;
       go(single ? leafIndexForSlug(leaves, slug) : spreadIndexForSlug(spreads, slug));
@@ -173,7 +189,7 @@ export function Book({ pages, initialSlug }: BookProps) {
 
   return (
     <div className="book" ref={viewportRef} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      {fit > 0 && single !== null ? (
+      {fit > 0 ? (
         <div
           className="book-stage"
           ref={stageRef}
