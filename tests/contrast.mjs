@@ -51,6 +51,46 @@ for (const theme of THEMES) {
       const out = [];
       const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
       const seen = new Set();
+
+      /**
+       * The rect a reader can actually see, which is not the element's own rect.
+       * Plain view scrolls inside `main`, not the window, so an element below
+       * `main`'s bottom edge is clipped away while still reporting coordinates
+       * inside the viewport. Sampling those coordinates reads whatever is
+       * painted under the scroll container — the rail — and calls it the
+       * element's background.
+       *
+       * Intersecting with every clipping ancestor is what makes the sampled
+       * pixel and the seen pixel the same thing again.
+       */
+      const visibleRect = (el) => {
+        let box = el.getBoundingClientRect();
+        box = {
+          left: box.left,
+          top: box.top,
+          right: box.right,
+          bottom: box.bottom,
+        };
+        for (let p = el.parentElement; p; p = p.parentElement) {
+          const pcs = getComputedStyle(p);
+          const clips =
+            pcs.overflow !== 'visible' ||
+            pcs.overflowX !== 'visible' ||
+            pcs.overflowY !== 'visible';
+          if (!clips) continue;
+          const pr = p.getBoundingClientRect();
+          box.left = Math.max(box.left, pr.left);
+          box.top = Math.max(box.top, pr.top);
+          box.right = Math.min(box.right, pr.right);
+          box.bottom = Math.min(box.bottom, pr.bottom);
+        }
+        box.left = Math.max(box.left, 0);
+        box.top = Math.max(box.top, 0);
+        box.right = Math.min(box.right, innerWidth);
+        box.bottom = Math.min(box.bottom, innerHeight);
+        return box;
+      };
+
       let node;
       while ((node = walk.nextNode())) {
         const text = node.textContent.trim();
@@ -62,8 +102,16 @@ for (const theme of THEMES) {
         if (el.closest('[aria-hidden="true"], .sfx, .sr-only, .skip-link')) continue;
         const cs = getComputedStyle(el);
         if (cs.visibility === 'hidden' || cs.display === 'none') continue;
-        const r = el.getBoundingClientRect();
-        if (r.width < 4 || r.height < 4 || r.bottom < 0 || r.top > innerHeight) continue;
+        const clipped = visibleRect(el);
+        const r = {
+          x: clipped.left,
+          y: clipped.top,
+          width: clipped.right - clipped.left,
+          height: clipped.bottom - clipped.top,
+        };
+        // Anything smaller than this is scrolled off or occluded, so there is
+        // no visible text to measure.
+        if (r.width < 4 || r.height < 4) continue;
         seen.add(el);
         const size = parseFloat(cs.fontSize);
         const weight = parseInt(cs.fontWeight, 10) || 400;
