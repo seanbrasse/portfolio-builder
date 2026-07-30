@@ -147,7 +147,17 @@ export type PanelContent =
   | { type: 'metric'; ref: string }
   | { type: 'cta' }
   | { type: 'image'; ref: string }
-  | { type: 'text'; heading: string; body: string }
+  | {
+      type: 'text';
+      heading: string;
+      body: string;
+      /**
+       * The shape the copy sits in. A comic page does not set every block of
+       * text in the same box: narration goes in a caption, a voice goes in a
+       * balloon. `plain` is the caption case.
+       */
+      blurb?: 'plain' | 'balloon';
+    }
   /** COMP-4: a slot deliberately left quiet. Renders as a blank inked panel. */
   | { type: 'empty' };
 

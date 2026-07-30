@@ -215,7 +215,10 @@ function CtaPanel() {
         {copy.body}
       </p>
       <a className="cta-button" href={`mailto:${settings.contactEmail}`}>
-        Hire me →
+        {/* The label is its own element so it hugs the text rather than the
+            burst's bounding box — the star's notches expose the panel behind,
+            which is decoration, not the glyphs' background. */}
+        <span className="cta-button-label">Hire me →</span>
       </a>
       <ul className="cta-contact">
         <li>
@@ -236,7 +239,26 @@ function CtaPanel() {
   );
 }
 
-function TextPanel({ heading, body }: { heading: string; body: string }) {
+function TextPanel({
+  heading,
+  body,
+  blurb = 'plain',
+}: {
+  heading: string;
+  body: string;
+  blurb?: 'plain' | 'balloon';
+}) {
+  if (blurb === 'balloon') {
+    return (
+      <>
+        <h2 className="panel-title">{heading}</h2>
+        <div className="balloon balloon--blurb">
+          <span className="balloon-quote">{body}</span>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <h2 className="panel-title">{heading}</h2>
@@ -279,7 +301,7 @@ export function PanelContentView({ content }: { content: PanelContent }) {
     case 'cta':
       return <CtaPanel />;
     case 'text':
-      return <TextPanel heading={content.heading} body={content.body} />;
+      return <TextPanel heading={content.heading} body={content.body} blurb={content.blurb} />;
     case 'image': {
       const project = getProjects().find((p) => p.images.some((image) => image.id === content.ref));
       const image = project?.images.find((candidate) => candidate.id === content.ref);
