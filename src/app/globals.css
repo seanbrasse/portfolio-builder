@@ -17,15 +17,19 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  /* Archivo Black, subset to the glyphs this site sets. Replaced a comic face
-     whose condensed, irregular letterforms were hard to read at the 12-15px
-     the captions and labels run at. A heavy grotesque holds up at every size
-     the page uses and is closer to the reference art anyway. */
+  /* Anton, subset to the glyphs this site sets. A condensed poster face: the
+     previous wide grotesque read as horizontally stretched at display sizes,
+     which is the opposite of what a comic headline wants. Small UI labels no
+     longer use this face at all — see `--font-label`. */
   src: url('/fonts/display.woff2') format('woff2');
 }
 
 :root {
-  --font-display: 'Display', 'Arial Black', 'Helvetica Neue', Impact, sans-serif;
+  --font-display: 'Display', Impact, 'Haettenschweiler', 'Arial Narrow Bold', sans-serif;
+  /* Chips, nav, kickers and plates. A heavy condensed display face is built for
+     headlines and gets muddy at 12px; the body face at 700 is simply easier to
+     read, and small caps do not need the personality. */
+  --font-label: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
   --font-body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
   --font-quote: ui-serif, Georgia, 'Times New Roman', serif;
 
@@ -54,7 +58,7 @@
   --border-ink: 5px;
   --panel-ink: 5px;
   --gutter: 14px;
-  --page-max: 1440px;
+  --page-max: min(1760px, 95vw);
 
   color-scheme: light;
 }
@@ -77,6 +81,9 @@ html {
 
 body {
   margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
@@ -96,6 +103,13 @@ body {
 
 a {
   color: inherit;
+}
+
+/* The issue fills the window rather than sitting in the top third of it. */
+main {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .skip-link {
@@ -122,12 +136,17 @@ a {
 
 .issue-shell {
   max-width: var(--page-max);
+  width: 100%;
   margin: 0 auto;
-  padding: 20px 16px 40px;
+  padding: 20px 16px 24px;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .comic-page {
   display: grid;
+  flex: 1 0 auto;
   gap: var(--gutter);
   background: var(--paper);
   border: var(--border-ink) solid var(--ink);
@@ -136,6 +155,7 @@ a {
 
 .page-caption {
   display: inline-block;
+  align-self: flex-start;
   background: var(--accent-c);
   color: var(--on-accent-c);
   border: 3px solid var(--ink);
@@ -207,7 +227,13 @@ a {
 .panel-screen {
   background-image: radial-gradient(var(--screen) 1.3px, transparent 1.4px);
   background-size: 6px 6px;
-  opacity: 0.2;
+  opacity: 0.22;
+  /* Concentrated at the edges and cleared through the middle. A flat screen
+     across the whole panel puts a dot behind every glyph, which is legible by
+     the numbers and still tiring to read. A screen that fades inward is also
+     closer to how a flat was actually laid down. */
+  -webkit-mask-image: radial-gradient(ellipse 78% 74% at 50% 50%, transparent 0 34%, black 88%);
+  mask-image: radial-gradient(ellipse 78% 74% at 50% 50%, transparent 0 34%, black 88%);
 }
 
 /**
@@ -308,7 +334,8 @@ a {
 --------------------------------------------------------------------------- */
 
 .panel-kicker {
-  font-family: var(--font-display);
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -319,7 +346,7 @@ a {
 
 .panel-title {
   font-family: var(--font-display);
-  font-size: clamp(22px, 2.9vw, 38px);
+  font-size: clamp(26px, 3.4vw, 46px);
   line-height: 1.05;
   letter-spacing: -0.01em;
   margin: 0 0 4px;
@@ -335,7 +362,8 @@ a {
    accessibility is the non-negotiable side of that trade. The display face and
    the letterspacing carry the emphasis instead. */
 .panel-subtitle {
-  font-family: var(--font-display);
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 14px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -432,6 +460,19 @@ a {
   justify-content: center;
 }
 
+/* The cover line is the one piece of prose that gets to be large. At the
+   body size it left the widest panel on the site mostly empty. */
+.hero-lockup .panel-prose {
+  font-size: clamp(17px, 1.35vw, 23px);
+  line-height: 1.45;
+  max-width: 34ch;
+  margin-top: 6px;
+}
+
+.hero-lockup .panel-title {
+  font-size: clamp(40px, 5vw, 78px);
+}
+
 .cover-box {
   flex: 0 1 17rem;
   border: 4px solid var(--ink);
@@ -440,7 +481,8 @@ a {
 }
 
 .cover-box-label {
-  font-family: var(--font-display);
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -450,7 +492,8 @@ a {
 }
 
 .cover-box-value {
-  font-family: var(--font-display);
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 16px;
   line-height: 1.2;
   margin: 0 0 12px;
@@ -467,7 +510,8 @@ a {
 }
 
 .tech-list li {
-  font-family: var(--font-display);
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 12px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -496,7 +540,8 @@ a {
 }
 
 .panel-link {
-  font-family: var(--font-display);
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -523,7 +568,7 @@ a {
    its own, since an outline is not something WCAG gives credit for. */
 .metric-value {
   font-family: var(--font-display);
-  font-size: clamp(38px, 5.6vw, 72px);
+  font-size: clamp(44px, 6.4vw, 88px);
   line-height: 0.98;
   letter-spacing: -0.02em;
   color: var(--ink);
@@ -532,7 +577,8 @@ a {
 }
 
 .metric-label {
-  font-family: var(--font-display);
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 15px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -636,10 +682,10 @@ a {
   opacity: 0.9;
   -webkit-mask-image: radial-gradient(
     ellipse 62% 56% at 50% 50%,
-    transparent 0 54%,
-    black 94%
+    transparent 0 50%,
+    black 62%
   );
-  mask-image: radial-gradient(ellipse 62% 56% at 50% 50%, transparent 0 54%, black 94%);
+  mask-image: radial-gradient(ellipse 62% 56% at 50% 50%, transparent 0 50%, black 62%);
 }
 
 /* The label gets its own plate rather than sitting on the flat. It is
@@ -833,7 +879,7 @@ a {
   bottom: 10%;
   z-index: 3;
   font-family: var(--font-display);
-  font-size: clamp(28px, 4vw, 52px);
+  font-size: clamp(32px, 4.4vw, 58px);
   color: var(--accent-c);
   -webkit-text-stroke: 3px var(--ink);
   paint-order: stroke fill;
@@ -1161,9 +1207,11 @@ a {
 --------------------------------------------------------------------------- */
 
 .issue-index {
+  width: 100%;
   max-width: var(--page-max);
   margin: 14px auto 0;
   padding: 0 16px;
+  flex: 0 0 auto;
 }
 
 .issue-index-inner {
@@ -1177,7 +1225,8 @@ a {
 }
 
 .issue-index-label {
-  font-family: var(--font-display);
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 14px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -1186,7 +1235,8 @@ a {
 }
 
 .index-link {
-  font-family: var(--font-display);
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 14px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -1217,7 +1267,8 @@ a {
 }
 
 .mode-button {
-  font-family: var(--font-display);
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
