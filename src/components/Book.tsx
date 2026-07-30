@@ -67,13 +67,18 @@ export function Book({ pages, initialSlug }: BookProps) {
     // Re-measures on turn too, because the opening spread is narrower.
   }, [index]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Open to whatever the URL asked for, once we know which mode we are in.
-  useEffect(() => {
-    if (single === null) return;
-    setIndex(single ? leafIndexForSlug(leaves, initialSlug) : spreadIndexForSlug(spreads, initialSlug));
-    // Re-deriving on mode change keeps the reader on the same content when a
-    // window crosses the breakpoint mid-read.
-  }, [single, initialSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Open to whatever the URL asked for, once we know which mode we are in, and
+  // re-derive when a resize crosses the breakpoint so the reader stays on the
+  // same content. Adjusted during render rather than in an effect: the value is
+  // derived from props and mode, and an effect would paint the wrong page
+  // first and then correct it.
+  const [derivedFor, setDerivedFor] = useState<boolean | null>(null);
+  if (single !== null && single !== derivedFor) {
+    setDerivedFor(single);
+    setIndex(
+      single ? leafIndexForSlug(leaves, initialSlug) : spreadIndexForSlug(spreads, initialSlug),
+    );
+  }
 
   const go = useCallback(
     (next: number) => {
