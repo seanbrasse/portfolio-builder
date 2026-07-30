@@ -705,6 +705,23 @@ a {
   margin: 0;
 }
 
+/* A balloon carrying narration rather than a quote. Same shape language, set
+   in the body face, and the tail points down-left into the panel instead of at
+   an off-panel speaker. */
+.balloon--blurb {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  margin-top: 4px;
+}
+
+.balloon--blurb::after {
+  left: 28px;
+  bottom: -12px;
+  width: 18px;
+  height: 18px;
+}
+
 .balloon-attribution {
   margin: 20px 0 0 12px;
   font-size: 13.5px;
@@ -729,25 +746,59 @@ a {
   color: var(--on-accent);
 }
 
+/* The one action on the site, shaped as a burst rather than a button.
+   `clip-path` cannot take a border, so the ink edge is a second clipped layer
+   underneath scaled up very slightly — the same trick the canted corner uses,
+   applied to a 32-point path. */
 .cta-button {
-  display: inline-block;
-  background: var(--accent-c);
-  color: var(--on-accent-c);
-  border: 4px solid var(--ink);
-  box-shadow: 5px 5px 0 var(--ink);
+  --burst: polygon(
+    50% 0%, 56% 11%, 67% 4%, 68% 17%, 81% 14%, 76% 26%, 90% 29%, 82% 38%,
+    100% 50%, 82% 62%, 90% 71%, 76% 74%, 81% 86%, 68% 83%, 67% 96%, 56% 89%,
+    50% 100%, 44% 89%, 33% 96%, 32% 83%, 19% 86%, 24% 74%, 10% 71%, 18% 62%,
+    0% 50%, 18% 38%, 10% 29%, 24% 26%, 19% 14%, 32% 17%, 33% 4%, 44% 11%
+  );
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 15rem;
+  min-height: 8.5rem;
   padding: 12px 26px;
   font-family: var(--font-display);
   font-size: 20px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   text-decoration: none;
-  transition:
-    transform var(--dur-hover) ease-out,
-    box-shadow var(--dur-hover) ease-out;
+  color: var(--on-accent-c);
+  background: transparent;
+  transition: transform var(--dur-hover) ease-out;
+}
+
+.cta-button::before,
+.cta-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: var(--burst);
+  z-index: -1;
+}
+
+.cta-button::before {
+  background: var(--ink);
+  transform: scale(1.05);
+}
+
+.cta-button::after {
+  background: var(--accent-c);
+}
+
+.cta-button-label {
+  position: relative;
+  z-index: 1;
+  display: block;
+  padding: 2px 6px;
 }
 
 .cta-button:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0 var(--ink);
+  transform: scale(1.04) rotate(-1.5deg);
 }
 
 .cta-contact {

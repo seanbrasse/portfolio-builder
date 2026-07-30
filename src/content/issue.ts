@@ -169,6 +169,7 @@ const pages: Issue['pages'] = [
         content: {
           type: 'text',
           heading: 'The origin story',
+          blurb: 'balloon',
           body: 'Computer science at Buffalo, then a first job modernizing a ten-year-old aerospace defense simulator. Then merchant onboarding at PayPal, then Mailchimp. Every move traded scale of hardware for scale of people — from simulated aircraft to a hundred thousand small businesses touching the same form builder.',
         },
         overrides: { accent: 'a' },
@@ -265,6 +266,7 @@ const pages: Issue['pages'] = [
         content: {
           type: 'text',
           heading: 'How I work',
+          blurb: 'balloon',
           body: 'I tend to write the test suite nobody assigned. At Mailchimp that meant scoping the end-to-end coverage gap across the Forms platform, authoring the first Playwright suite, and mentoring a contract engineer through delivery — 0% to 85%. Shipping is the part after the feature works.',
         },
         overrides: { accent: 'c', shape: 'canted' },
