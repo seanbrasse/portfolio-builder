@@ -111,9 +111,18 @@ driven most of the art direction since:
   3:1, because a ray crossing a glyph sets that glyph's worst-case background.
   Clearing an ellipse removes the overlap instead of trading against it.
 - The metric label sits on its own ink plate, which is one rule that holds for
-  every accent in both themes rather than a gradient retuned per panel.
+  every accent in both themes rather than a gradient retuned per panel. The ray
+  layer sits at `z-index: -1` so the plate is genuinely the thing behind the
+  glyphs: at `0` the rays are a positioned element and paint *above* the in-flow
+  label, putting gold back on top of the plate meant to keep it off.
 
-288 text elements now pass AA in both themes.
+The audit measures what is visible, which is not the same as an element's own
+rect. Boxes are intersected with every clipping ancestor first — plain view
+scrolls inside `main`, so an element past that container's edge still reports
+coordinates inside the viewport, and sampling them reads the rail painted
+underneath rather than the text.
+
+440 text elements now pass AA in both themes.
 
 ```bash
 npm run build && npm start &

@@ -892,7 +892,13 @@ main {
 .speed-lines {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  /* Negative, and the sign matters. At z-index 0 this is a positioned element,
+     so it paints above the in-flow lettering beside it — including the ink
+     plate behind the metric label, which meant the rays landed on top of the
+     very thing meant to protect that label. Negative puts the layer behind
+     in-flow content while still above `.panel-body`'s own transparent
+     background, so it stays over the panel's flat and under every glyph. */
+  z-index: -1;
   opacity: 0.28;
   pointer-events: none;
   /* Opt-in. Three bursting panels in a row is three focal points, which is
