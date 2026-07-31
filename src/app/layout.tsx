@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 
-import { SiteHeader } from '@/components/SiteHeader';
 import { ThemeScript } from '@/components/ThemeScript';
 import { getSettings } from '@/content';
 import { PALETTES, themeStylesheet } from '@/lib/tokens';
@@ -62,8 +61,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <a className="skip-link" href="#main">
           Skip to content
         </a>
-
-        <SiteHeader name={settings.displayName} />
 
         <main id="main">{children}</main>
 

@@ -146,7 +146,7 @@ for (const theme of THEMES) {
     // The sticky header would otherwise be captured floating over whatever it
     // happened to be scrolled past, painting its own background across text it
     // does not actually cover in the reader's view.
-    await page.addStyleTag({ content: '.site-header { position: static !important; }' });
+    // The sticky header is gone; nothing needs pinning for a full-page capture.
 
     await page.addStyleTag({
       content: `*, *::before, *::after, *::marker {
