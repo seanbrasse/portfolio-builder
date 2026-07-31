@@ -241,7 +241,6 @@ a:hover {
     flex-direction: column;
   }
 
-  .site-header,
   .site-footer {
     flex: none;
   }
@@ -258,6 +257,19 @@ a:hover {
   .carousel-stage {
     --locked: 1;
   }
+}
+
+/* The toggle hangs off this block, top right, so it starts on the same line
+   the title does without either of them knowing the other's padding. */
+.intro {
+  position: relative;
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 5;
 }
 
 .intro h1 {
@@ -357,30 +369,6 @@ a:hover {
 
 /* Header ------------------------------------------------------------------ */
 
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: color-mix(in srgb, var(--paper) 82%, transparent);
-  backdrop-filter: blur(12px);
-}
-
-.site-header-inner {
-  max-width: var(--page-max);
-  margin: 0 auto;
-  padding: 18px var(--gutter);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.site-mark {
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-  text-decoration: none;
-}
 
 .site-nav {
   display: flex;
@@ -707,6 +695,17 @@ a:hover {
   border-bottom: 1px solid var(--rule);
 }
 
+/* In the dialog, an empty well is capped. The 16:9 ratio exists so a real
+   screenshot is never letterboxed; a placeholder has no shape to preserve, and
+   at the dialog's width the honest ratio gives 585px of "no screenshot yet"
+   above two paragraphs of actual content. Only ever hit while a project has no
+   image — the moment one is uploaded, `.project-shot` renders instead and this
+   rule stops applying. */
+.dialog .project-shot-empty {
+  aspect-ratio: auto;
+  height: clamp(160px, 26vh, 260px);
+}
+
 .project-shot-empty {
   aspect-ratio: 16 / 9;
   flex: none;
@@ -799,11 +798,16 @@ a:hover {
   overflow: hidden;
 }
 
-/* Not on the one-screen card. Summary, tech and the link all have to fit in
-   the height the carousel gets, and the summary says what the thing is while
-   the impact says how it went — someone who does not yet know the first cannot
-   use the second. It renders wherever the card has room. */
-.screen .project-impact {
+/* Not on the carousel card. Summary, tech and the link all have to fit in the
+   height the carousel gets, and the summary says what the thing is while the
+   impact says how it went — someone who does not yet know the first cannot use
+   the second.
+
+   Scoped to the card, not to `.screen`. The dialog is rendered inside `.screen`
+   too, so the broader selector was hiding this in the one place that exists to
+   show it — the modal was dropping the impact and the tech row it is supposed
+   to carry in full. */
+.project-card .project-impact {
   display: none;
 }
 
@@ -828,16 +832,15 @@ a:hover {
 
 /* Not on the carousel card. The card is the poster — image, company, title,
    one line of what it is — and clicking it opens a dialog that carries the
-   tech, the impact and the links in full. Before the dialog existed the card
-   had to be the whole record; now it does not, and on a page that cannot
-   scroll that is worth taking. */
-.screen .tech-row {
+   tech, the impact and the links in full. Same scoping fix as above. */
+.project-card .tech-row {
   display: none;
 }
 
-/* Four chips, not the whole stack. The list wrapping to three rows was the
-   biggest consumer of card height, and it pushed the summary out of frame. */
-.tech-row li:nth-child(n + 5) {
+/* Four chips, not the whole stack — on the card. The list wrapping to three
+   rows was the biggest consumer of card height. The dialog has the room and
+   shows every one. */
+.project-card .tech-row li:nth-child(n + 5) {
   display: none;
 }
 
@@ -1036,9 +1039,9 @@ a:hover {
 /* Print ------------------------------------------------------------------- */
 
 @media print {
-  .site-header,
   .site-footer,
-  .carousel-controls {
+  .carousel-controls,
+  .theme-toggle {
     display: none;
   }
 
@@ -1116,13 +1119,24 @@ a:hover {
   margin: 0 auto;
 }
 
+/* Left and width come from the component, because the rule is drawn in two
+   pieces: the scale changes at the first job, and the compressed stretch
+   before it is drawn fainter so the change is visible rather than implied. */
 .timeline-rule {
   position: absolute;
-  left: 0;
-  right: 0;
   top: var(--stack);
   height: 1px;
   background: var(--rule-strong);
+}
+
+.timeline-rule-lead {
+  background: var(--rule);
+}
+
+/* A year the line has no room for. Hidden rather than removed, so the next
+   measurement can put it back when the window grows. */
+.timeline-year[data-crowded] {
+  visibility: hidden;
 }
 
 .timeline-year {
@@ -1282,13 +1296,18 @@ a:hover {
   border: 0;
   padding: 0;
   background: transparent;
-  max-width: min(560px, calc(100vw - 32px));
+  /* Bigger than the card it opened from — the card reaches 637px, and a
+     dialog narrower than that reads as a step backwards rather than a step
+     in. The `100vw` term is what makes one expression serve a phone too:
+     there it is the viewport less a margin, and the modal is near full width
+     because that is the whole screen there is. */
+  max-width: min(1040px, calc(100vw - 32px));
   max-height: calc(100dvh - 48px);
   color: var(--ink);
 }
 
 .dialog[data-wide] {
-  max-width: min(880px, calc(100vw - 32px));
+  max-width: min(1240px, calc(100vw - 32px));
 }
 
 .dialog::backdrop {
@@ -1500,8 +1519,17 @@ a:hover {
     justify-content: flex-start;
   }
 
+  /* In the content column, not full-bleed.
+     The desktop timeline is pulled out to the viewport with a negative
+     margin-left; restating `margin` as a shorthand here reset that to zero
+     while leaving `width: 100vw` in place, so the line started at the gutter
+     and ran 20px off the right edge. On a phone a rule that ignores the
+     gutter buys nothing anyway — lining it up with the text is symmetric by
+     construction rather than by arithmetic. */
   .timeline {
+    width: auto;
     margin: clamp(10px, 3vw, 20px) 0 8px;
+    padding-inline: 0;
   }
 
   /* The cards past the third are laid out and transparent, not absent, so they
@@ -1536,13 +1564,6 @@ a:hover {
     display: none;
   }
 
-  /* Room for the ends. The newest project sits at 100% of the line and the
-     cursor is centred on it, so it half-overhangs whatever the line is inset
-     by — at this width the gutter alone left it clipped by the viewport edge. */
-  .timeline {
-    padding-inline: calc(var(--gutter) + 10px);
-  }
-
   .timeline-year {
     font-size: 9px;
     letter-spacing: 0.04em;
@@ -1550,6 +1571,22 @@ a:hover {
 
   .timeline-now {
     font-size: 12px;
+  }
+
+  /* Smaller chips. Eight of them at desktop size take two rows and 74px of a
+     screen that has to hold a name, a timeline and a card as well. */
+  .skills li {
+    font-size: 12px;
+    padding: 3px 9px;
+  }
+
+  .skills {
+    gap: 6px;
+  }
+
+  .intro-skills-label {
+    margin-top: clamp(14px, 2.4vh, 22px);
+    margin-bottom: 10px;
   }
 
   /* The mark on its own line above the links, rather than wedged beside them
@@ -1562,6 +1599,45 @@ a:hover {
 
   .footer-fine {
     margin-left: 0;
+    font-size: 11px;
+  }
+
+  /* One tight block instead of three loose ones. The mark sits inline with the
+     links rather than claiming a row of its own, and the copyright closes it
+     out — 158px of footer on a 844px screen was a quarter of the page spent
+     on the least important thing on it. */
+  .site-footer {
+    padding-block: 0 16px;
+  }
+
+  .site-footer-inner {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px 14px;
+  }
+
+  /* Gone. It is decorative and `aria-hidden`, the name is spelled out in the
+     copyright line right below it, and as a flex item it was wide enough to
+     push every link onto a second row — a monogram costing a line of contact
+     details is a bad trade on a phone. */
+  .footer-mark {
+    display: none;
+  }
+
+  .footer-col ul {
+    gap: 4px 14px;
+  }
+
+  /* One row, not two. Tracking is what pushed "Résumé" onto a line of its own —
+     letter-spacing on four short uppercase labels costs more width than the
+     labels gain from it at this size. */
+  .footer-col a {
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+
+  .footer-col ul {
+    gap: 4px 12px;
   }
 
   .gallery-grid {

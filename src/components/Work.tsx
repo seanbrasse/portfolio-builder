@@ -203,10 +203,13 @@ export function Work({
      * couple of pixels nothing is written, no resize fires, and it settles.
      */
     const region = node.closest<HTMLElement>('.work');
-    const label = region?.querySelector<HTMLElement>('.section-label');
+    // The timeline, not the heading. The heading is screen-reader-only now, so
+    // it is out of flow and its top is not where the block's content starts —
+    // anchoring on it would count the block's own slack as chrome.
+    const head = region?.querySelector<HTMLElement>('.timeline');
 
     const fit = () => {
-      if (!region || !label) return;
+      if (!region || !head) return;
 
       const chrome = body ? body.offsetHeight : 96;
 
@@ -219,14 +222,14 @@ export function Work({
        * anything here — subtract the parts of it that are not the stage and
        * what is left is the stage's budget.
        *
-       * Measured from the label down and from the region's bottom up, never
+       * Measured from the timeline down and from the region's bottom up, never
        * from the region's top. The block is bottom-aligned, so the space above
-       * the label is slack, and counting it as chrome would shrink the card to
-       * make room for the emptiness the shrinking creates.
+       * it is slack, and counting that as chrome would shrink the card to make
+       * room for the emptiness the shrinking creates.
        */
       const regionBox = region.getBoundingClientRect();
       const stageBox = node.getBoundingClientRect();
-      const above = stageBox.top - label.getBoundingClientRect().top;
+      const above = stageBox.top - head.getBoundingClientRect().top;
       const below = regionBox.bottom - stageBox.bottom;
 
       // A little back, so a rounding error cannot put the card over the edge.
@@ -581,6 +584,9 @@ type Geometry = ReturnType<typeof timelineGeometry>;
 /** The least whitespace two labels on the line may sit apart. */
 const GUTTER = 20;
 
+/** The same, for year ticks, which are shorter and can sit closer. */
+const YEAR_GAP = 10;
+
 /** Months since epoch, for placing a date on a line. */
 function monthsOf(iso: string) {
   const [year, month] = iso.split('-').map(Number);
@@ -607,17 +613,50 @@ function timelineGeometry(
     ...projects.map((project) => monthsOf(project.date)),
     ...experiences.map((item) => monthsOf(item.endDate ?? item.startDate)),
   );
-  const span = Math.max(max - min, 1);
-  const at = (iso: string) => ((monthsOf(iso) - min) / span) * 100;
-
-  const years = [];
-  for (let year = Math.ceil(min / 12); year * 12 <= max; year += 1) {
-    years.push({ year, left: ((year * 12 - min) / span) * 100 });
-  }
 
   const ordered = [...experiences].sort((a, b) => a.startDate.localeCompare(b.startDate));
 
+  /**
+   * The line is not to scale, on purpose.
+   *
+   * Four years of a degree and five years of work are almost the same length in
+   * months, so an honest axis spends nearly half its width on a stretch with
+   * one mark on it — and crams every job, every project and the cursor's whole
+   * useful travel into the other half. The line is meant to show a career, and
+   * the years before it started are context rather than subject.
+   *
+   * So the scale breaks once, at the first job. Everything before it shares
+   * `LEAD` percent; everything after shares the rest. Both halves stay linear,
+   * which keeps the mapping monotonic and reversible — this is a different
+   * scale, not a scrambled one, and a reader can still tell that later is
+   * further right.
+   *
+   * The break is signposted rather than hidden: the lead is drawn in a lighter
+   * rule, and the year ticks that no longer fit are dropped instead of being
+   * allowed to overprint each other. Bunched years under a faint rule read as
+   * "compressed", which is what has happened.
+   */
+  const LEAD = 18;
+  const careerStart = ordered.length > 0 ? monthsOf(ordered[0].startDate) : min;
+  const runway = Math.max(careerStart - min, 1);
+  const career = Math.max(max - careerStart, 1);
+
+  const place = (t: number) =>
+    t <= careerStart
+      ? ((t - min) / runway) * LEAD
+      : LEAD + ((t - careerStart) / career) * (100 - LEAD);
+
+  const at = (iso: string) => place(monthsOf(iso));
+
+  const years = [];
+  for (let year = Math.ceil(min / 12); year * 12 <= max; year += 1) {
+    years.push({ year, left: place(year * 12) });
+  }
+
   return {
+    /** Where the scale changes, as a percentage. The rule is drawn in two
+     *  pieces so the compressed stretch can be shown as one. */
+    lead: LEAD,
     ticks: years,
     // The degree is a join like any other as far as the line is concerned: a
     // tick where something started. It is first because it started first.
@@ -730,6 +769,31 @@ function Timeline({
 
       node.style.setProperty('--rows', String(edges.length));
       node.style.setProperty('--row-h', `${Math.ceil(tallest) + 4}px`);
+
+      /**
+       * Years, thinned.
+       *
+       * The warp crushes the pre-career years together — four of them into
+       * eighteen percent of the line — and four labels in fifty pixels is not a
+       * scale, it is a smudge. Any year that would collide with the last one
+       * kept is dropped, left to right, so what survives is a legible sample
+       * that gets denser where the line has room.
+       *
+       * Measured in three passes rather than one: everything is un-hidden
+       * first, then every box is read, then the decisions are written. Reading
+       * and writing in the same loop would measure some of them against the
+       * layout the earlier ones had already changed.
+       */
+      const years = [...node.querySelectorAll<HTMLElement>('.timeline-year')];
+      for (const year of years) year.removeAttribute('data-crowded');
+
+      const boxes = years.map((year) => year.getBoundingClientRect());
+      let occupied = -Infinity;
+
+      years.forEach((year, index) => {
+        if (boxes[index].left < occupied + YEAR_GAP) year.setAttribute('data-crowded', '');
+        else occupied = boxes[index].right;
+      });
     };
 
     stack();
@@ -743,7 +807,16 @@ function Timeline({
       {/* Decoration. The same facts follow as a dated list, because a position
           on a line is not information anyone can hear. */}
       <div className="timeline-track" ref={track} aria-hidden="true">
-        <span className="timeline-rule" />
+        {/* Two pieces, because the scale changes between them. The lighter one
+            covers the years before the first job, which are compressed. */}
+        <span
+          className="timeline-rule timeline-rule-lead"
+          style={{ left: 0, width: `${geometry.lead}%` }}
+        />
+        <span
+          className="timeline-rule"
+          style={{ left: `${geometry.lead}%`, width: `${100 - geometry.lead}%` }}
+        />
 
         {geometry.ticks.map((tick) => (
           <span key={tick.year} className="timeline-year" style={{ left: `${tick.left}%` }}>

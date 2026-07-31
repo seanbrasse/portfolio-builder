@@ -1,3 +1,4 @@
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { Work } from '@/components/Work';
 import { getExperiences, getProjects, getSettings } from '@/content';
 import { personSchema } from '@/lib/schema';
@@ -34,6 +35,13 @@ export default async function Home() {
 
       <div className="screen">
         <div className="intro">
+          {/* In the intro rather than in a bar of its own. A header whose only
+              content was the name, sitting directly above an h1 of the name,
+              was saying it twice — and taking a strip of a screen that cannot
+              scroll to do it. Anchored to this block, the control lines up with
+              the title by construction rather than by matching two paddings. */}
+          <ThemeToggle />
+
           <h1>{settings.displayName}</h1>
           <p className="intro-role">Software Engineer · {settings.location}</p>
           <p className="intro-tagline">{settings.tagline}</p>
@@ -47,7 +55,11 @@ export default async function Home() {
         </div>
 
         <section className="work" aria-labelledby="work-label">
-          <h2 className="section-label" id="work-label">
+          {/* Named, not shown. The carousel is the only thing in this half of
+              the page, so a label over it was telling the reader what they were
+              already looking at — but the section still needs a name, or the
+              landmark is an unlabelled region. */}
+          <h2 className="sr-only" id="work-label">
             Selected work
           </h2>
           <Work projects={projects} experiences={experiences} education={settings.education} />

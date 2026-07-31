@@ -22,7 +22,7 @@ function readTheme(): Theme {
   return document.documentElement.dataset.theme === 'light' ? 'light' : DEFAULT_THEME;
 }
 
-export function SiteHeader({ name }: { name: string }) {
+export function ThemeToggle() {
   // The server has no document, so it renders the default. The script has
   // already corrected the attribute by the time this hydrates.
   const theme = useSyncExternalStore(subscribe, readTheme, () => DEFAULT_THEME);
@@ -38,22 +38,14 @@ export function SiteHeader({ name }: { name: string }) {
   }, [theme]);
 
   return (
-    <header className="site-header">
-      <div className="site-header-inner">
-        <a className="site-mark" href="#top">
-          {name}
-        </a>
-
-        <button
-          type="button"
-          className="theme-toggle"
-          onClick={toggle}
-          aria-pressed={theme === 'dark'}
-        >
-          <span className="theme-toggle-dot" aria-hidden="true" />
-          {theme === 'dark' ? 'Dark' : 'Light'}
-        </button>
-      </div>
-    </header>
+    <button
+      type="button"
+      className="theme-toggle"
+      onClick={toggle}
+      aria-pressed={theme === 'dark'}
+    >
+      <span className="theme-toggle-dot" aria-hidden="true" />
+      {theme === 'dark' ? 'Dark' : 'Light'}
+    </button>
   );
 }
