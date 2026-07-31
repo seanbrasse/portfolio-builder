@@ -209,6 +209,14 @@ function MetricPanel({ id }: { id: string }) {
   );
 }
 
+/**
+ * A panel that is a picture. Full bleed inside its own borders — an
+ * establishing shot has no margin, it is the whole frame.
+ */
+function ArtPanel({ art }: { art: 'skyline' }) {
+  return <div className="art-panel-inner">{art === 'skyline' ? <Skyline /> : null}</div>;
+}
+
 function CtaPanel() {
   const settings = getSettings();
   const copy = availabilityCopy(settings.availabilityStatus, settings);
@@ -313,6 +321,8 @@ export function PanelContentView({ content }: { content: PanelContent }) {
       const image = project?.images.find((candidate) => candidate.id === content.ref);
       return image ? <PanelMedia asset={image} /> : null;
     }
+    case 'art':
+      return <ArtPanel art={content.art} />;
     case 'empty':
       return null;
   }

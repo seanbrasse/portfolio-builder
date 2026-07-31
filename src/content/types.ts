@@ -156,11 +156,11 @@ export type PanelOverrides = {
    * makes a page read as laid out rather than tabulated.
    *
    * `canted` cuts one corner. `lean-l` / `lean-r` make the panel a
-   * parallelogram, which suits a tall panel. `slope-t` / `slope-b` tilt a
-   * single edge — pair them on adjacent bands and the gutter between the two
-   * runs diagonally, which is the point of the whole vocabulary.
+   * parallelogram, which suits a tall panel. `band-up` / `band-down` slant a
+   * wide band — both edges the same way, so the band keeps its full height and
+   * a run of them leaves parallel diagonal gutters.
    */
-  shape?: 'rect' | 'canted' | 'lean-l' | 'lean-r' | 'slope-t' | 'slope-b';
+  shape?: 'rect' | 'canted' | 'lean-l' | 'lean-r' | 'band-up' | 'band-down';
   /** Degrees of tilt. Small values only — this is a printing skew, not a fan. */
   tilt?: number;
   /**
@@ -189,6 +189,15 @@ export type PanelContent =
        */
       blurb?: 'plain' | 'balloon';
     }
+  /**
+   * An establishing shot: a panel that carries a drawing rather than copy.
+   *
+   * This is the slot a figure goes in once one exists. Until then it holds the
+   * skyline, so the composition the reference calls for — one big image beside
+   * a stack of text panels — is the real composition and not a blank box
+   * waiting for art.
+   */
+  | { type: 'art'; art: 'skyline' }
   /** COMP-4: a slot deliberately left quiet. Renders as a blank inked panel. */
   | { type: 'empty' };
 

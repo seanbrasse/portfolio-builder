@@ -68,18 +68,20 @@ export const TEMPLATES = {
     slots: ['a', 'b', 'c', 'd'],
   },
   /**
-   * A tall panel down one side with the rest stacked beside it — the shape a
-   * comic reaches for when one image has to carry the page. The splash is the
-   * narrower track on purpose: a tall panel reads as large from its height, and
-   * giving it the wider column as well leaves the stack too cramped to letter.
+   * A tall panel down one side with three stacked beside it.
+   *
+   * The splash carries an image rather than copy — that is what it is for, and
+   * it is the natural home for a figure once one exists. It takes the narrower
+   * track on purpose: a tall panel reads as large from its height, and giving
+   * it the wider column as well leaves the stack too cramped to letter.
    */
   'splash-side': {
     id: 'splash-side',
-    name: 'Splash and stack',
-    areas: ['splash a', 'splash b'],
-    columns: '0.92fr 1.22fr',
-    rows: '1.08fr 0.94fr',
-    slots: ['splash', 'a', 'b'],
+    name: 'Splash and three',
+    areas: ['splash a', 'splash b', 'splash c'],
+    columns: '0.88fr 1.26fr',
+    rows: '1.04fr 1.0fr 0.96fr',
+    slots: ['splash', 'a', 'b', 'c'],
   },
   'splash-4': {
     id: 'splash-4',

@@ -48,9 +48,12 @@
   --dur-hover: 140ms;
   --dur-page: 280ms;
 
-  --border-ink: 5px;
-  --panel-ink: 4px;
-  --gutter: 11px;
+  /* Thin. A 4px slab on every panel and an 11px margin all round is a
+     newsprint convention from a specific decade; a page laid out now runs its
+     panels to the paper edge with a hairline gutter between them. */
+  --border-ink: 3px;
+  --panel-ink: 2px;
+  --gutter: 7px;
   --page-max: min(1760px, 95vw);
 
   color-scheme: light;
@@ -196,7 +199,10 @@ main {
   overflow: hidden;
   background: var(--paper);
   border: var(--border-ink) solid var(--ink);
-  padding: var(--gutter);
+  /* No margin. Panels run to the paper's edge — a page that frames its grid in
+     a band of blank stock is doing a newsprint thing, and full bleed is most
+     of what separates a page laid out now from one laid out in 1994. */
+  padding: 0;
   display: flex;
   flex-direction: column;
   box-shadow: 0 18px 40px rgb(0 0 0 / 22%);
@@ -428,14 +434,19 @@ main {
   background: var(--paper);
 }
 
+/* The caption box sits *on* the art rather than above it, which is where a
+   comic has always put it — and with the page full bleed there is no longer a
+   band of blank stock for it to sit in. */
 .page-caption {
-  display: inline-block;
-  align-self: flex-start;
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 4;
+  margin: 0;
   background: var(--accent-c);
   color: var(--on-accent-c);
-  border: 3px solid var(--ink);
-  padding: 6px 12px;
-  margin-bottom: 12px;
+  border: 2px solid var(--ink);
+  padding: 5px 11px;
   font-family: var(--font-display);
   font-size: 15px;
   letter-spacing: 0.07em;
@@ -618,39 +629,34 @@ main {
   --shape: polygon(0 0, calc(100% - var(--lean)) 0, 100% 100%, var(--lean) 100%);
 }
 
-/* A single sloped edge, for wide bands.
+/* Slanted bands.
  *
- * Sloping both edges of a band — which is what a wedge does — takes height off
- * the top *and* the bottom of a panel that is already only a sixth of the page
- * tall, and clips the last line of copy at both ends. Sloping one edge costs
- * half as much and buys the same thing: pair `slope-b` on one band with
- * `slope-t` on the next and the gutter between them runs diagonally, which is
- * the effect the whole shape vocabulary exists for. */
-.panel[data-shape='slope-b'] {
-  --slope: 18px;
-  --shape: polygon(0 0, 100% 0, 100% calc(100% - var(--slope)), 0 100%);
+ * Both edges slope the same way, which is the whole trick: the band is a
+ * parallelogram, so its vertical extent is identical at every x and it loses
+ * no height to the slant. Give a run of bands the same shape and every gutter
+ * between them is a parallel diagonal, which is what a modern page does with a
+ * stack of horizontals.
+ *
+ * The first attempt sloped one edge only, and before that both edges in
+ * opposite directions. Opposite edges taper the band and clip its last line at
+ * both ends; a single edge costs half as much and still costs. Parallel edges
+ * cost nothing, so the slant can be bold enough to actually read.
+ */
+.panel[data-shape='band-up'] {
+  --slope: 30px;
+  --shape: polygon(0 var(--slope), 100% 0, 100% calc(100% - var(--slope)), 0 100%);
 }
 
-.panel[data-shape='slope-t'] {
-  --slope: 18px;
-  --shape: polygon(0 var(--slope), 100% 0, 100% 100%, 0 100%);
+.panel[data-shape='band-down'] {
+  --slope: 30px;
+  --shape: polygon(0 0, 100% var(--slope), 100% 100%, 0 calc(100% - var(--slope)));
 }
 
-/* A leaning panel's copy has to clear the slant or the first character of
-   every line disappears under the edge. */
-.panel[data-shape='lean-r'] .panel-body,
-.panel[data-shape='lean-l'] .panel-body {
-  padding-left: calc(18px + var(--lean));
-  padding-right: calc(18px + var(--lean));
-}
-
-/* Only the sloped edge needs the clearance. */
-.panel[data-shape='slope-b'] .panel-body {
-  padding-bottom: calc(16px + var(--slope));
-}
-
-.panel[data-shape='slope-t'] .panel-body {
-  padding-top: calc(16px + var(--slope));
+/* Half the slant at each end, because that is all a parallel band takes. */
+.panel[data-shape='band-up'] .panel-body,
+.panel[data-shape='band-down'] .panel-body {
+  padding-top: calc(16px + var(--slope) / 2);
+  padding-bottom: calc(16px + var(--slope) / 2);
 }
 
 .panel-fill,
@@ -683,9 +689,13 @@ main {
 /* The halftone. Never above 0.3 — past that it stops reading as a printing
    artifact and starts reading as a texture overlay. */
 .panel-screen {
-  background-image: radial-gradient(var(--screen) 1.3px, transparent 1.4px);
-  background-size: 6px 6px;
-  opacity: 0.22;
+  /* Finer and fainter than it was. The dots stay — they are the paper's
+     texture and worth keeping — but at a 6px pitch they read as Ben-Day, which
+     dates the page to the decade this is trying not to look like. At 3.5px
+     they read as print grain. */
+  background-image: radial-gradient(var(--screen) 0.8px, transparent 0.9px);
+  background-size: 3.5px 3.5px;
+  opacity: 0.16;
   /* Concentrated at the edges and cleared through the middle. A flat screen
      across the whole panel puts a dot behind every glyph, which is legible by
      the numbers and still tiring to read. A screen that fades inward is also
@@ -1790,4 +1800,41 @@ main {
 .breakout[data-kind='skyline-band'] .skyline {
   position: static;
   opacity: 1;
+}
+
+/* The caption sits on the first panel, so that panel's copy starts under it.
+   Slots are emitted in reading order, so the first panel is always the one the
+   caption lands on. An art panel is exempt — a drawing is what a caption box is
+   meant to sit on. */
+.comic-page > .panel:first-of-type .panel-body {
+  padding-top: 52px;
+}
+
+.comic-page > .panel:first-of-type:has(.art-panel-inner) .panel-body {
+  padding-top: 0;
+}
+
+/* An establishing-shot panel: the drawing is the panel, so it runs to the
+   inked edge rather than sitting inside the body's padding. */
+.art-panel-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.art-panel-inner .skyline {
+  position: static;
+  /* A crop, not the whole drawing. The skyline is 3.75:1 and the splash is
+     roughly 1:2 — dropped in at full width it is a 90px strip at the foot of an
+     800px panel, which reads as a mistake rather than as an establishing shot.
+     Magnified and centred, the panel holds a slice of city. */
+  width: 250%;
+  margin-left: -75%;
+  opacity: 0.6;
+}
+
+.panel:has(.art-panel-inner) .panel-body {
+  padding: 0;
 }
