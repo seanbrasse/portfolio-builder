@@ -35,6 +35,7 @@ export function Work({
   const [detail, setDetail] = useState<Project | null>(null);
   const [gallery, setGallery] = useState(false);
   const drag = useRef<{ x: number; from: number } | null>(null);
+  const dragged = useRef(false);
 
   const employers = useMemo(
     () => Object.fromEntries(experiences.map((item) => [item.id, item])),
@@ -195,7 +196,7 @@ export function Work({
       // A little back, so a rounding error cannot put the card over the edge.
       const available = node.clientHeight - chrome - 4;
       const byHeight = Math.max(available, 80) * (16 / 9);
-      const byWidth = Math.min(node.clientWidth * 0.42, 560);
+      const byWidth = Math.min(node.clientWidth * 0.5, 680);
       const next = Math.round(Math.min(byHeight, byWidth));
 
       const current = parseFloat(node.style.getPropertyValue('--card-w')) || 0;
@@ -311,6 +312,7 @@ export function Work({
   const onPointerMove = (event: React.PointerEvent) => {
     const start = drag.current;
     if (!start) return;
+    if (Math.abs(event.clientX - start.x) > 6) dragged.current = true;
     const width = stage.current?.clientWidth ?? 1;
     seek(start.from - ((event.clientX - start.x) / width) * 2.2);
   };
@@ -339,7 +341,26 @@ export function Work({
         tabIndex={0}
         onKeyDown={onKeyDown}
         onWheel={onWheel}
-        onPointerDown={(event) => (drag.current = { x: event.clientX, from: target.current })}
+        onPointerDown={(event) => {
+          // Stops the container taking focus from a pointer, so the focus ring
+          // is only ever the keyboard's. `:focus-visible` is meant to do this
+          // on its own and does not for a `tabindex` container in Chrome — a
+          // click leaves the ring up for the whole time the reader is dragging
+          // through the cards. Keyboard focus still lands here and is still
+          // shown, which is the part that matters.
+          event.preventDefault();
+          dragged.current = false;
+          drag.current = { x: event.clientX, from: target.current };
+        }}
+        // A drag has to swallow the click that follows it. Without this, pulling
+        // the carousel sideways also counts as a click on whichever card the
+        // pointer went down on, and scrubbing opens a dialog every time.
+        onClickCapture={(event) => {
+          if (!dragged.current) return;
+          dragged.current = false;
+          event.preventDefault();
+          event.stopPropagation();
+        }}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={() => (drag.current = null)}
@@ -472,8 +493,18 @@ function timelineGeometry(
     // The degree is a join like any other as far as the line is concerned: a
     // tick where something started. It is first because it started first.
     joins: [
-      { id: 'education', label: education.school, left: at(education.startDate) },
-      ...ordered.map((item) => ({ id: item.id, label: item.company, left: at(item.startDate) })),
+      {
+        id: 'education',
+        label: education.school,
+        sub: education.credential,
+        left: at(education.startDate),
+      },
+      ...ordered.map((item) => ({
+        id: item.id,
+        label: item.company,
+        sub: item.role,
+        left: at(item.startDate),
+      })),
     ],
     spans: [
       {
@@ -531,7 +562,13 @@ function Timeline({
 
         {geometry.joins.map((join) => (
           <span key={join.id} className="timeline-join" style={{ left: `${join.left}%` }}>
-            <span className="timeline-company">{join.label}</span>
+            <span className="timeline-company">
+              {join.label}
+              {/* The role, in the secondary face. Two lines of the same
+                  typeface at the same size read as one wrapped label; the
+                  change of face is what separates the place from the job. */}
+              <span className="timeline-role">{join.sub}</span>
+            </span>
           </span>
         ))}
 
