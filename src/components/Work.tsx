@@ -11,9 +11,12 @@ const WHEEL = 0.0016;
 /** How fast the eased position closes on the target, per second. */
 const EASE = 9;
 
-/** How far apart the cards sit, as a fraction of a card's width. Under 1, so
- *  neighbours overlap rather than sit beside each other. */
-const SPACING = 0.62;
+/**
+ * How long after the reader stops before the carousel settles onto a card.
+ * Long enough that consecutive wheel notches read as one gesture, short enough
+ * that letting go feels like it lands rather than drifts.
+ */
+const SETTLE = 160;
 
 /**
  * The timeline and the carousel, which are one component because they share one
@@ -62,6 +65,14 @@ export function Work({
   const stage = useRef<HTMLDivElement>(null);
   const cursor = useRef<HTMLSpanElement>(null);
   const frame = useRef(0);
+  const settle = useRef(0);
+  /**
+   * Card spacing, mirrored from CSS. `paint()` runs sixty times a second and
+   * cannot afford a `getComputedStyle` per frame, so `fit()` — which already
+   * runs on every resize, and so on every breakpoint crossing — reads it once
+   * and leaves it here.
+   */
+  const spacing = useRef(0.62);
 
   /**
    * Where each project sits on the timeline, as a percentage. Shared between
@@ -117,7 +128,7 @@ export function Work({
       // centres it — writing only the X translate here left the card centred
       // horizontally and dropped a half-height below the middle.
       card.style.transform =
-        `translate(calc(-50% + ${offset * SPACING * 100}%), -50%) scale(${scale})`;
+        `translate(calc(-50% + ${offset * spacing.current * 100}%), -50%) scale(${scale})`;
       card.style.zIndex = String(Math.round(100 - distance * 10));
 
       /**
@@ -221,22 +232,52 @@ export function Work({
       // A little back, so a rounding error cannot put the card over the edge.
       const budget = regionBox.height - above - below;
       const available = budget - chrome - 4;
+      // The tunables live in the stylesheet, because all of them change at a
+      // breakpoint. Read on every pass, so crossing one is picked up.
+      const style = getComputedStyle(node);
+      const read = (name: string, fallback: number) =>
+        parseFloat(style.getPropertyValue(name)) || fallback;
+
+      spacing.current = read('--spacing', 0.62);
+      const locked = read('--locked', 0) === 1;
+
+      const byWidth = Math.min(
+        node.clientWidth * read('--card-fraction', 0.62),
+        read('--card-max', 700),
+      );
+
+      /**
+       * Height only constrains the locked layout.
+       *
+       * Off it the page scrolls, so there is no fixed height to fit into — and
+       * worse, the budget above is derived from a region that is now sized by
+       * its own content, which includes the card. Honouring it on a phone
+       * collapsed the card to the 80px floor and left it overlapping the
+       * timeline above and the controls below.
+       */
+      if (!locked) {
+        const only = Math.round(byWidth);
+        node.style.setProperty('--card-h', `${Math.round((only * 9) / 16) + chrome + 2}px`);
+        if (Math.abs(only - (parseFloat(node.style.getPropertyValue('--card-w')) || 0)) < 2) return;
+        node.style.setProperty('--card-w', `${only}px`);
+        paint();
+        return;
+      }
+
       const byHeight = Math.max(available, 80) * (16 / 9);
       /**
-       * The width bound, which is now what binds on a tall window.
-       *
-       * Three cards wide, not one: the neighbours sit `SPACING` out and scaled
-       * down, so the stack covers about `2 * SPACING + 0.87` card widths and
-       * spills well past the text column it is centred in. Bounding on the
+       * Three cards wide, not one: the neighbours sit `--spacing` out and
+       * scaled down, so the stack covers about `2 * spacing + 0.87` card widths
+       * and spills well past the text column it is centred in. Bounding on the
        * column alone let the outer cards run off a narrow screen.
+       *
+       * Only while locked, where all three have to be on screen at once. Below
+       * it the neighbours are meant to be mostly off the edge, and applying
+       * this would crush the card to a third of its width to keep cards visible
+       * that nobody is trying to see.
        */
-      const span = 2 * SPACING + 0.87;
-      const byWidth = Math.min(
-        node.clientWidth * 0.62,
-        (window.innerWidth - 48) / span,
-        700,
-      );
-      const next = Math.round(Math.min(byHeight, byWidth));
+      const bySpan = (window.innerWidth - 48) / (2 * spacing.current + 0.87);
+      const next = Math.round(Math.min(byHeight, byWidth, bySpan));
 
       /**
        * Written every pass, deadband or not: the copy can rewrap without the
@@ -316,7 +357,13 @@ export function Work({
     frame.current = requestAnimationFrame(step);
   }, [paint, count]);
 
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(frame.current);
+      window.clearTimeout(settle.current);
+    },
+    [],
+  );
 
   /**
    * Move the carousel. The target is not clamped — it runs off either end and
@@ -339,6 +386,20 @@ export function Work({
    * ordinary scrolling document and hijacking the wheel would trap the reader
    * in the carousel — there, horizontal intent still works and so does drag.
    */
+  /**
+   * Settle onto a card once the reader stops.
+   *
+   * A wheel has no end event, so "stopped" is the absence of another notch for
+   * a while. Every notch pushes the timer back, which is what keeps a long
+   * scroll from snapping mid-gesture; when they stop, the carousel closes on
+   * the nearest card rather than resting between two of them with both half
+   * faded.
+   */
+  const snapSoon = useCallback(() => {
+    window.clearTimeout(settle.current);
+    settle.current = window.setTimeout(() => seek(Math.round(target.current)), SETTLE);
+  }, [seek]);
+
   const onWheel = useCallback(
     (event: React.WheelEvent) => {
       const pageScrolls = document.documentElement.scrollHeight > window.innerHeight;
@@ -347,8 +408,9 @@ export function Work({
 
       const amount = horizontal ? event.deltaX : event.deltaY;
       seek(target.current + amount * WHEEL);
+      snapSoon();
     },
-    [seek],
+    [seek, snapSoon],
   );
 
   const go = useCallback(
@@ -406,7 +468,13 @@ export function Work({
           // click leaves the ring up for the whole time the reader is dragging
           // through the cards. Keyboard focus still lands here and is still
           // shown, which is the part that matters.
-          event.preventDefault();
+          //
+          // Mouse only. On touch, cancelling the default action here also
+          // cancels the pan the browser was about to start, so a finger that
+          // came to scroll the page finds it frozen. `touch-action: pan-y` is
+          // what governs there, and it needs the default left alone.
+          if (event.pointerType === 'mouse') event.preventDefault();
+          window.clearTimeout(settle.current);
           dragged.current = false;
           drag.current = { x: event.clientX, from: target.current };
         }}
