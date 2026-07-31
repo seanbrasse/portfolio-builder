@@ -643,20 +643,28 @@ main {
  * cost nothing, so the slant can be bold enough to actually read.
  */
 .panel[data-shape='band-up'] {
-  --slope: 30px;
+  --slope: 14px;
   --shape: polygon(0 var(--slope), 100% 0, 100% calc(100% - var(--slope)), 0 100%);
 }
 
 .panel[data-shape='band-down'] {
-  --slope: 30px;
+  --slope: 14px;
   --shape: polygon(0 0, 100% var(--slope), 100% 100%, 0 calc(100% - var(--slope)));
 }
 
-/* Half the slant at each end, because that is all a parallel band takes. */
+/* The full slant at each end, not half of it.
+ *
+ * A parallel band keeps a constant vertical *extent*, which is why it can be
+ * slanted harder than a tapering one — but a full-width line of copy does not
+ * live in the extent, it lives in the largest axis-aligned rectangle that fits
+ * inside the parallelogram, and that rectangle is bounded by the top edge at
+ * its lowest (the left end) and the bottom edge at its highest (the right).
+ * Both are a full slant in. Half of it is the average and sliced the last
+ * bullet on the widest band. */
 .panel[data-shape='band-up'] .panel-body,
 .panel[data-shape='band-down'] .panel-body {
-  padding-top: calc(16px + var(--slope) / 2);
-  padding-bottom: calc(16px + var(--slope) / 2);
+  padding-top: calc(14px + var(--slope));
+  padding-bottom: calc(14px + var(--slope));
 }
 
 .panel-fill,

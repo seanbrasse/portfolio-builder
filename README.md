@@ -87,13 +87,16 @@ immediately.
 panel), and `band-up`/`band-down` (a slanted wide band). Templates use uneven
 tracks for the same reason — no `repeat()` anywhere.
 
-A slanted band slopes **both** edges the same way, which is the whole trick:
-the band is a parallelogram, its vertical extent is identical at every x, and
-it loses no height to the slant. Give a run of bands the same shape and every
-gutter between them is a parallel diagonal. Two earlier attempts sloped the
-edges in opposite directions, then a single edge; both taper the band and clip
-its last line, which is why they had to stay too shallow to read. Parallel
-edges cost nothing, so the slant can be bold.
+A slanted band slopes **both** edges the same way, so the band is a
+parallelogram and its vertical extent is identical at every x. That is what
+makes a run of them layout-predictable — a tapering band shrinks toward one end
+— and every gutter between them is a parallel diagonal.
+
+It does not make the slant free. A full-width line of copy does not live in the
+band's extent, it lives in the largest axis-aligned rectangle inside the
+parallelogram, and that is bounded by the top edge at its lowest and the bottom
+edge at its highest — a full slant in at each. Padding of half the slant is the
+average, not the worst case, and sliced the last bullet on the widest band.
 
 **The page is full bleed.** Panels run to the paper's edge and the caption box
 sits on the first panel rather than in a band of blank stock above it. That,
