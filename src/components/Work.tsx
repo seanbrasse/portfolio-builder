@@ -65,25 +65,64 @@ export function Work({
     if (!node) return;
 
     const cards = node.querySelectorAll<HTMLElement>('.project-card');
-    cards.forEach((card, index) => {
+
+    // Signed distance from the middle, wrapped, so the first card sits beside
+    // the last rather than against an empty edge.
+    const offsets = Array.from(cards, (_, index) => {
       let offset = (index - position.current) % count;
       if (offset > count / 2) offset -= count;
       if (offset < -count / 2) offset += count;
+      return offset;
+    });
 
+    /**
+     * Depth is a rank, not a threshold on distance.
+     *
+     * Thresholds cannot promise a card count. With four cards the two furthest
+     * are equidistant every time the carousel is halfway between two of them —
+     * both land on the same side of any cutoff, and four cards are on screen
+     * instead of three. Ranking sorts that out by construction: nearest is the
+     * front, the next two are its neighbours, everything else is hidden, and
+     * that holds at every position and for any number of projects.
+     */
+    const rank = offsets
+      .map((offset, index) => ({ index, distance: Math.abs(offset) }))
+      .sort((a, b) => a.distance - b.distance)
+      .map((entry) => entry.index);
+
+    cards.forEach((card, index) => {
+      const offset = offsets[index];
       const distance = Math.abs(offset);
       const scale = Math.max(1 - distance * 0.13, 0.7);
-      // Fades out before it reaches the card on the far side, so nothing is
-      // seen crossing the middle from behind.
-      const opacity = distance > 1.55 ? 0 : Math.max(1 - distance * 0.42, 0);
 
       card.style.transform = `translateX(calc(-50% + ${offset * SPACING * 100}%)) scale(${scale})`;
-      card.style.opacity = String(opacity);
       card.style.zIndex = String(Math.round(100 - distance * 10));
+
+      /**
+       * Opacity comes from that rank, and CSS owns it.
+       *
+       * Ramping opacity off raw distance means a card is only fully solid at
+       * the exact instant it is dead centre. Every other moment the front card
+       * is slightly transparent and the one behind shows through it, which is a
+       * permanent crossfade — the card on top never looks like it is on top.
+       *
+       * Rank is discrete and changes once, when two cards swap places. So the
+       * depth goes in an attribute and the stylesheet transitions between the
+       * three values: the front card sits at full strength for the whole time
+       * it is the front card, and the exchange is a short crossfade at the
+       * moment the order actually changes.
+       *
+       * Transform stays per-frame. Only opacity is transitioned, and only
+       * because the value it smooths is a step rather than a stream.
+       */
+      const place = rank.indexOf(index);
+      const depth = place === 0 ? '0' : place <= 2 ? '1' : '2';
+      if (card.dataset.depth !== depth) card.dataset.depth = depth;
+
       // `toggleAttribute`, not `dataset.centre = undefined`. Assigning
       // undefined to a dataset property stringifies it, so the attribute is
-      // present with the value "undefined" and still matches `[data-centre]` —
-      // every card was getting the centre card's shadow.
-      card.toggleAttribute('data-centre', distance < 0.5);
+      // present with the value "undefined" and still matches `[data-centre]`.
+      card.toggleAttribute('data-centre', depth === '0');
     });
   }, [count]);
 

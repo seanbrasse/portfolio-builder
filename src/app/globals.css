@@ -673,29 +673,74 @@ a:hover {
   border-radius: var(--radius);
   overflow: hidden;
   transform-origin: center center;
-  /* No transition. Position is written every frame from the animation loop, and
-     a transition on top of that is a filter lagging behind the value it is
-     smoothing — the cards would drift a fixed distance behind where they are
-     meant to be, and stop late every time the carousel pauses. */
+  /* No transition on transform. Position is written every frame from the
+     animation loop, and a transition on top of that is a filter lagging behind
+     the value it is smoothing — the cards would drift a fixed distance behind
+     where they belong and stop late every time the carousel pauses.
+
+     Opacity is the exception, and only because it is a step rather than a
+     stream: it comes from the card's rank, which changes once when a card
+     crosses the halfway mark. See the note in Work.tsx. */
+  transition: opacity 420ms var(--ease);
   will-change: transform, opacity;
 }
 
-/* Where the cards sit before the script runs. The loop takes over on the first
+/* The front card, at full strength for the whole time it is the front card.
+ *
+ * The transition is asymmetric on purpose, and it is the whole trick. The
+ * duration that applies is the one declared on the state being entered, so
+ * promotion is instant while demotion takes the base 420ms. Symmetric timing
+ * means both cards are mid-fade at the same moment and neither is solid for a
+ * fifth of a second every time the order changes; even a 70ms ramp leaves a
+ * few frames where the front card is not opaque, which is measurable.
+ *
+ * Snapping up and easing down means the card on top is opaque at every frame
+ * it is on top, and the one it replaced dissolves out from underneath it. The
+ * snap is invisible because the card taking over is already the nearest thing
+ * to the middle when it happens. */
+.project-card[data-depth='0'] {
+  opacity: 1;
+  transition-duration: 0s;
+}
+
+/* Its neighbours. Far enough back that the one moving up is clearly still
+   waiting rather than half-arrived. */
+.project-card[data-depth='1'] {
+  opacity: 0.34;
+}
+
+/* Leaving the visible set is quick. The slow 420ms fade belongs to the card
+   being demoted from the front, where it is the crossfade; reusing it on the
+   way out means a fourth card is still dissolving at the edge long after it
+   stopped being one of the three, which is measurable and was. */
+.project-card[data-depth='2'] {
+  opacity: 0;
+  transition-duration: 110ms;
+}
+
+/* Where the cards sit before the script runs.
+
+   Every one is gated on `:not([data-depth])`, and that is not decoration. These
+   rules and the depth rules have the same specificity, and these come later in
+   the file — so `:nth-child(2) { opacity: 0.34 }` was quietly beating
+   `[data-depth='0'] { opacity: 1 }`, and the second card stayed faded for the
+   entire time it was the front card. Gating them means they stop applying the
+   moment the loop writes a depth, which is the first frame. The loop takes over on the first
    frame; without this every card would be stacked dead centre in the server's
    markup and the page would flash a pile of cards. */
-.project-card:nth-child(1) {
+.project-card:not([data-depth]):nth-child(1) {
   transform: translateX(-50%) scale(1);
   opacity: 1;
   z-index: 100;
 }
 
-.project-card:nth-child(2) {
+.project-card:not([data-depth]):nth-child(2) {
   transform: translateX(12%) scale(0.87);
-  opacity: 0.58;
+  opacity: 0.34;
   z-index: 90;
 }
 
-.project-card:nth-child(n + 3) {
+.project-card:not([data-depth]):nth-child(n + 3) {
   transform: translateX(74%) scale(0.74);
   opacity: 0;
   z-index: 80;
