@@ -1362,6 +1362,19 @@ function Shot({ project }: { project: Project }) {
   }
 
   /**
+   * The per-image framing, as inline style so it wins over the stylesheet's
+   * default `cover`. `object-position` is only meaningful under `cover`; on
+   * `contain` it is harmless, and the focal point is nulled in the database
+   * there anyway, so it reads as centre and does nothing.
+   */
+  const framing: React.CSSProperties = {
+    objectFit: shot.fit ?? 'cover',
+    objectPosition: shot.focalPoint
+      ? `${shot.focalPoint.x * 100}% ${shot.focalPoint.y * 100}%`
+      : undefined,
+  };
+
+  /**
    * A clip of the thing running says more than a still of it stopped.
    *
    * Muted, looping and inline, so it behaves like an image rather than like
@@ -1379,6 +1392,7 @@ function Shot({ project }: { project: Project }) {
         aria-label={shot.alt}
         width={640}
         height={360}
+        style={framing}
         muted
         playsInline
         loop
@@ -1389,7 +1403,16 @@ function Shot({ project }: { project: Project }) {
     );
   }
 
-  return <img className="project-shot" src={shot.src} alt={shot.alt} width={640} height={360} />;
+  return (
+    <img
+      className="project-shot"
+      src={shot.src}
+      alt={shot.alt}
+      width={640}
+      height={360}
+      style={framing}
+    />
+  );
 }
 
 /**

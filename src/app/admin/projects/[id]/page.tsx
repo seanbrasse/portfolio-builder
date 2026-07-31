@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { addImage, deleteProject, removeImage, saveProject } from '../../actions';
 import { adminExperiences, adminImages, adminProject } from '../../data';
 import { DeleteButton, Form } from '../../Form';
+import { ImageAdjust } from '../../ImageAdjust';
 import { LinkRows } from '../../LinkRows';
 import { Upload } from '../../Upload';
 import { CAPS } from '@/content/types';
@@ -140,21 +141,18 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
         <section className="admin-section">
           <h2>Images</h2>
           <p className="admin-note">
-            The first is what the card shows. The well is 16:9, so anything
-            else is letterboxed rather than cropped. An MP4 or WebM works too —
-            a clip of the thing running says more than a still, and it plays
-            muted and looping unless the visitor has asked for reduced motion.
+            The first is what the card shows. The well is 16:9, and each image
+            chooses how it sits in it — Cover fills and crops, Contain shows the
+            whole thing letterboxed, and under Cover you set which part stays in
+            frame. An MP4 or WebM works too — a clip of the thing running says
+            more than a still, and it plays muted and looping unless the visitor
+            has asked for reduced motion.
           </p>
 
           <ul className="admin-shots">
             {images.map((image) => (
               <li key={image.id}>
-                {image.media === 'video' ? (
-                  <video src={image.src} controls muted playsInline />
-                ) : (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={image.src} alt={image.alt} />
-                )}
+                <ImageAdjust image={image} />
                 <span className="admin-note">
                   {image.media === 'video' ? 'Video · ' : ''}
                   {image.width} × {image.height} · {image.alt}

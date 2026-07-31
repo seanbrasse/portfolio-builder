@@ -107,6 +107,7 @@ type ImageRow = {
   kind: Asset['kind'];
   media: 'image' | 'video';
   poster: string | null;
+  fit: 'cover' | 'contain';
   focal_x: number | null;
   focal_y: number | null;
 };
@@ -218,6 +219,7 @@ function toAsset(row: ImageRow): Asset {
     kind: row.kind,
     media: row.media ?? 'image',
     poster: row.poster ?? undefined,
+    fit: row.fit ?? 'cover',
     focalPoint:
       row.focal_x === null || row.focal_y === null
         ? undefined

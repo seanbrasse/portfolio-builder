@@ -69,6 +69,9 @@ export type AdminImage = {
   width: number;
   height: number;
   media: 'image' | 'video';
+  fit: 'cover' | 'contain';
+  focal_x: number | null;
+  focal_y: number | null;
   sort_order: number;
 };
 

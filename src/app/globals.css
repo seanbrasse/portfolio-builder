@@ -2271,14 +2271,88 @@ a:hover {
   margin: 16px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  gap: 24px;
 }
 
 .admin-shots li {
   display: grid;
   gap: 8px;
   justify-items: start;
+}
+
+/* The framing editor: the card's well beside its controls, wrapping to a stack
+   when the column is too narrow to hold both. */
+.admin-frame-editor {
+  display: grid;
+  grid-template-columns: minmax(240px, 360px) minmax(220px, 1fr);
+  gap: 20px;
+  align-items: start;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .admin-frame-editor {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The well, at the card's exact ratio, so what is framed here is what ships. */
+.admin-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface-sunk);
+}
+
+.admin-frame[data-focusable] {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* Fills the well and is positioned inline; this overrides the generic
+   `.admin-shots img` border, which would draw a box around the framed image. */
+.admin-frame img,
+.admin-frame video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+/* The focal anchor. Two rings so it reads on any pixel it lands on, and inert
+   to the pointer so a drag through it still measures the well underneath. */
+.admin-frame-dot {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid var(--paper);
+  box-shadow: 0 0 0 2px var(--accent-a);
+  background: color-mix(in srgb, var(--accent-a) 30%, transparent);
+  pointer-events: none;
+}
+
+.admin-frame-controls {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-frame-focus {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-frame-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .admin-door {
