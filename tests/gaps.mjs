@@ -62,9 +62,13 @@ function collect({ overlapMin, reach }) {
         const r = el.getBoundingClientRect();
         const cs = getComputedStyle(el);
         return {
-          // A page-bleed panel underlies the whole leaf and is deliberately
-          // not in the tiling, so it has no gutters to measure.
+          // Neither of these is part of the tiling, so neither has a gutter to
+          // measure. A page-bleed panel underlies the whole leaf; a mounted one
+          // is lying on top of it, overlapping its neighbours on purpose. A
+          // rail of mounts measured as a grid reports every overlap as a
+          // negative gutter.
           bleed: el.dataset.bleed,
+          frame: el.dataset.frame,
           slope: parseFloat(cs.getPropertyValue('--slope')) || 0,
           left: r.left / scale,
           right: r.right / scale,
@@ -73,7 +77,7 @@ function collect({ overlapMin, reach }) {
         };
       });
 
-      const grid = boxes.filter((b) => b.bleed !== 'page');
+      const grid = boxes.filter((b) => b.bleed !== 'page' && b.frame !== 'mat');
       const rows = [];
       const cols = [];
 
@@ -103,6 +107,11 @@ function collect({ overlapMin, reach }) {
         caption: leaf.querySelector('.page-caption')?.textContent?.trim() ?? '(untitled)',
         declaredCol: parseFloat(cs.columnGap) || 0,
         declaredRow: parseFloat(cs.rowGap) || 0,
+        // How many panels are actually tiling. A leaf built out of a bleed
+        // splash and a rail of mounts has none, and correctly measures no
+        // gutters — that is a different thing from a tiled leaf measuring
+        // none, which means the walk missed it.
+        tiled: grid.length,
         rows,
         cols,
       };
@@ -130,8 +139,10 @@ for (const route of ROUTES) {
   }
 
   for (const leaf of leaves) {
-    if (leaf.rows.length === 0 && leaf.cols.length === 0) {
-      failures.push(`${leaf.caption} has no adjacent panels — nothing was measured`);
+    if (leaf.tiled >= 2 && leaf.rows.length === 0 && leaf.cols.length === 0) {
+      failures.push(
+        `${leaf.caption} tiles ${leaf.tiled} panels but no gutter was measured between any of them`,
+      );
     }
     for (const [axis, measured, declared] of [
       ['row', leaf.rows, leaf.declaredRow],
@@ -147,8 +158,9 @@ for (const route of ROUTES) {
       }
     }
     const fmt = (list) => (list.length ? [...new Set(list.map((v) => v.toFixed(1)))].join(', ') : '—');
+    const note = leaf.tiled < 2 ? '  (mounted — no tiling)' : '';
     console.log(
-      `${leaf.caption.padEnd(26)} rows ${fmt(leaf.rows).padEnd(18)} cols ${fmt(leaf.cols)}`,
+      `${leaf.caption.padEnd(26)} rows ${fmt(leaf.rows).padEnd(18)} cols ${fmt(leaf.cols)}${note}`,
     );
   }
 }

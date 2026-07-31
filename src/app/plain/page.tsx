@@ -29,10 +29,13 @@ function PlainPanel({ content }: { content: PanelContent }) {
     case 'hero': {
       const settings = getSettings();
       return (
-        <p className="plain-lede">
-          {settings.tagline} Based in {settings.location}. Open to{' '}
-          {settings.rolesOpenTo.join(' and ').toLowerCase()} roles.
-        </p>
+        <>
+          <p className="plain-lede">
+            {settings.tagline} Based in {settings.location}. Open to{' '}
+            {settings.rolesOpenTo.join(' and ').toLowerCase()} roles.
+          </p>
+          {content.body ? <p>{content.body}</p> : null}
+        </>
       );
     }
 

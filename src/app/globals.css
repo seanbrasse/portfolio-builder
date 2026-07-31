@@ -64,6 +64,14 @@
      bounding box and tapers the gutter beside it from 7.5px to 10.4px. */
   --gutter-col: 9px;
   --gutter-row: 13px;
+  /* A mounted panel's mat and the shadow it throws. The mat is far wider than
+     the 2px ink of a printed panel because it is doing a different job: an ink
+     rule separates a panel from its neighbour, a mat lifts a panel off the
+     picture behind it. */
+  --mat-width: 7px;
+  --mat-shadow-x: 5px;
+  --mat-shadow-y: 7px;
+  --mat-shadow-blur: 9px;
   --gutter: var(--gutter-col);
   --page-max: min(1760px, 95vw);
 
@@ -609,6 +617,174 @@ main {
   background: var(--paper-lit);
   clip-path: var(--shape, none);
   pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Mounted panels
+
+   The other way to frame a panel, and the one that separates a page laid out
+   now from a page laid out in 1994. An inked panel is *printed into* the page:
+   a black rule, flush against its neighbours, sharing a gutter. A mounted panel
+   is *laid on* the page, like a photograph dropped on a painting — a cream mat,
+   a shadow onto whatever is underneath, and no obligation to line up with
+   anything.
+
+   The three parts are one mode, not three options. A mat with no shadow is a
+   thick white border; a shadow with nothing under it falls on paper and reads
+   as a mistake. Mounting is only meaningful over a bleed panel, which is why
+   `.comic-page` turns it on for its own children rather than the panel opting
+   in alone.
+
+   `filter: drop-shadow` rather than `box-shadow`, because these panels are
+   clipped: a box-shadow is cast by the border box and would draw a rectangle
+   around a panel whose visible edge is a polygon. drop-shadow follows the
+   composited silhouette, so it follows the clip.
+--------------------------------------------------------------------------- */
+
+.panel[data-frame='mat'] {
+  --panel-ink: var(--mat-width);
+  background: var(--matte);
+  filter: drop-shadow(var(--mat-shadow-x) var(--mat-shadow-y) var(--mat-shadow-blur)
+    color-mix(in srgb, var(--matte-shade) 62%, transparent));
+}
+
+/* A mounted panel is over the art, so it needs its own stacking above the
+   bleed panel — which sits at z-index 0 — without each one needing a `layer`. */
+.comic-page > .panel[data-frame='mat'] {
+  z-index: 2;
+}
+
+/* A panel that *is* the page rather than one laid on it. No mat, no rule: the
+   establishing shot has nothing to be separated from, because there is nothing
+   beside it. */
+.panel[data-frame='none'] {
+  --panel-ink: 0px;
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   The mounted rail
+
+   Tilt comes back here, and only here. The reason it was removed is that a
+   rotated panel's bounding box is larger than the panel and the grid lays out
+   the box, so a tilted panel narrows the gutter it shares with its neighbour.
+   These panels share no gutter with anything — they are lying on a picture, and
+   the gaps between them are that picture. Out-of-parallel is the point.
+
+   The angles are per position rather than authored per panel. A page where
+   every mount is hand-angled is a page where adding a panel means re-tuning
+   the ones around it.
+--------------------------------------------------------------------------- */
+
+.comic-page[data-template='splash-rail'] > .panel[data-frame='mat'] {
+  /* Mounted panels overlap each other and hang off the paper, which is what
+     stops the rail reading as a column of four equal things. */
+  margin-right: -22px;
+  margin-left: -14px;
+}
+
+.comic-page[data-template='splash-rail'] > .panel[data-frame='mat']:nth-of-type(2) {
+  --tilt: -1.1deg;
+}
+
+.comic-page[data-template='splash-rail'] > .panel[data-frame='mat']:nth-of-type(3) {
+  --tilt: 0.8deg;
+  margin-top: -16px;
+  margin-left: -30px;
+}
+
+.comic-page[data-template='splash-rail'] > .panel[data-frame='mat']:nth-of-type(4) {
+  --tilt: -0.6deg;
+  margin-top: -12px;
+  margin-left: -6px;
+}
+
+.comic-page[data-template='splash-rail'] > .panel[data-frame='mat']:nth-of-type(5) {
+  --tilt: 1.3deg;
+  margin-top: -18px;
+  margin-left: -34px;
+}
+
+/* The splash runs the whole leaf, so its copy has to be told where the rail
+   starts — otherwise the page's lead paragraph sets underneath four mounted
+   panels. This is the one place a template's proportions leak into the type,
+   and it is why the number lives beside the template it belongs to. */
+.comic-page[data-template='splash-rail'] > .panel[data-bleed='page'] .panel-body {
+  padding-right: 46%;
+}
+
+/* The splash is the whole page now, so the lockup stops being a panel's worth
+   of copy and becomes the page's title treatment: the name at display size,
+   the strap under it, and the lead paragraph set to a readable measure rather
+   than to whatever the panel left over. The corner box drops to the bottom of
+   the picture, which is where a cover puts it. */
+.comic-page[data-template='splash-rail'] .hero-layout {
+  flex-wrap: nowrap;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0;
+}
+
+.comic-page[data-template='splash-rail'] .hero-lockup {
+  flex: 0 0 auto;
+  justify-content: flex-start;
+}
+
+.comic-page[data-template='splash-rail'] .hero-lockup .panel-title {
+  font-size: 92px;
+  line-height: 0.86;
+}
+
+.comic-page[data-template='splash-rail'] .hero-lockup .panel-prose {
+  max-width: 40ch;
+}
+
+/* The lead paragraph is prose, not the cover line, so it is set at reading
+   size rather than at the tagline's 19px. */
+.comic-page[data-template='splash-rail'] .hero-body {
+  font-size: 15px;
+  line-height: 1.5;
+  margin-top: 14px;
+}
+
+.comic-page[data-template='splash-rail'] .cover-box {
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+/* A graded sky, which is the other half of not looking like 1994.
+ *
+ * Every other flat in this system is one value laid down at one strength,
+ * because that is what spot-color printing could do. A splash is the one place
+ * that is worth breaking: the reference for this layout is a painted sunset,
+ * and a painted ground is the difference between a picture and a colored
+ * rectangle.
+ *
+ * It grades downward, away from the copy. The lead paragraph and the name sit
+ * in the top half, so the saturated end is kept below them and the type keeps
+ * the near-paper value it was measured against — a gradient behind body copy
+ * means the contrast ratio is different at the top of the paragraph than at the
+ * bottom, and the audit samples the composited pixel behind each glyph.
+ */
+.comic-page[data-template='splash-rail'] > .panel[data-bleed='page'] .panel-fill {
+  opacity: 1;
+  background: linear-gradient(
+    to bottom,
+    var(--paper-lit) 0%,
+    var(--paper-lit) 38%,
+    color-mix(in srgb, var(--accent-c) 26%, var(--paper-lit)) 62%,
+    color-mix(in srgb, var(--accent-a) 34%, var(--paper-lit)) 86%,
+    color-mix(in srgb, var(--accent-b) 30%, var(--paper-lit)) 100%
+  );
+}
+
+/* The skyline is the picture on a splash, not a watermark behind a panel, so
+   it is drawn at strength and sized to the page rather than to a hero band. */
+.comic-page[data-template='splash-rail'] .skyline {
+  opacity: 0.42;
+  width: 116%;
+  left: -8%;
+  right: auto;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1868,8 +2044,9 @@ main {
   z-index: 1;
 }
 
+/* The span itself is set inline in Panel.tsx — the slot's `grid-area` is an
+   inline style and would beat any rule here. */
 .comic-page > .panel[data-bleed='page'] {
-  grid-area: 1 / 1 / -1 / -1;
   z-index: 0;
 }
 

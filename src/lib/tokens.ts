@@ -30,6 +30,15 @@ export type Palette = {
   paperLit: string;
   /** Border ink, body text, everything drawn. */
   ink: string;
+  /**
+   * The mat a floating panel is mounted on — the cream border a photograph gets
+   * when it is laid on a page, rather than the black rule a panel gets when it
+   * is printed into one. This is the difference between a page whose panels
+   * tile and a page whose panels sit on top of a picture.
+   */
+  matte: string;
+  /** The shadow a floating panel casts on whatever it is lying on. */
+  matteShade: string;
   /** Ink at reduced presence, for rules and secondary text. */
   inkMuted: string;
   /** The three spot colors. In noir these collapse toward one accent. */
@@ -98,6 +107,8 @@ const fourColor: Palette = {
   paper: '#EFE4CE',
   paperLit: '#FBF4E3',
   ink: '#14110F',
+  matte: '#FBF7EC',
+  matteShade: '#2A1D2E',
   inkMuted: '#57514A',
   // Deepened from a brighter pillarbox red. As a solid flat it has to carry
   // cream lettering *and* the gold rays crossing behind it, and the brighter
@@ -140,6 +151,12 @@ const noir: Palette = {
   paper: '#131315',
   paperLit: '#1C1C1F',
   ink: '#E8E3D8',
+  // Noir mounts on a warm dark mat rather than bone. A cream mat is the one
+  // element bright enough to become the first thing the eye lands on, and in a
+  // palette whose whole argument is that light is scarce, the mat is not what
+  // the light should be spent on.
+  matte: '#33302B',
+  matteShade: '#050506',
   inkMuted: '#8B867C',
   accentA: '#D69A33', // sodium amber — the one spot color
   // Dark enough to take light lettering as a solid flat. A mid steel looked
@@ -175,6 +192,8 @@ const CUSTOM_PROPERTY: Record<keyof Palette, string> = {
   paper: '--paper',
   paperLit: '--paper-lit',
   ink: '--ink',
+  matte: '--matte',
+  matteShade: '--matte-shade',
   inkMuted: '--ink-muted',
   accentA: '--accent-a',
   accentB: '--accent-b',
