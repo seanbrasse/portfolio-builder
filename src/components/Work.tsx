@@ -5,13 +5,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Experience, Project } from '@/content/types';
 import { formatMonth, formatRange, isoRange } from '@/lib/format';
 
-const ADVANCE_MS = 5200;
+/** Cards per second. Slow enough to read a title as it passes. */
+const DRIFT = 0.16;
+
+/** How far apart the cards sit, as a fraction of a card's width. Under 1, so
+ *  neighbours overlap rather than sit beside each other. */
+const SPACING = 0.62;
 
 /**
  * The timeline and the carousel, which are one component because they share one
- * index. The timeline marks where the card currently in the middle sits in the
- * career; advancing the carousel moves the marker, and stopping the carousel
- * stops the marker with it.
+ * position. The timeline marks where the card nearest the middle sits in the
+ * career; the carousel drifting moves the marker, and stopping it stops the
+ * marker with it.
  */
 export function Work({
   projects,
@@ -33,36 +38,98 @@ export function Work({
     [experiences],
   );
 
-  const go = useCallback(
-    (delta: number) => setActive((current) => (current + delta + count) % count),
-    [count],
-  );
-
   /**
-   * Advance on a timer, unless something says not to.
+   * Position is a float, not an index.
    *
-   * `held` covers hover and keyboard focus; `playing` is the explicit control.
-   * Both matter: hover is not available to a keyboard user and focus is not
-   * available to a mouse user, and WCAG 2.2.2 wants a mechanism that is not
-   * either of them. A dialog being open stops it too — nothing should be
-   * moving behind a modal.
+   * A carousel that steps between integers can only ever jump; the cards are
+   * either here or there, and a transition tweens between two states. Drifting
+   * means position is continuous — 1.37 is a real place — and every card's
+   * transform is a function of its distance from it. That is what produces
+   * cards sliding steadily past each other rather than snapping.
    *
-   * Reduced motion does not slow the carousel down, it stops it starting. An
-   * animation that a reader asked not to see is not improved by being gentle.
+   * It lives in a ref and is written to the DOM directly from the animation
+   * frame. Re-rendering four cards sixty times a second to move them is the
+   * expensive way to do this, and React would be reconciling a tree whose only
+   * change is a transform string. Only the *rounded* position goes into state,
+   * because that is the one thing anything else needs to know.
    */
+  const position = useRef(0);
+  const stage = useRef<HTMLDivElement>(null);
+
+  const paused = !playing || held || detail !== null || gallery;
+
+  // Layout is a pure function of position, so it can be called from the frame
+  // loop and from a jump, and the two cannot disagree.
+  const paint = useCallback(() => {
+    const node = stage.current;
+    if (!node) return;
+
+    const cards = node.querySelectorAll<HTMLElement>('.project-card');
+    cards.forEach((card, index) => {
+      let offset = (index - position.current) % count;
+      if (offset > count / 2) offset -= count;
+      if (offset < -count / 2) offset += count;
+
+      const distance = Math.abs(offset);
+      const scale = Math.max(1 - distance * 0.13, 0.7);
+      // Fades out before it reaches the card on the far side, so nothing is
+      // seen crossing the middle from behind.
+      const opacity = distance > 1.55 ? 0 : Math.max(1 - distance * 0.42, 0);
+
+      card.style.transform = `translateX(calc(-50% + ${offset * SPACING * 100}%)) scale(${scale})`;
+      card.style.opacity = String(opacity);
+      card.style.zIndex = String(Math.round(100 - distance * 10));
+      card.dataset.centre = distance < 0.5 ? 'true' : undefined;
+    });
+  }, [count]);
+
+  useEffect(paint, [paint]);
+
   useEffect(() => {
-    if (!playing || held || detail || gallery) return;
+    if (paused) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const id = window.setInterval(() => go(1), ADVANCE_MS);
-    return () => window.clearInterval(id);
-  }, [playing, held, detail, gallery, go]);
+    let frame = 0;
+    let last = performance.now();
+
+    const step = (now: number) => {
+      // Elapsed time, not a fixed increment per frame: a 120Hz display would
+      // otherwise run the carousel at twice the speed of a 60Hz one, and a
+      // dropped frame would make it stutter rather than catch up.
+      const delta = Math.min((now - last) / 1000, 0.1);
+      last = now;
+      position.current = (position.current + delta * DRIFT) % count;
+      paint();
+
+      const rounded = Math.round(position.current) % count;
+      setActive((current) => (current === rounded ? current : rounded));
+
+      frame = requestAnimationFrame(step);
+    };
+
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [paused, count, paint]);
+
+  const jump = useCallback(
+    (to: number) => {
+      position.current = ((to % count) + count) % count;
+      setActive(Math.round(position.current) % count);
+      paint();
+    },
+    [count, paint],
+  );
+
+  const go = useCallback(
+    (delta: number) => jump(Math.round(position.current) + delta),
+    [jump],
+  );
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'ArrowRight') go(1);
     else if (event.key === 'ArrowLeft') go(-1);
-    else if (event.key === 'Home') setActive(0);
-    else if (event.key === 'End') setActive(count - 1);
+    else if (event.key === 'Home') jump(0);
+    else if (event.key === 'End') jump(count - 1);
     else return;
     event.preventDefault();
   };
@@ -81,7 +148,7 @@ export function Work({
         experiences={experiences}
         projects={projects}
         activeProject={projects[active]}
-        onPick={(index) => setActive(index)}
+        onPick={jump}
       />
 
       <div
@@ -99,22 +166,21 @@ export function Work({
         onFocusCapture={() => setHeld(true)}
         onBlurCapture={() => setHeld(false)}
       >
-        <div className="carousel-stage">
+        <div className="carousel-stage" ref={stage}>
           {projects.map((project, index) => {
             let offset = (index - active + count) % count;
             if (offset > count / 2) offset -= count;
-            const visible = Math.abs(offset) <= 1;
+            const near = Math.abs(offset) <= 1;
 
             return (
               <article
                 key={project.id}
                 className="project-card"
-                data-offset={Math.max(-2, Math.min(2, offset))}
                 role="group"
                 aria-roledescription="slide"
                 aria-label={`${index + 1} of ${count}`}
-                aria-hidden={!visible || undefined}
-                inert={offset !== 0}
+                aria-hidden={!near || undefined}
+                inert={index !== active}
               >
                 {/* The whole card opens the detail. A button rather than a
                     click handler on the article, so it is reachable, announced
@@ -155,7 +221,7 @@ export function Work({
                   className="carousel-dot"
                   aria-current={index === active || undefined}
                   aria-label={`Show ${project.title}`}
-                  onClick={() => setActive(index)}
+                  onClick={() => jump(index)}
                 />
               </li>
             ))}
@@ -201,12 +267,15 @@ function months(iso: string) {
 }
 
 /**
- * The career on one line: years, where each job started and ended, and the
- * projects distributed along it.
+ * The career as one continuous line.
  *
- * Everything is placed as a percentage between the first start and today, so
- * the spacing is real elapsed time rather than one slot per item — a job held
- * for four months and one held for three years should not look the same.
+ * A single rule end to end, a tick where each company was joined, and the
+ * projects distributed along it. Not a bar per job: the line is the career, and
+ * cutting it into segments makes the gaps between jobs look like part of the
+ * design rather than like nothing happening.
+ *
+ * Everything is placed as a percentage of elapsed time rather than one slot per
+ * item, so four months and three years do not occupy the same width.
  */
 function Timeline({
   experiences,
@@ -219,31 +288,32 @@ function Timeline({
   activeProject?: Project;
   onPick: (index: number) => void;
 }) {
-  const { spans, ticks, marks, place } = useMemo(() => {
+  const { joins, ticks, marks, spans } = useMemo(() => {
+    const end = months(latestDate(projects, experiences));
     const starts = experiences.map((item) => months(item.startDate));
-    const ends = experiences.map((item) =>
-      item.endDate ? months(item.endDate) : months(latestDate(projects, experiences)),
-    );
     const min = Math.min(...starts);
-    const max = Math.max(...ends, ...projects.map((p) => months(p.date)));
+    const max = Math.max(end, ...projects.map((p) => months(p.date)));
     const span = Math.max(max - min, 1);
     const at = (iso: string) => ((months(iso) - min) / span) * 100;
 
-    const firstYear = Math.floor(min / 12);
-    const lastYear = Math.floor(max / 12);
     const years = [];
-    for (let year = firstYear; year <= lastYear; year += 1) {
+    for (let year = Math.ceil(min / 12); year * 12 <= max; year += 1) {
       years.push({ year, left: ((year * 12 - min) / span) * 100 });
     }
 
+    // Oldest first, so the line reads left to right the way time does.
+    const ordered = [...experiences].sort((a, b) => a.startDate.localeCompare(b.startDate));
+
     return {
-      place: at,
-      ticks: years.filter((tick) => tick.left >= -2 && tick.left <= 102),
-      spans: experiences.map((item) => ({
+      ticks: years,
+      joins: ordered.map((item) => ({
         id: item.id,
         company: item.company,
         left: at(item.startDate),
-        width: at(item.endDate ?? latestDate(projects, experiences)) - at(item.startDate),
+      })),
+      spans: ordered.map((item) => ({
+        id: item.id,
+        company: item.company,
         range: formatRange(item.startDate, item.endDate),
         iso: isoRange(item.startDate, item.endDate),
       })),
@@ -259,22 +329,20 @@ function Timeline({
 
   return (
     <div className="timeline">
-      {/* The bar itself is decoration; the list below carries the same facts as
-          text, so nothing here is only a position on a line. */}
+      {/* Decoration. The same facts follow as a dated list, because a position
+          on a line is not information anyone can hear. */}
       <div className="timeline-track" aria-hidden="true">
+        <span className="timeline-rule" />
+
         {ticks.map((tick) => (
           <span key={tick.year} className="timeline-year" style={{ left: `${tick.left}%` }}>
             {tick.year}
           </span>
         ))}
 
-        {spans.map((span) => (
-          <span
-            key={span.id}
-            className="timeline-span"
-            style={{ left: `${span.left}%`, width: `${Math.max(span.width, 1.5)}%` }}
-          >
-            <span className="timeline-company">{span.company}</span>
+        {joins.map((join) => (
+          <span key={join.id} className="timeline-join" style={{ left: `${join.left}%` }}>
+            <span className="timeline-company">{join.company}</span>
           </span>
         ))}
 
