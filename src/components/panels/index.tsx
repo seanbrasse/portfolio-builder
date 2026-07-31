@@ -47,7 +47,7 @@ function PanelLinks({ links }: { links: ContentLink[] }) {
   );
 }
 
-function HeroPanel() {
+function HeroPanel({ body }: { body?: string }) {
   const settings = getSettings();
 
   return (
@@ -62,6 +62,7 @@ function HeroPanel() {
         <p className="panel-title panel-title--accent">{settings.displayName}</p>
         <p className="panel-subtitle">Software Engineer · React · TypeScript</p>
         <p className="panel-prose">{settings.tagline}</p>
+        {body ? <p className="panel-prose hero-body">{body}</p> : null}
       </div>
 
       {/* The corner box a comic cover puts its issue number and price in.
@@ -301,7 +302,7 @@ export function panelClassName(content: PanelContent): string | undefined {
 export function PanelContentView({ content }: { content: PanelContent }) {
   switch (content.type) {
     case 'hero':
-      return <HeroPanel />;
+      return <HeroPanel body={content.body} />;
     case 'experience':
       return <ExperiencePanel id={content.ref} />;
     case 'project': {

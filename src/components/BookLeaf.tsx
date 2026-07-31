@@ -21,7 +21,7 @@ function ComicLeaf({ page }: { page: Page }) {
   return (
     <>
       <p className="page-caption">{page.caption}</p>
-      <div className="comic-page" style={gridStyle(template)}>
+      <div className="comic-page" data-template={template.id} style={gridStyle(template)}>
         {template.slots.map((slot) => {
           const panel: PanelData = bySlot.get(slot) ?? { slot, content: { type: 'empty' } };
           return (

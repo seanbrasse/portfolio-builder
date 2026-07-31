@@ -85,6 +85,30 @@ export const TEMPLATES = {
     rows: '1.04fr 1.0fr 0.96fr',
     slots: ['splash', 'a', 'b', 'c'],
   },
+  /**
+   * The establishing shot *is* the page, and a rail of panels is mounted on
+   * one side of it.
+   *
+   * Structurally the opposite of every other template here. The others tile:
+   * each panel owns a cell, the cells partition the leaf, and the gutters are
+   * the paper showing between them. This one has a `bleed: 'page'` panel under
+   * everything and a column of mounted panels lying on top, so the gaps in the
+   * rail are the picture underneath rather than paper, and the rail is free to
+   * be uneven — the panels are not holding a grid together.
+   *
+   * The splash takes the larger share. It is carrying a picture and the page's
+   * lead copy, and the rail is carrying short captioned beats.
+   */
+  'splash-rail': {
+    id: 'splash-rail',
+    name: 'Splash with a mounted rail',
+    areas: ['splash rail-a', 'splash rail-b', 'splash rail-c', 'splash rail-d'],
+    columns: '1.34fr 1fr',
+    // Uneven on purpose, and more so than a tiling template would dare. A rail
+    // of four equal panels beside a picture reads as a contact sheet.
+    rows: '0.9fr 1.04fr 0.94fr 1.12fr',
+    slots: ['splash', 'rail-a', 'rail-b', 'rail-c', 'rail-d'],
+  },
   'splash-4': {
     id: 'splash-4',
     name: 'Splash four',

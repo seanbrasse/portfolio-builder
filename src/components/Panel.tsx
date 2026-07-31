@@ -47,9 +47,16 @@ export function Panel({
   const shape = overrides?.shape ?? 'rect';
   const rays = overrides?.rays === true;
   const bleed = overrides?.bleed;
+  const frame = overrides?.frame ?? 'ink';
 
   const style = {
-    gridArea: slot,
+    /* A page-bleed panel is under the whole leaf, not in its named cell.
+       This has to be set here rather than in the stylesheet: the slot's grid
+       area is an inline style, and no amount of selector specificity beats
+       that — a CSS `grid-area: 1 / 1 / -1 / -1` on the same element loses
+       silently, which is exactly how a bleed panel spent several commits
+       looking full-page only on templates whose column happened to be tall. */
+    gridArea: overrides?.bleed === 'page' ? '1 / 1 / -1 / -1' : slot,
     ...(overrides?.tilt ? { '--tilt': `${overrides.tilt}deg` } : {}),
     ...(overrides?.layer ? { zIndex: overrides.layer } : {}),
   } as CSSProperties;
@@ -61,6 +68,7 @@ export function Panel({
       data-accent={accent}
       data-fill={fill}
       data-shape={shape}
+      data-frame={frame}
       data-rays={rays || undefined}
       data-bleed={bleed}
       data-interactive={interactive || undefined}

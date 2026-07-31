@@ -162,6 +162,18 @@ export type PanelOverrides = {
    */
   shape?: 'rect' | 'canted' | 'lean-l' | 'lean-r' | 'band-up' | 'band-down';
   /**
+   * How the panel is edged.
+   *
+   * `ink` is a printed panel: a black rule, flush with its neighbours, sharing
+   * a gutter. `mat` is a mounted one — a cream mat and a shadow, laid on top of
+   * whatever is behind it rather than tiled beside it. `none` removes the edge
+   * entirely, for a panel that *is* the page rather than one on it.
+   *
+   * Mounting only means anything over a `bleed: 'page'` panel. A mat on paper
+   * is a thick white border and a shadow on paper is a mistake.
+   */
+  frame?: 'ink' | 'mat' | 'none';
+  /**
    * Degrees of tilt. Small values only — this is a printing skew, not a fan.
    *
    * Nothing uses it, and a grid panel should not: rotating a rectangle grows
@@ -188,7 +200,13 @@ export type PanelOverrides = {
 };
 
 export type PanelContent =
-  | { type: 'hero' }
+  /**
+   * `body` is the page's opening paragraph, set inside the establishing shot
+   * rather than in a panel beside it. Optional because the hero carried none
+   * when it was one panel among several on a tiled page; a hero that *is* the
+   * page has the room, and the lead copy belongs in the picture.
+   */
+  | { type: 'hero'; body?: string }
   | { type: 'experience'; ref: string }
   | { type: 'project'; ref: string }
   | { type: 'testimonial'; ref: string }

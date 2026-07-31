@@ -160,50 +160,47 @@ const pages: Issue['pages'] = [
     slug: 'origin',
     title: 'Origin',
     caption: 'MEANWHILE, IN NEW YORK...',
-    templateId: 'hero-2-3',
+    templateId: 'splash-rail',
     status: 'published',
     panels: [
-      { slot: 'hero', content: { type: 'hero' }, overrides: { accent: 'b', shape: 'canted' } },
+      // The establishing shot is the page. Name, role and the opening paragraph
+      // sit *in* the picture rather than in a panel above it, which is the
+      // arrangement the whole template exists for.
       {
-        slot: 'left',
+        slot: 'splash',
         content: {
-          type: 'text',
-          heading: 'The origin story',
-          blurb: 'balloon',
+          type: 'hero',
           body: 'Computer science at Buffalo, then a first job modernizing a ten-year-old aerospace defense simulator. Then merchant onboarding at PayPal, then Mailchimp. Every move traded scale of hardware for scale of people — from simulated aircraft to a hundred thousand small businesses touching the same form builder.',
         },
-        overrides: { accent: 'a' },
+        overrides: { accent: 'b', bleed: 'page', frame: 'none' },
       },
+      // Four beats mounted down the right, in reading order: what he is doing
+      // now, then the three numbers.
       {
-        slot: 'right',
+        slot: 'rail-a',
         content: {
           type: 'text',
           heading: 'Currently',
           body: 'Software Engineer II at Intuit Mailchimp in New York, on the Forms and SMS platform. Most of what I ship crosses a React microfrontend, a legacy Dojo app, and a PHP monolith before it reaches a customer.',
         },
-        overrides: { accent: 'c' },
+        overrides: { accent: 'c', frame: 'mat' },
       },
-      // The three loud panels on the page. Solid flats, inverted lettering,
-      // radiating rays — this is the row a recruiter remembers.
       {
-        slot: 'a',
+        slot: 'rail-b',
         content: { type: 'metric', ref: 'qbo-merchants' },
-        overrides: { accent: 'b', fill: 'solid', rays: true },
+        overrides: { accent: 'b', fill: 'solid', rays: true, frame: 'mat' },
       },
       {
-        slot: 'b',
+        slot: 'rail-c',
         content: { type: 'metric', ref: 'arr-unlocked' },
-        overrides: { accent: 'a', fill: 'solid' },
+        overrides: { accent: 'a', fill: 'solid', frame: 'mat' },
       },
       {
-        slot: 'c',
+        slot: 'rail-d',
         content: { type: 'metric', ref: 'optin-lift' },
-        overrides: { accent: 'c', fill: 'solid' },
+        overrides: { accent: 'c', fill: 'solid', frame: 'mat' },
       },
     ],
-    // The establishing shot leaves the hero and crosses the gutter beneath it,
-    // which ties the panel to the page rather than framing it away.
-    breakouts: [{ kind: 'skyline-band', x: 3, y: 19, w: 58, h: 15, opacity: 0.34 }],
   },
   {
     id: 'page-work',
