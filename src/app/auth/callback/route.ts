@@ -3,12 +3,12 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
 
 /**
- * Where a magic link lands.
+ * Where Google sends the reader back.
  *
- * The link carries a one-time code; this exchanges it for a session and sets
- * the cookies. A route handler rather than a page, because only a handler may
- * write cookies — doing this in a component is how a sign-in appears to work
- * and then finds no session on the next request.
+ * The redirect carries a one-time code; this exchanges it for a session and
+ * sets the cookies. A route handler rather than a page, because only a handler
+ * may write cookies — doing this in a component is how a sign-in appears to
+ * work and then finds no session on the next request.
  *
  * Failures come back to the door with a reason rather than silently landing on
  * the front page. The original version said nothing on purpose, so an expired
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
   const code = params.get('code');
   if (!code) {
-    return refuse(request, 'That link carried no sign-in code. Request a new one.');
+    return refuse(request, 'That sign-in carried no code. Try again from the button below.');
   }
 
   const supabase = await supabaseServer();
@@ -50,9 +50,9 @@ export async function GET(request: NextRequest) {
      */
     return refuse(
       request,
-      'That link could not be completed. It has either been used already, or it ' +
-        'was opened in a different browser from the one that requested it. ' +
-        'Ask for a new link below and open it here.',
+      'That sign-in could not be completed. It has either been used already, or ' +
+        'it finished in a different browser from the one that started it. ' +
+        'Try again below.',
     );
   }
 
