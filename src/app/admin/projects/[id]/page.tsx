@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { addImage, deleteProject, removeImage, saveProject } from '../../actions';
+import { addImage, deleteProject, moveImage, removeImage, saveProject } from '../../actions';
 import { adminExperiences, adminImages, adminProject } from '../../data';
 import { DeleteButton, Form } from '../../Form';
 import { ImageAdjust } from '../../ImageAdjust';
 import { LinkRows } from '../../LinkRows';
+import { Reorder } from '../../Reorder';
 import { Upload } from '../../Upload';
 import { CAPS } from '@/content/types';
 
@@ -153,22 +154,40 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
         <section className="admin-section">
           <h2>Images</h2>
           <p className="admin-note">
-            The first is what the card shows. The well is 16:9, and each image
-            chooses how it sits in it — Cover fills and crops, Contain shows the
-            whole thing letterboxed, and under Cover you set which part stays in
-            frame. An MP4 or WebM works too — a clip of the thing running says
-            more than a still, and it plays muted and looping unless the visitor
-            has asked for reduced motion.
+            The order is the order they appear in, and the first is what the
+            card shows — move one to the top to make it the card&rsquo;s picture.
+            Opening the project shows all of them as a gallery. The well is 16:9,
+            and each image chooses how it sits in it — Cover fills and crops,
+            Contain shows the whole thing letterboxed, and under Cover you set
+            which part stays in frame. An MP4 or WebM works too — a clip of the
+            thing running says more than a still, and it plays muted and looping
+            unless the visitor has asked for reduced motion.
           </p>
 
-          <ul className="admin-shots">
-            {images.map((image) => (
+          <ol className="admin-shots">
+            {images.map((image, i) => (
               <li key={image.id}>
+                <div className="admin-shot-head">
+                  <span className="admin-note">
+                    {i === 0 ? 'Shown on the card · ' : `#${i + 1} · `}
+                    {image.media === 'video' ? 'Video · ' : ''}
+                    {image.width} × {image.height}
+                  </span>
+                  <Reorder
+                    isFirst={i === 0}
+                    isLast={i === images.length - 1}
+                    up={async () => {
+                      'use server';
+                      return moveImage(image.id, 'up');
+                    }}
+                    down={async () => {
+                      'use server';
+                      return moveImage(image.id, 'down');
+                    }}
+                  />
+                </div>
                 <ImageAdjust image={image} />
-                <span className="admin-note">
-                  {image.media === 'video' ? 'Video · ' : ''}
-                  {image.width} × {image.height} · {image.alt}
-                </span>
+                <span className="admin-note">{image.alt}</span>
                 <DeleteButton
                   label="Remove"
                   confirm="Remove this image from the project?"
@@ -184,7 +203,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
                 None yet — the card shows &ldquo;No screenshot yet&rdquo;.
               </li>
             ) : null}
-          </ul>
+          </ol>
 
           {/* The hint doubles as the default alt now, so it has to read as a
               description rather than an instruction — "Cadence screenshot", not

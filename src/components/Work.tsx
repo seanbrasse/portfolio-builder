@@ -1394,17 +1394,13 @@ function useReducedMotion() {
   );
 }
 
-function Shot({ project }: { project: Project }) {
-  const [shot] = project.images;
+/**
+ * One asset in the 16:9 well — the shared renderer behind the card's single
+ * shot and the modal's gallery, so framing, video behaviour and the well are
+ * defined once rather than twice.
+ */
+function Media({ shot }: { shot: Asset }) {
   const reduced = useReducedMotion();
-
-  if (!shot) {
-    return (
-      <div className="project-shot-empty" aria-hidden="true">
-        No screenshot yet
-      </div>
-    );
-  }
 
   /**
    * The per-image framing, as inline style so it wins over the stylesheet's
@@ -1461,6 +1457,112 @@ function Shot({ project }: { project: Project }) {
 }
 
 /**
+ * The card's shot: the first image, and only the first. The card is a fixed
+ * shape in a moving carousel — it is a glance, not a viewer — so it shows the
+ * one image the admin ordered to the front and leaves the rest to the modal.
+ */
+function Shot({ project }: { project: Project }) {
+  const [shot] = project.images;
+
+  if (!shot) {
+    return (
+      <div className="project-shot-empty" aria-hidden="true">
+        No screenshot yet
+      </div>
+    );
+  }
+
+  return <Media shot={shot} />;
+}
+
+/**
+ * Every image, once the card has been opened.
+ *
+ * This lives only in the modal on purpose: the extra images are detail, and
+ * detail is what opening the card is for — putting a carousel inside a carousel
+ * on the front page would be two things asking to be swiped in the same spot.
+ * With one image it is just the shot; with several it grows arrows, dots and a
+ * count, and the arrow keys move it because a dialog is where they are free to.
+ */
+function ProjectGallery({ project }: { project: Project }) {
+  const images = project.images;
+  const [index, setIndex] = useState(0);
+
+  if (images.length === 0) {
+    return (
+      <div className="project-shot-empty" aria-hidden="true">
+        No screenshot yet
+      </div>
+    );
+  }
+
+  const many = images.length > 1;
+  const go = (step: number) => setIndex((i) => (i + step + images.length) % images.length);
+
+  return (
+    <div
+      className="gallery-viewer"
+      role={many ? 'group' : undefined}
+      aria-roledescription={many ? 'carousel' : undefined}
+      aria-label={many ? `${project.title} screenshots` : undefined}
+      onKeyDown={
+        many
+          ? (event) => {
+              if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                go(-1);
+              } else if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                go(1);
+              }
+            }
+          : undefined
+      }
+    >
+      <Media key={images[index].id} shot={images[index]} />
+
+      {many ? (
+        <>
+          <button
+            type="button"
+            className="gallery-nav gallery-nav-prev"
+            aria-label="Previous image"
+            onClick={() => go(-1)}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="gallery-nav gallery-nav-next"
+            aria-label="Next image"
+            onClick={() => go(1)}
+          >
+            ›
+          </button>
+
+          <ol className="gallery-dots" aria-hidden="true">
+            {images.map((image, i) => (
+              <li key={image.id}>
+                <button
+                  type="button"
+                  className="gallery-dot"
+                  aria-current={i === index || undefined}
+                  onClick={() => setIndex(i)}
+                />
+              </li>
+            ))}
+          </ol>
+
+          <p className="gallery-counter" aria-live="polite">
+            {index + 1} of {images.length}
+          </p>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * How far along it is — but only when that is news.
  *
  * Every finished project carrying a "shipped" badge is a column of the same
@@ -1501,7 +1603,7 @@ function CardFace({ project, employer }: { project: Project; employer?: Experien
 function ProjectDetail({ project, employer }: { project: Project; employer?: Experience }) {
   return (
     <>
-      <Shot project={project} />
+      <ProjectGallery project={project} />
       <div className="detail-body">
         <p className="project-context">
           {employer ? <Badge name={employer.company} logo={employer.logo} /> : null}
