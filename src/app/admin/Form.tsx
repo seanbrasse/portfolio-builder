@@ -35,17 +35,35 @@ export function Form({
       /**
        * `noValidate` so the browser does not silently swallow the submit.
        *
-       * A React form action bypasses the native submit event, which means a
-       * field failing its `pattern` can stop the submit with no visible reason.
-       * Validity is checked explicitly instead: `reportValidity` shows the
-       * browser's own message on the offending field and focuses it, and the
-       * summary below names how many there are, so a failure at the bottom of a
-       * long form is not silent at the top.
+       * A field failing its `pattern` can otherwise stop the submit with no
+       * visible reason. Validity is checked explicitly instead: `reportValidity`
+       * shows the browser's own message on the offending field and focuses it,
+       * and the summary below names how many there are, so a failure at the
+       * bottom of a long form is not silent at the top.
        */
       noValidate
-      action={(form) => {
+      /**
+       * `onSubmit`, not the `action` prop, and that is the whole point.
+       *
+       * React 19 automatically resets an uncontrolled form once a function
+       * passed to `<form action>` finishes — every uncontrolled field is
+       * cleared. That reset does not care whether the action saved anything:
+       * the early return on a validation failure counts as "finished", so a
+       * bad id at the top of the form wiped a full project's worth of typing
+       * below it. These inputs are uncontrolled by design (the whole form is a
+       * lot of fields), so the reset is pure data loss.
+       *
+       * Handling submit ourselves keeps that reset from ever running. Nothing
+       * here clears the form — a failed save leaves every value in place to be
+       * fixed and resubmitted, and a successful one refreshes the surrounding
+       * list rather than blanking the fields.
+       */
+      onSubmit={(event) => {
+        event.preventDefault();
         const element = node.current;
-        if (element && !element.checkValidity()) {
+        if (!element) return;
+
+        if (!element.checkValidity()) {
           element.reportValidity();
           const bad = element.querySelectorAll(':invalid').length;
           setState({
@@ -58,6 +76,7 @@ export function Form({
           return;
         }
 
+        const form = new FormData(element);
         start(async () => {
           const result = await action(form);
           setState(result);
