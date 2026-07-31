@@ -254,9 +254,6 @@ a:hover {
     padding-top: clamp(16px, 3vh, 36px);
   }
 
-  .carousel-stage {
-    --locked: 1;
-  }
 }
 
 /* The toggle hangs off this block, top right, so it starts on the same line
@@ -572,7 +569,12 @@ a:hover {
   --spacing: 0.62;
   --card-fraction: 0.62;
   --card-max: 700px;
-  --locked: 0;
+  /* Defaults to on, and the responsive block at the end of this file turns it
+     off. The other way round did not work: `--locked: 1` lived in the
+     one-screen media query near the top, and this base declaration is later at
+     equal specificity, so it won everywhere and the locked layout never saw its
+     own flag. */
+  --locked: 1;
   position: relative;
   /* Exactly one card tall. The cards are out of flow, so the stage cannot
      shrink-wrap them and the height is measured and written instead. Letting it
@@ -1613,6 +1615,12 @@ a:hover {
     padding-inline: 0;
   }
 
+  /* Height does not constrain here; the page scrolls, and `fit()` takes its
+     budget from the viewport instead of the region. */
+  .carousel-stage {
+    --locked: 0;
+  }
+
   /* The cards past the third are laid out and transparent, not absent, so they
      still push the document's scroll width out — about 300px of empty page to
      the right at tablet size. The locked layout never showed it because it
@@ -1654,8 +1662,87 @@ a:hover {
     letter-spacing: 0.04em;
   }
 
+  /* Announced, not drawn.
+     It names the project the carousel is on — which the card directly beneath
+     it already says, in larger type. On a screen this tight that is twenty-odd
+     pixels spent saying something twice, and those pixels go to the card. The
+     live region stays, so a screen reader is still told when the carousel
+     moves; only the duplicate rendering goes. */
   .timeline-now {
-    font-size: 12px;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Everything below is one decision, applied in a dozen places: on a phone the
+     contact details have to be on screen without scrolling, and the only way to
+     buy that is to take a few pixels from every block above them. The card is
+     sized by what is left over, so trimming here is what makes the card bigger
+     rather than smaller — it is competing with the chrome, not with the
+     footer. */
+  .screen {
+    padding-top: clamp(12px, 2vh, 20px);
+    padding-bottom: 8px;
+    gap: clamp(8px, 1.4vh, 16px);
+  }
+
+  .intro h1 {
+    font-size: 27px;
+  }
+
+  .intro-role {
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  .intro-tagline {
+    font-size: 14px;
+    line-height: 1.4;
+    margin-top: 10px;
+    max-width: none;
+  }
+
+  .intro-skills-label {
+    margin-top: clamp(10px, 1.6vh, 16px);
+    margin-bottom: 8px;
+  }
+
+  .timeline {
+    margin: clamp(8px, 2vw, 14px) 0 6px;
+  }
+
+  /* The card is the poster here: image, company, title, a line of what it is.
+     The detail dialog carries the rest and is a tap away. */
+  .project-body {
+    padding: 9px 12px 11px;
+    gap: 3px;
+  }
+
+  .project-context {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .project-title {
+    font-size: 17px;
+  }
+
+  .project-summary {
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  .carousel-controls {
+    gap: 14px;
+  }
+
+  .site-footer {
+    padding-block: 0 10px;
   }
 
   /* Smaller chips. Eight of them at desktop size take two rows and 74px of a

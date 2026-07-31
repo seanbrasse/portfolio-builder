@@ -250,16 +250,49 @@ export function Work({
       );
 
       /**
-       * Height only constrains the locked layout.
+       * Off the lock, the budget is the viewport rather than the region.
        *
-       * Off it the page scrolls, so there is no fixed height to fit into — and
-       * worse, the budget above is derived from a region that is now sized by
-       * its own content, which includes the card. Honouring it on a phone
-       * collapsed the card to the 80px floor and left it overlapping the
-       * timeline above and the controls below.
+       * The region is sized by its own content there — which includes the card
+       * — so measuring it is circular, and taking width alone is what left the
+       * contact details hanging off the bottom of a phone. The document is the
+       * honest frame: everything above the stage plus everything below it is
+       * fixed by the copy, so what is left of the viewport is what the card may
+       * have.
+       *
+       * Positions are converted to document coordinates before subtracting, so
+       * the answer does not depend on where the page happens to be scrolled to
+       * when a resize fires.
+       *
+       * Self-correcting in both directions. Too tall and this shrinks the card,
+       * which shortens the document, which is measured again next pass; too
+       * short and it grows into the slack. The deadband is what stops that
+       * settling into a wobble.
        */
       if (!locked) {
-        const only = Math.round(byWidth);
+        const fromTop = stageBox.top + window.scrollY;
+        /**
+         * The body's box, not `scrollHeight`.
+         *
+         * The root element's scroll height is clamped to at least the viewport,
+         * so once the page fits it stops reporting how tall the content is and
+         * starts reporting how tall the window is. Everything below the stage
+         * then appears to include the empty space under the footer, the budget
+         * comes out short, and the card sits at its floor with room to spare
+         * above it — which is exactly what it did.
+         */
+        const content = document.body.getBoundingClientRect().bottom + window.scrollY;
+        const beneath = content - (fromTop + stageBox.height);
+
+        /**
+         * A floor, not a hard bound. On a very short window — or at large text
+         * sizes, or 400% zoom — the page genuinely cannot hold all of this, and
+         * squeezing the card to nothing to avoid a scrollbar would trade a
+         * scrollbar for an unreadable card. Below this it stops shrinking and
+         * the page scrolls, which is what WCAG 1.4.10 asks for anyway.
+         */
+        const room = Math.max(window.innerHeight - fromTop - beneath - chrome - 4, 84);
+
+        const only = Math.round(Math.min(byWidth, room * (16 / 9)));
         node.style.setProperty('--card-h', `${Math.round((only * 9) / 16) + chrome + 2}px`);
         if (Math.abs(only - (parseFloat(node.style.getPropertyValue('--card-w')) || 0)) < 2) return;
         node.style.setProperty('--card-w', `${only}px`);
@@ -312,7 +345,21 @@ export function Work({
     // The region carries the budget, so a viewport change has to be seen here
     // — the stage is a fixed height now and no longer resizes on its own.
     if (region) observer.observe(region);
-    return () => observer.disconnect();
+
+    /**
+     * Off the lock the budget is the viewport's height, and nothing being
+     * observed necessarily changes when that does — a rotation or a browser
+     * toolbar sliding away can leave every element the same size and every box
+     * in a different place.
+     */
+    window.addEventListener('resize', fit);
+    window.addEventListener('orientationchange', fit);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', fit);
+      window.removeEventListener('orientationchange', fit);
+    };
   }, [paint]);
 
   useEffect(paint, [paint]);
