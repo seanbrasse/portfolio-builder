@@ -418,6 +418,9 @@ main {
 }
 
 .comic-page {
+  /* The containing block for the breakout layer, which is placed in page
+     percentages against this box. */
+  position: relative;
   display: grid;
   flex: 1 1 auto;
   min-height: 0;
@@ -564,27 +567,96 @@ main {
   position: relative;
   isolation: isolate;
   min-height: 0;
-  background: var(--paper-lit);
+  /* The ink plate. The border is this showing past the paper plate laid on
+     top, which is the only way an edge can follow a shape that is not a
+     rectangle — a clip-path takes no border. */
+  background: var(--ink);
   padding: 0;
   overflow: hidden;
-  --cut: 0px;
+  clip-path: var(--shape, none);
   /* A printing skew, not a fan. Under a degree, so the page reads as laid up
      by hand rather than as a broken grid. */
   transform: rotate(var(--tilt, 0deg));
 }
 
-/* A cut corner. The clip removes it; `.panel-rule--cut` inks the diagonal that
-   replaces it, and the clip also trims that bar's overhanging ends. */
+.panel-plate {
+  position: absolute;
+  inset: var(--panel-ink);
+  z-index: 0;
+  background: var(--paper-lit);
+  clip-path: var(--shape, none);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Panel shapes
+
+   A comic page is not a grid of rectangles: edges cant, panels lean, gutters
+   run diagonally. Each shape is a polygon on the panel box, and both plates
+   take the same one, so the ink edge follows whatever the outline does.
+
+   Percentages resolve against each plate's own box, so the inner polygon comes
+   out very slightly narrower than a true parallel offset would be. At a 4px
+   ink weight on a 400px panel that error is under a tenth of a pixel, and
+   computing exact edge normals in CSS would cost far more than it buys.
+--------------------------------------------------------------------------- */
+
 .panel[data-shape='canted'] {
   --cut: 38px;
-  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+  --shape: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+}
+
+/* Leaning panels. The gutter between two of these is a diagonal, which is what
+   makes a page read as laid out rather than tabulated. */
+.panel[data-shape='lean-r'] {
+  --lean: 34px;
+  --shape: polygon(var(--lean) 0, 100% 0, calc(100% - var(--lean)) 100%, 0 100%);
+}
+
+.panel[data-shape='lean-l'] {
+  --lean: 34px;
+  --shape: polygon(0 0, calc(100% - var(--lean)) 0, 100% 100%, var(--lean) 100%);
+}
+
+/* A single sloped edge, for wide bands.
+ *
+ * Sloping both edges of a band — which is what a wedge does — takes height off
+ * the top *and* the bottom of a panel that is already only a sixth of the page
+ * tall, and clips the last line of copy at both ends. Sloping one edge costs
+ * half as much and buys the same thing: pair `slope-b` on one band with
+ * `slope-t` on the next and the gutter between them runs diagonally, which is
+ * the effect the whole shape vocabulary exists for. */
+.panel[data-shape='slope-b'] {
+  --slope: 18px;
+  --shape: polygon(0 0, 100% 0, 100% calc(100% - var(--slope)), 0 100%);
+}
+
+.panel[data-shape='slope-t'] {
+  --slope: 18px;
+  --shape: polygon(0 var(--slope), 100% 0, 100% 100%, 0 100%);
+}
+
+/* A leaning panel's copy has to clear the slant or the first character of
+   every line disappears under the edge. */
+.panel[data-shape='lean-r'] .panel-body,
+.panel[data-shape='lean-l'] .panel-body {
+  padding-left: calc(18px + var(--lean));
+  padding-right: calc(18px + var(--lean));
+}
+
+/* Only the sloped edge needs the clearance. */
+.panel[data-shape='slope-b'] .panel-body {
+  padding-bottom: calc(16px + var(--slope));
+}
+
+.panel[data-shape='slope-t'] .panel-body {
+  padding-top: calc(16px + var(--slope));
 }
 
 .panel-fill,
 .panel-screen {
   position: absolute;
   inset: 0;
-  z-index: 0;
   pointer-events: none;
 }
 
@@ -620,75 +692,6 @@ main {
      closer to how a flat was actually laid down. */
   -webkit-mask-image: radial-gradient(ellipse 78% 74% at 50% 50%, transparent 0 34%, black 88%);
   mask-image: radial-gradient(ellipse 78% 74% at 50% 50%, transparent 0 34%, black 88%);
-}
-
-/**
- * The border, drawn as four rules instead of an SVG stroke.
- *
- * The obvious implementation is a `<rect>` with `pathLength="100"` and an
- * animated `stroke-dashoffset`, which is what a motion study would reach for.
- * It does not survive contact with a real grid: the SVG has to stretch to
- * whatever size the template gives the panel, and `preserveAspectRatio="none"`
- * scales the stroke per-axis, so a 1100px-wide panel draws a 44px slab down
- * each side and a hairline across the top. `vector-effect: non-scaling-stroke`
- * fixes the weight but then the dash pattern is computed in device space,
- * where `pathLength` normalisation no longer lines up and the border renders
- * as disconnected segments.
- *
- * Four scaled rules have none of those failure modes, are pixel-crisp at every
- * panel size, and animate `transform` only — which MOTION-7 asks for and a
- * dashed stroke cannot deliver, since `stroke-dashoffset` is not a
- * compositor-friendly property.
- */
-.panel-rule {
-  position: absolute;
-  z-index: 2;
-  background: var(--ink);
-  pointer-events: none;
-}
-
-.panel-rule--t {
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--panel-ink);
-  transform-origin: left center;
-}
-
-.panel-rule--r {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: var(--panel-ink);
-  transform-origin: center top;
-}
-
-.panel-rule--b {
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: var(--panel-ink);
-  transform-origin: right center;
-}
-
-.panel-rule--l {
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: var(--panel-ink);
-  transform-origin: center bottom;
-}
-
-/* Width is the hypotenuse of the cut (cut x sqrt2); the offsets place its
-   midpoint exactly on the diagonal before the 45deg rotation. transform-origin
-   must stay centred or the rotation lands the bar somewhere else. */
-.panel-rule--cut {
-  height: var(--panel-ink);
-  width: calc(var(--cut) * 1.4143);
-  top: calc(var(--cut) / 2 - var(--panel-ink) / 2);
-  right: calc(var(--cut) * -0.2072);
-  transform: rotate(45deg);
-  transform-origin: center;
 }
 
 .panel-body {
@@ -1730,4 +1733,61 @@ main {
   width: 0;
   height: 0;
   overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   Breakouts
+
+   Art that crosses panel borders. A panel clips its own contents — that is
+   what makes it a panel — so anything that breaks the frame has to sit above
+   the grid entirely and be placed in page coordinates instead.
+
+   The fixed canvas is what makes that safe: a percentage of an 880x1140 leaf
+   is the same slice of the composition at every scale factor, so a piece aimed
+   at a particular gutter stays on that gutter.
+--------------------------------------------------------------------------- */
+
+.breakout-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.breakout {
+  position: absolute;
+  color: var(--ink);
+}
+
+.breakout[data-accent='a'] { color: var(--accent-a); }
+.breakout[data-accent='b'] { color: var(--accent-b); }
+.breakout[data-accent='c'] { color: var(--accent-c); }
+
+.breakout svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Inked like everything else on the page. A flat shape with no edge reads as a
+   sticker dropped on the paper rather than as art that was drawn there. */
+.breakout[data-kind='speed-streak'] polygon,
+.breakout[data-kind='burst-star'] polygon {
+  fill: currentColor;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  paint-order: fill stroke;
+}
+
+.breakout[data-kind='speed-streak'] polygon {
+  stroke-width: 1.5;
+}
+
+/* The skyline crossing a gutter is drawn, not filled — same line language as
+   the establishing shot it is lifted from. */
+.breakout[data-kind='skyline-band'] .skyline {
+  position: static;
+  opacity: 1;
 }

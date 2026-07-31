@@ -201,6 +201,9 @@ const pages: Issue['pages'] = [
         overrides: { accent: 'c', fill: 'solid', tilt: 0.5 },
       },
     ],
+    // The establishing shot leaves the hero and crosses the gutter beneath it,
+    // which ties the panel to the page rather than framing it away.
+    breakouts: [{ kind: 'skyline-band', x: 3, y: 19, w: 58, h: 15, opacity: 0.34 }],
   },
   {
     id: 'page-work',
@@ -211,10 +214,12 @@ const pages: Issue['pages'] = [
     status: 'published',
     ogTagline: 'Mailchimp, PayPal, and a ten-year-old defense simulator.',
     sfx: { text: 'SHIP IT!', slot: 'a', rotate: -11 },
+    // Crosses the gutter between the first two bands.
+    breakouts: [{ kind: 'speed-streak', x: 62, y: 25, w: 34, h: 6, rotate: -3, accent: 'a', opacity: 0.42 }],
     panels: [
       { slot: 'a', content: { type: 'experience', ref: 'mailchimp' }, overrides: { accent: 'a', tilt: -0.35 } },
-      { slot: 'b', content: { type: 'experience', ref: 'paypal' }, overrides: { accent: 'b', shape: 'canted' } },
-      { slot: 'c', content: { type: 'experience', ref: 'avarint' }, overrides: { accent: 'c', tilt: 0.35 } },
+      { slot: 'b', content: { type: 'experience', ref: 'paypal' }, overrides: { accent: 'b', shape: 'slope-b' } },
+      { slot: 'c', content: { type: 'experience', ref: 'avarint' }, overrides: { accent: 'c', shape: 'slope-t', tilt: 0.35 } },
       // Professional side projects belong with the professional work, not
       // filed under nights-and-weekends.
       {
@@ -229,18 +234,20 @@ const pages: Issue['pages'] = [
     slug: 'builds',
     title: 'Builds',
     caption: 'NIGHTS AND WEEKENDS...',
-    templateId: 'stack-3',
+    templateId: 'splash-side',
     status: 'published',
     ogTagline: 'Three things built to find out whether they could be.',
     panels: [
       {
-        slot: 'a',
+        slot: 'splash',
         content: { type: 'project', ref: 'pass-the-interview' },
-        overrides: { accent: 'a', shape: 'canted' },
+        overrides: { accent: 'a', shape: 'lean-r' },
       },
-      { slot: 'b', content: { type: 'project', ref: 'cadence' }, overrides: { accent: 'b' } },
-      { slot: 'c', content: { type: 'project', ref: 'life-os' }, overrides: { accent: 'c', tilt: 0.4 } },
+      { slot: 'a', content: { type: 'project', ref: 'cadence' }, overrides: { accent: 'b' } },
+      { slot: 'b', content: { type: 'project', ref: 'life-os' }, overrides: { accent: 'c', tilt: 0.4 } },
     ],
+    // Straddles the gutter between the splash and the stack beside it.
+    breakouts: [{ kind: 'burst-star', x: 38, y: 30, w: 20, rotate: -8, accent: 'c', opacity: 0.9 }],
   },
   {
     id: 'page-contact',

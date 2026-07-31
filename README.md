@@ -42,7 +42,7 @@ needed for a custom domain.
 | Comic chrome, motion, print | `src/app/globals.css` |
 | Panel kinds | `src/components/panels/index.tsx` |
 
-Four pages — Origin, Work, Builds, Contact — plus `/plain`. Six templates.
+Four pages — Origin, Work, Builds, Contact — plus `/plain`. Seven templates.
 Every public route is statically generated, so a visitor's page load touches no
 data source.
 
@@ -51,8 +51,8 @@ data source.
 **Templates, not a canvas.** Each template declares a `grid-template-areas` map
 and an ordered slot list. Panels are emitted by walking that slot list, so DOM
 order and tab order match the reading order by construction — there is no way
-to author a page whose visual order and DOM order disagree. Adding a template is a deploy, which keeps art direction under version
-control.
+to author a page whose visual order and DOM order disagree. Adding a template
+is a deploy, which keeps art direction under version control.
 
 **Nothing inside a leaf reacts to the viewport.** A leaf is a fixed 880×1140
 canvas that gets scaled to fit, so its width has no relationship to the
@@ -82,12 +82,35 @@ and it iterates the identical pages and slots the comic view does. That makes
 discipline — a panel kind that renders nothing in plain view shows up
 immediately.
 
+**Panels are not rectangles, and art crosses their borders.** `shape` takes
+`canted` (one corner cut), `lean-l`/`lean-r` (a parallelogram, for a tall
+panel), and `slope-t`/`slope-b` (a single tilted edge). Pair `slope-b` on one
+band with `slope-t` on the next and the gutter between them runs diagonally,
+which is most of what makes a page read as laid out rather than tabulated.
+Templates use uneven tracks for the same reason — no `repeat()` anywhere.
+
+The border is the panel's own background showing past a slightly smaller plate
+laid on top, not four rules along the edges. The rules existed so the ink could
+draw on one edge at a time; that animation is gone, and they could never have
+followed an edge that is not a rectangle, because a clip-path takes no border.
+
+A panel clips its contents — that is what makes it a panel — so anything that
+*breaks* the frame has to live above the grid entirely. `BreakoutLayer` is that
+layer, placed in page percentages. The fixed canvas is what makes that safe: a
+percentage of an 880×1140 leaf is the same slice of the composition at every
+scale factor, so art aimed at a gutter stays on that gutter. Everything in it
+is `aria-hidden` decoration and may never be the only place a fact appears.
+
+A slope costs a band the height of its clearance, and the page has no spare
+height — the first version paid for two slopes out of the neighbouring band and
+the audit caught it immediately, as a clipped bullet reporting foreground
+exactly equal to background.
+
 **Flats come in two weights.** A panel is `tint` or `solid`. Tint is a wash
 over the paper, for panels carrying body copy; solid lays the flat down at full
 strength with the lettering inverted on top. The loud panels are what stop a
-page of accents from reading as beige. Panels also take `shape: 'canted'` — a
-clip-path corner cut with an inked diagonal across it — and a sub-degree
-`tilt`, so the page is not a grid of identical rectangles.
+page of accents from reading as beige. Panels also take a sub-degree `tilt`, so
+even two rectangles are not perfectly parallel.
 
 **Color exists in exactly one file.** `src/lib/tokens.ts` defines both palettes;
 the root layout emits them as custom properties. A lint rule fails on a hex
@@ -95,12 +118,6 @@ literal anywhere else in `src/`, because noir is only a day's work for as long
 as that stays true. Two files are exempt: the token file itself, and the OG
 generator, which rasterises through Satori and has no cascade to resolve
 variables against — it imports the same values.
-
-**The panel border is four rules, not an SVG stroke.** A `<rect>` with
-`pathLength="100"` and an animated `stroke-dashoffset` is the obvious approach
-and it does not survive a real grid: `preserveAspectRatio="none"` scales the
-stroke per-axis, so a wide panel draws a thick slab down each side and a
-hairline across the top. Four scaled rules are crisp at any panel size.
 
 **Pages arrive drawn.** There is no entrance animation: panels, flats and
 lettering appear together, the moment a page is on screen. An earlier version
