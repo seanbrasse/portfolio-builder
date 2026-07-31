@@ -176,10 +176,14 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
             ) : null}
           </ul>
 
+          {/* The hint doubles as the default alt now, so it has to read as a
+              description rather than an instruction — "Cadence screenshot", not
+              "what the screenshot shows". Type something specific when the shot
+              has a subject worth naming; this is the floor, not the goal. */}
           <Upload
             folder={`projects/${id}`}
             label="Add screenshot or clip"
-            altHint={`${item!.title} — what the screenshot shows`}
+            altHint={`${item!.title} screenshot`}
             onSave={async (image) => {
               'use server';
               return addImage(id, image);

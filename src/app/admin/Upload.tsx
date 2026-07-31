@@ -112,8 +112,17 @@ export function Upload({
     }
   }
 
+  /**
+   * The description that will be saved: what was typed, or the hint if nothing
+   * was. The hint is written to read as usable alt text ("Avarint logo",
+   * "Cadence screenshot") precisely so it can stand in — an empty field
+   * defaulting to a prompt would be worse than the prompt. Alt text is still
+   * required; this only changes what "required" falls back to.
+   */
+  const effectiveAlt = alt.trim() || altHint;
+
   function save() {
-    if (!picked || !alt.trim()) return;
+    if (!picked) return;
 
     start(async () => {
       setError('');
@@ -135,7 +144,7 @@ export function Upload({
 
       const result = await onSave({
         src: publicUrl,
-        alt: alt.trim(),
+        alt: effectiveAlt,
         width: picked.width,
         height: picked.height,
         media: picked.media,
@@ -179,21 +188,25 @@ export function Upload({
           </p>
 
           <label className="field">
-            <span className="field-label">Alt text (required)</span>
+            <span className="field-label">Alt text — defaults to the grey suggestion</span>
             <input
               type="text"
               value={alt}
               onChange={(event) => setAlt(event.target.value)}
+              /**
+               * Tabbing out of an empty field commits the suggestion, so the
+               * value you leave is the value that saves — no difference between
+               * "looked filled in" and "was filled in". Uploading straight from
+               * an empty field does the same, via `effectiveAlt`.
+               */
+              onBlur={() => {
+                if (!alt.trim()) setAlt(altHint);
+              }}
               placeholder={altHint}
             />
           </label>
 
-          <button
-            type="button"
-            className="admin-button"
-            onClick={save}
-            disabled={pending || alt.trim().length === 0}
-          >
+          <button type="button" className="admin-button" onClick={save} disabled={pending}>
             {pending ? 'Uploading…' : 'Upload'}
           </button>
         </>
