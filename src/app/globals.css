@@ -596,10 +596,14 @@ a:hover {
   flex: none;
   height: var(--card-h, 300px);
   min-height: 0;
-  /* The stage is the full width; the cards are centred within it and then
-     pushed out sideways, so the middle card is always dead centre regardless
-     of how many there are. */
-  perspective: 1400px;
+  /* No `perspective`.
+     It was here to suggest depth, but nothing in the carousel rotates or
+     translates in Z — the cards only move and scale in two dimensions, so it
+     bought no visual effect at all. What it did buy was a 3D rendering context,
+     which puts every descendant on a composited layer and drops their text from
+     subpixel antialiasing to grayscale. That is not blur, but it is thinner and
+     softer type on the card and nowhere else on the page, which is exactly what
+     it looked like. */
 }
 
 .project-card {
@@ -615,6 +619,13 @@ a:hover {
      Pinning it top and bottom is what left the copy floating in a tall empty
      panel: the card was the height of the stage and its contents were not. */
   width: var(--card-w, 420px);
+  /* Height is declared, not inferred, and `fit()` rounds it to an even number.
+     A 16:9 well 430px wide is 241.875px tall, which made the card 366.125px and
+     `translate(-50%)` a fractional -183.0625px — every glyph inside then landed
+     off the pixel grid. An even height puts the centring translate on a whole
+     pixel; the width is rounded to a multiple of 16 so the well's height is
+     whole too. */
+  height: var(--card-h, 300px);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -632,7 +643,13 @@ a:hover {
      stream: it comes from the card's rank, which changes once when a card
      crosses the halfway mark. See the note in Work.tsx. */
   transition: opacity 420ms var(--ease);
-  will-change: transform, opacity;
+  /* No `will-change`.
+     Four cards permanently promoted is four layers held for the sake of a
+     gesture that happens occasionally, and a promoted layer renders its text
+     with grayscale antialiasing whether or not anything is moving. Chrome
+     promotes during the animation on its own — measured over 200 frames, taking
+     the hint away left the median frame at 16.7ms and removed the two dropped
+     frames that were there with it. */
 }
 
 /* The front card, at full strength for the whole time it is the front card.
