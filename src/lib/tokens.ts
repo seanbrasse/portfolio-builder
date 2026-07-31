@@ -191,10 +191,7 @@ const light: Palette = {
   ink: '#141414',
   matte: '#FFFFFF',
   matteShade: '#141414',
-  // Darkened once the ground carried a photographic texture. Muted ink has the
-  // least headroom on this palette, and grain behind it spends what there was —
-  // it measured 3.84:1 at 11px over the asphalt before this.
-  inkMuted: '#4A463F',
+  inkMuted: '#5F5A52',
   surface: '#FAF8F3',
   surfaceSunk: '#EDE9E0',
   rule: '#E0DBD1',
