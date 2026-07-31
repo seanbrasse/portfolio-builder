@@ -692,19 +692,17 @@ a:hover {
 
 .project-card {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 50%;
   left: 50%;
-  /* Wider and shorter, which only both hold if the image stops spanning the
-     card.
-     With the well on top, a fixed 16:9 means image height *is* card width x
-     0.5625 — widening the card makes it taller, every time, and the only way
-     to claw the height back is to starve the copy underneath. Putting the well
-     down one side breaks that: it takes a share of the width, so its height is
-     a fraction of a fraction, and the card gets wider and lower together while
-     the image keeps its ratio exactly. */
-  width: clamp(320px, 42vw, 580px);
-  flex-direction: row;
+  /* Width is measured, not declared. A full-width 16:9 well means image height
+     *is* card width x 0.5625, so the card's width and the space available to it
+     are the same question — and CSS cannot answer it, because a percentage
+     width cannot be derived from a parent's height. A ResizeObserver solves it
+     from the one place that knows both numbers.
+     The card is content-height and centred rather than stretched to the stage.
+     Pinning it top and bottom is what left the copy floating in a tall empty
+     panel: the card was the height of the stage and its contents were not. */
+  width: var(--card-w, 420px);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -769,19 +767,19 @@ a:hover {
    frame; without this every card would be stacked dead centre in the server's
    markup and the page would flash a pile of cards. */
 .project-card:not([data-depth]):nth-child(1) {
-  transform: translateX(-50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
   opacity: 1;
   z-index: 100;
 }
 
 .project-card:not([data-depth]):nth-child(2) {
-  transform: translateX(12%) scale(0.87);
+  transform: translate(12%, -50%) scale(0.87);
   opacity: 0.34;
   z-index: 90;
 }
 
 .project-card:not([data-depth]):nth-child(n + 3) {
-  transform: translateX(74%) scale(0.74);
+  transform: translate(74%, -50%) scale(0.74);
   opacity: 0;
   z-index: 80;
 }
@@ -792,24 +790,22 @@ a:hover {
 
 .project-shot {
   aspect-ratio: 16 / 9;
-  /* A share of the width, not all of it. This is what sets the card's height:
-     58% of the card, at 16:9, is about 0.33 of its width. */
-  flex: 0 0 58%;
-  width: 58%;
+  flex: none;
+  width: 100%;
   height: auto;
   object-fit: cover;
   background: var(--surface-sunk);
-  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
 }
 
 .project-shot-empty {
   aspect-ratio: 16 / 9;
-  flex: 0 0 58%;
-  width: 58%;
+  flex: none;
+  width: 100%;
   display: grid;
   place-items: center;
   background: var(--surface-sunk);
-  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
   color: var(--ink-muted);
   font-size: 12px;
   letter-spacing: 0.1em;
@@ -817,14 +813,12 @@ a:hover {
 }
 
 .project-body {
-  padding: 14px 16px;
+  padding: 13px 16px 15px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 6px;
-  flex: 1;
+  gap: 5px;
+  flex: none;
   min-width: 0;
-  min-height: 0;
   overflow: hidden;
 }
 
@@ -1330,14 +1324,6 @@ a:hover {
 .dialog-title {
   font-size: 24px;
   letter-spacing: -0.02em;
-}
-
-.dialog .project-shot,
-.dialog .project-shot-empty {
-  flex: none;
-  width: 100%;
-  border-right: 0;
-  border-bottom: 1px solid var(--rule);
 }
 
 .detail-body {
