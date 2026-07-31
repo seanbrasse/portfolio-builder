@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { Experience, Project } from '@/content/types';
+import type { Experience, Project, SiteSettings } from '@/content/types';
 import { formatMonth, formatRange, isoRange } from '@/lib/format';
 
-/** Cards per second. Slow enough to read a title as it passes. */
-const DRIFT = 0.16;
+/** Cards per notch of wheel travel. Tuned so a normal flick moves about one. */
+const WHEEL = 0.0016;
+
+/** How fast the eased position closes on the target, per second. */
+const EASE = 9;
 
 /** How far apart the cards sit, as a fraction of a card's width. Under 1, so
  *  neighbours overlap rather than sit beside each other. */
@@ -21,17 +24,17 @@ const SPACING = 0.62;
 export function Work({
   projects,
   experiences,
+  education,
 }: {
   projects: Project[];
   experiences: Experience[];
+  education: SiteSettings['education'];
 }) {
   const count = projects.length;
   const [active, setActive] = useState(0);
-  const [playing, setPlaying] = useState(true);
-  const [held, setHeld] = useState(false);
   const [detail, setDetail] = useState<Project | null>(null);
   const [gallery, setGallery] = useState(false);
-  const drag = useRef<{ x: number } | null>(null);
+  const drag = useRef<{ x: number; from: number } | null>(null);
 
   const employers = useMemo(
     () => Object.fromEntries(experiences.map((item) => [item.id, item])),
@@ -54,9 +57,21 @@ export function Work({
    * because that is the one thing anything else needs to know.
    */
   const position = useRef(0);
+  const target = useRef(0);
   const stage = useRef<HTMLDivElement>(null);
+  const cursor = useRef<HTMLSpanElement>(null);
+  const frame = useRef(0);
 
-  const paused = !playing || held || detail !== null || gallery;
+  /**
+   * Where each project sits on the timeline, as a percentage. Shared between
+   * the line, which draws a dot per project, and the cursor, which slides
+   * between those dots as the carousel moves — they have to agree, so they
+   * come from one calculation rather than two.
+   */
+  const geometry = useMemo(
+    () => timelineGeometry(experiences, projects, education),
+    [experiences, projects, education],
+  );
 
   // Layout is a pure function of position, so it can be called from the frame
   // loop and from a jump, and the two cannot disagree.
@@ -68,12 +83,11 @@ export function Work({
 
     // Signed distance from the middle, wrapped, so the first card sits beside
     // the last rather than against an empty edge.
-    const offsets = Array.from(cards, (_, index) => {
-      let offset = (index - position.current) % count;
-      if (offset > count / 2) offset -= count;
-      if (offset < -count / 2) offset += count;
-      return offset;
-    });
+    // No wrapping. Position is progress from the first project to the last,
+    // because that is what the timeline cursor is reporting — a line that
+    // jumps back to the start when the carousel loops is not a progress
+    // indicator, it is a clock.
+    const offsets = Array.from(cards, (_, index) => index - position.current);
 
     /**
      * Depth is a rank, not a threshold on distance.
@@ -124,74 +138,134 @@ export function Work({
       // present with the value "undefined" and still matches `[data-centre]`.
       card.toggleAttribute('data-centre', depth === '0');
     });
-  }, [count]);
+
+    // The cursor sits between the two projects the position is between, which
+    // is what makes it track the carousel rather than snap to whichever card
+    // happens to be nearest.
+    if (cursor.current && geometry.marks.length > 0) {
+      const clamped = Math.max(0, Math.min(position.current, geometry.marks.length - 1));
+      const lower = Math.floor(clamped);
+      const upper = Math.min(lower + 1, geometry.marks.length - 1);
+      const blend = clamped - lower;
+      const left =
+        geometry.marks[lower].left + (geometry.marks[upper].left - geometry.marks[lower].left) * blend;
+      cursor.current.style.left = `${left}%`;
+    }
+  }, [count, geometry]);
 
   useEffect(paint, [paint]);
 
-  useEffect(() => {
-    if (paused) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  /**
+   * The loop no longer advances anything. It closes the gap between where the
+   * carousel is and where the reader has asked it to be, and then stops.
+   *
+   * Keeping the eased follow rather than writing the target straight to the
+   * cards is what preserves the feel of the old drift: a wheel notch is a
+   * discrete event, and applying it directly would make the carousel jump by
+   * that much instantly. Easing turns a series of notches into continuous
+   * travel, and a flick that lands several notches at once still resolves as
+   * one smooth move.
+   *
+   * It cancels itself when the gap closes, so an idle page runs no frames.
+   */
+  const run = useCallback(() => {
+    if (frame.current) return;
 
-    let frame = 0;
     let last = performance.now();
-
     const step = (now: number) => {
-      // Elapsed time, not a fixed increment per frame: a 120Hz display would
-      // otherwise run the carousel at twice the speed of a 60Hz one, and a
-      // dropped frame would make it stutter rather than catch up.
+      // Elapsed time, not a fixed step, or the carousel closes twice as fast
+      // on a 120Hz display as it does on a 60Hz one.
       const delta = Math.min((now - last) / 1000, 0.1);
       last = now;
-      position.current = (position.current + delta * DRIFT) % count;
+
+      const gap = target.current - position.current;
+      if (Math.abs(gap) < 0.0005) {
+        position.current = target.current;
+        paint();
+        frame.current = 0;
+        return;
+      }
+
+      position.current += gap * Math.min(delta * EASE, 1);
       paint();
 
-      const rounded = Math.round(position.current) % count;
+      const rounded = Math.round(position.current);
       setActive((current) => (current === rounded ? current : rounded));
 
-      frame = requestAnimationFrame(step);
+      frame.current = requestAnimationFrame(step);
     };
 
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [paused, count, paint]);
+    frame.current = requestAnimationFrame(step);
+  }, [paint]);
 
-  const jump = useCallback(
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+
+  /** Move the carousel to a position, clamped to the projects that exist. */
+  const seek = useCallback(
     (to: number) => {
-      position.current = ((to % count) + count) % count;
-      setActive(Math.round(position.current) % count);
-      paint();
+      target.current = Math.max(0, Math.min(to, count - 1));
+      setActive(Math.round(target.current));
+      run();
     },
-    [count, paint],
+    [count, run],
+  );
+
+  /**
+   * The wheel drives it, but only where the page has no scrolling of its own to
+   * give up. On the locked one-screen layout there is nothing else a vertical
+   * wheel could do, so taking it is free. Below that breakpoint the page is an
+   * ordinary scrolling document and hijacking the wheel would trap the reader
+   * in the carousel — there, horizontal intent still works and so does drag.
+   */
+  const onWheel = useCallback(
+    (event: React.WheelEvent) => {
+      const pageScrolls = document.documentElement.scrollHeight > window.innerHeight;
+      const horizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY);
+      if (pageScrolls && !horizontal) return;
+
+      const amount = horizontal ? event.deltaX : event.deltaY;
+      seek(target.current + amount * WHEEL);
+    },
+    [seek],
   );
 
   const go = useCallback(
-    (delta: number) => jump(Math.round(position.current) + delta),
-    [jump],
+    (delta: number) => seek(Math.round(target.current) + delta),
+    [seek],
   );
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'ArrowRight') go(1);
     else if (event.key === 'ArrowLeft') go(-1);
-    else if (event.key === 'Home') jump(0);
-    else if (event.key === 'End') jump(count - 1);
+    else if (event.key === 'Home') seek(0);
+    else if (event.key === 'End') seek(count - 1);
     else return;
     event.preventDefault();
   };
 
-  const onPointerUp = (event: React.PointerEvent) => {
+  // Drag scrubs rather than stepping. The carousel is the reader's to move
+  // now, so a half-drag should leave it half-way rather than snapping back.
+  const onPointerMove = (event: React.PointerEvent) => {
     const start = drag.current;
-    drag.current = null;
     if (!start) return;
-    const dx = event.clientX - start.x;
-    if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+    const width = stage.current?.clientWidth ?? 1;
+    seek(start.from - ((event.clientX - start.x) / width) * 2.2);
+  };
+
+  const onPointerUp = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    // Settle on a card so the carousel never rests between two.
+    seek(Math.round(target.current));
   };
 
   return (
     <>
       <Timeline
-        experiences={experiences}
-        projects={projects}
+        geometry={geometry}
         activeProject={projects[active]}
-        onPick={jump}
+        cursorRef={cursor}
+        onPick={seek}
       />
 
       <div
@@ -201,13 +275,11 @@ export function Work({
         aria-label="Selected work"
         tabIndex={0}
         onKeyDown={onKeyDown}
-        onPointerDown={(event) => (drag.current = { x: event.clientX })}
+        onWheel={onWheel}
+        onPointerDown={(event) => (drag.current = { x: event.clientX, from: target.current })}
+        onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={() => (drag.current = null)}
-        onMouseEnter={() => setHeld(true)}
-        onMouseLeave={() => setHeld(false)}
-        onFocusCapture={() => setHeld(true)}
-        onBlurCapture={() => setHeld(false)}
       >
         <div className="carousel-stage" ref={stage}>
           {projects.map((project, index) => {
@@ -247,15 +319,6 @@ export function Work({
         </div>
 
         <div className="carousel-controls">
-          <button
-            type="button"
-            className="carousel-arrow"
-            onClick={() => setPlaying((on) => !on)}
-            aria-label={playing ? 'Pause the carousel' : 'Play the carousel'}
-          >
-            {playing ? '❙❙' : '▶'}
-          </button>
-
           <ol className="carousel-dots">
             {projects.map((project, index) => (
               <li key={project.id}>
@@ -264,7 +327,7 @@ export function Work({
                   className="carousel-dot"
                   aria-current={index === active || undefined}
                   aria-label={`Show ${project.title}`}
-                  onClick={() => jump(index)}
+                  onClick={() => seek(index)}
                 />
               </li>
             ))}
@@ -303,73 +366,93 @@ export function Work({
    Timeline
 ------------------------------------------------------------------------- */
 
+type Geometry = ReturnType<typeof timelineGeometry>;
+
 /** Months since epoch, for placing a date on a line. */
-function months(iso: string) {
+function monthsOf(iso: string) {
   const [year, month] = iso.split('-').map(Number);
   return year * 12 + (month - 1);
 }
 
 /**
- * The career as one continuous line.
+ * Where everything sits on the line, as percentages.
  *
- * A single rule end to end, a tick where each company was joined, and the
- * projects distributed along it. Not a bar per job: the line is the career, and
- * cutting it into segments makes the gaps between jobs look like part of the
- * design rather than like nothing happening.
+ * Computed once and shared, because the line draws a dot per project and the
+ * cursor slides between those dots — two calculations that disagree by a
+ * rounding error would show as a cursor that never quite lands on a mark.
  *
- * Everything is placed as a percentage of elapsed time rather than one slot per
- * item, so four months and three years do not occupy the same width.
+ * Positions are elapsed time, not one slot per item: a degree that ran four
+ * years and a job that ran seven months should not occupy the same width.
  */
-function Timeline({
-  experiences,
-  projects,
-  activeProject,
-  onPick,
-}: {
-  experiences: Experience[];
-  projects: Project[];
-  activeProject?: Project;
-  onPick: (index: number) => void;
-}) {
-  const { joins, ticks, marks, spans } = useMemo(() => {
-    const end = months(latestDate(projects, experiences));
-    const starts = experiences.map((item) => months(item.startDate));
-    const min = Math.min(...starts);
-    const max = Math.max(end, ...projects.map((p) => months(p.date)));
-    const span = Math.max(max - min, 1);
-    const at = (iso: string) => ((months(iso) - min) / span) * 100;
+function timelineGeometry(
+  experiences: Experience[],
+  projects: Project[],
+  education: SiteSettings['education'],
+) {
+  const min = monthsOf(education.startDate);
+  const max = Math.max(
+    ...projects.map((project) => monthsOf(project.date)),
+    ...experiences.map((item) => monthsOf(item.endDate ?? item.startDate)),
+  );
+  const span = Math.max(max - min, 1);
+  const at = (iso: string) => ((monthsOf(iso) - min) / span) * 100;
 
-    const years = [];
-    for (let year = Math.ceil(min / 12); year * 12 <= max; year += 1) {
-      years.push({ year, left: ((year * 12 - min) / span) * 100 });
-    }
+  const years = [];
+  for (let year = Math.ceil(min / 12); year * 12 <= max; year += 1) {
+    years.push({ year, left: ((year * 12 - min) / span) * 100 });
+  }
 
-    // Oldest first, so the line reads left to right the way time does.
-    const ordered = [...experiences].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const ordered = [...experiences].sort((a, b) => a.startDate.localeCompare(b.startDate));
 
-    return {
-      ticks: years,
-      joins: ordered.map((item) => ({
+  return {
+    ticks: years,
+    // The degree is a join like any other as far as the line is concerned: a
+    // tick where something started. It is first because it started first.
+    joins: [
+      { id: 'education', label: education.school, left: at(education.startDate) },
+      ...ordered.map((item) => ({ id: item.id, label: item.company, left: at(item.startDate) })),
+    ],
+    spans: [
+      {
+        id: 'education',
+        label: `${education.credential}, ${education.school}`,
+        range: `from ${formatMonth(education.startDate)}`,
+        iso: education.startDate,
+      },
+      ...ordered.map((item) => ({
         id: item.id,
-        company: item.company,
-        left: at(item.startDate),
-      })),
-      spans: ordered.map((item) => ({
-        id: item.id,
-        company: item.company,
+        label: item.company,
         range: formatRange(item.startDate, item.endDate),
         iso: isoRange(item.startDate, item.endDate),
       })),
-      marks: projects.map((project, index) => ({
-        index,
-        id: project.id,
-        title: project.title,
-        date: project.date,
-        left: at(project.date),
-      })),
-    };
-  }, [experiences, projects]);
+    ],
+    marks: projects.map((project, index) => ({
+      index,
+      id: project.id,
+      title: project.title,
+      date: project.date,
+      left: at(project.date),
+    })),
+  };
+}
 
+/**
+ * The career as one continuous line: a rule end to end, a tick where each thing
+ * started, and the projects distributed along it. Not a bar per job — the line
+ * is the career, and cutting it into segments makes the gaps between jobs look
+ * like part of the design rather than like nothing happening.
+ */
+function Timeline({
+  geometry,
+  activeProject,
+  cursorRef,
+  onPick,
+}: {
+  geometry: Geometry;
+  activeProject?: Project;
+  cursorRef: React.RefObject<HTMLSpanElement | null>;
+  onPick: (index: number) => void;
+}) {
   return (
     <div className="timeline">
       {/* Decoration. The same facts follow as a dated list, because a position
@@ -377,35 +460,35 @@ function Timeline({
       <div className="timeline-track" aria-hidden="true">
         <span className="timeline-rule" />
 
-        {ticks.map((tick) => (
+        {geometry.ticks.map((tick) => (
           <span key={tick.year} className="timeline-year" style={{ left: `${tick.left}%` }}>
             {tick.year}
           </span>
         ))}
 
-        {joins.map((join) => (
+        {geometry.joins.map((join) => (
           <span key={join.id} className="timeline-join" style={{ left: `${join.left}%` }}>
-            <span className="timeline-company">{join.company}</span>
+            <span className="timeline-company">{join.label}</span>
           </span>
         ))}
 
-        {marks.map((mark) => (
-          <span
-            key={mark.id}
-            className="timeline-mark"
-            data-active={mark.id === activeProject?.id || undefined}
-            style={{ left: `${mark.left}%` }}
-          />
+        {geometry.marks.map((mark) => (
+          <span key={mark.id} className="timeline-mark" style={{ left: `${mark.left}%` }} />
         ))}
+
+        {/* Rides the carousel's continuous position, so it slides between two
+            projects rather than snapping to whichever is nearest. Placed from
+            the animation frame, which is why it is a ref. */}
+        <span ref={cursorRef} className="timeline-cursor" />
       </div>
 
       <ol className="sr-only">
-        {spans.map((span) => (
+        {geometry.spans.map((span) => (
           <li key={span.id}>
-            {span.company}, <time dateTime={span.iso}>{span.range}</time>
+            {span.label}, <time dateTime={span.iso}>{span.range}</time>
           </li>
         ))}
-        {marks.map((mark) => (
+        {geometry.marks.map((mark) => (
           <li key={mark.id}>
             <button type="button" onClick={() => onPick(mark.index)}>
               {mark.title}, {formatMonth(mark.date)}
@@ -419,11 +502,6 @@ function Timeline({
       </p>
     </div>
   );
-}
-
-function latestDate(projects: Project[], experiences: Experience[]) {
-  const all = [...projects.map((p) => p.date), ...experiences.map((e) => e.startDate)];
-  return all.sort().at(-1) ?? '2026-01';
 }
 
 /* -------------------------------------------------------------------------
