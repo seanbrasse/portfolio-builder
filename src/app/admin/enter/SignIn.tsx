@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { supabaseBrowser } from '@/lib/supabase/browser';
 
@@ -13,17 +14,39 @@ import { supabaseBrowser } from '@/lib/supabase/browser';
  * email that controls the site".
  *
  * Being sent a link is not authorisation. Anyone can ask for one; the allowlist
- * decides what the resulting session can reach, and both the middleware and
- * every row-level policy consult it.
+ * decides what the resulting session can reach, and both the proxy and every
+ * row-level policy consult it.
  */
-export function SignIn() {
+export function SignIn({ problem }: { problem?: string }) {
   const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const router = useRouter();
+
+  /**
+   * Supabase reports a failed link twice — once in the query string and once in
+   * the fragment. The fragment never reaches the server, so a redirect landing
+   * here directly rather than through `/auth/callback` would otherwise show an
+   * empty form and no explanation.
+   *
+   * Rewritten into the query rather than held in state, so the message has one
+   * source: the server prop above. Copying it into a second place is how the
+   * two end up disagreeing after a navigation.
+   */
+  useEffect(() => {
+    if (problem || !window.location.hash) return;
+
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const reported = hash.get('error_description') ?? hash.get('error');
+    if (!reported) return;
+
+    router.replace(`/admin/enter?problem=${encodeURIComponent(reported.replace(/\+/g, ' '))}`);
+  }, [problem, router]);
 
   async function send(form: FormData) {
     const email = String(form.get('email') ?? '').trim();
     if (!email) return;
 
     setState('sending');
+
     const supabase = supabaseBrowser();
     await supabase.auth.signInWithOtp({
       email,
@@ -37,13 +60,21 @@ export function SignIn() {
   if (state === 'sent') {
     return (
       <p className="admin-note" role="status">
-        Check your inbox. The link expires shortly and can be used once.
+        Check your inbox. The link expires shortly, can be used once, and has to
+        be opened in this browser — it is completed with a secret this page
+        kept.
       </p>
     );
   }
 
   return (
     <form action={send} className="admin-form">
+      {problem ? (
+        <p className="admin-error" role="status">
+          {problem}
+        </p>
+      ) : null}
+
       <label className="field">
         <span className="field-label">Email</span>
         <input
