@@ -113,7 +113,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
           <span className="field-label">Summary — max {CAPS.projectSummary}</span>
           <textarea
             name="summary"
-            rows={3}
+            rows={5}
             maxLength={CAPS.projectSummary}
             defaultValue={item?.summary ?? ''}
           />
