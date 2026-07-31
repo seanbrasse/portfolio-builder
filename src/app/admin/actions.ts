@@ -367,6 +367,39 @@ export async function removeImage(id: string): Promise<Result> {
   return { ok: true };
 }
 
+/**
+ * How an already-uploaded image sits in the card's well.
+ *
+ * `contain` shows the whole image and makes the focal point moot, so it is
+ * nulled rather than kept around as a value that steers nothing — the next edit
+ * back to `cover` starts from centre, which is the honest default. Under
+ * `cover` the fractions are clamped to 0..1, the range the column allows and
+ * the range `object-position` means anything by.
+ */
+export async function saveImageFraming(
+  id: string,
+  framing: { fit: 'cover' | 'contain'; focalX: number; focalY: number },
+): Promise<Result> {
+  if (!(await isAdmin())) return DENIED;
+  const supabase = await supabaseServer();
+
+  const clamp = (n: number) => Math.min(1, Math.max(0, n));
+  const cover = framing.fit === 'cover';
+
+  const { error } = await supabase
+    .from('project_images')
+    .update({
+      fit: framing.fit,
+      focal_x: cover ? clamp(framing.focalX) : null,
+      focal_y: cover ? clamp(framing.focalY) : null,
+    })
+    .eq('id', id);
+
+  if (error) return { ok: false, error: error.message };
+  republish();
+  return { ok: true };
+}
+
 /* -------------------------------------------------------------------------
    Session
 ------------------------------------------------------------------------- */

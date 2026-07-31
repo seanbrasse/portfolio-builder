@@ -38,7 +38,16 @@ export type Asset = {
   width: number;
   height: number;
   kind: 'screenshot' | 'logo' | 'avatar' | 'document';
-  /** MEDIA-4: the point that must survive any crop. 0..1 in both axes. */
+  /**
+   * How the image sits in a fixed well. `cover` fills and crops, `contain`
+   * shows the whole image letterboxed. Undefined means cover — the historical
+   * behaviour, and the right default for a shot already the right shape.
+   */
+  fit?: 'cover' | 'contain';
+  /**
+   * MEDIA-4: the point that must survive the crop, 0..1 in both axes. Applies
+   * under `cover` only — there is nothing to steer when the whole image shows.
+   */
   focalPoint?: { x: number; y: number };
   treatment?: AssetTreatment;
 };
