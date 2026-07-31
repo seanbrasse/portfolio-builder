@@ -77,10 +77,25 @@ rail scroll. The tell was a rail reporting zero horizontal overflow while cards
 visibly ran off the screen: nothing was overflowing it, because it had been
 given room for everything.
 
-**The projects rail is native scrolling, not a carousel.** Horizontal
-`scroll-snap` on a real scroll container. The browser already implements
-keyboard scrolling, touch momentum, scrollbar dragging and reduced motion
-correctly, and a carousel reimplements all four.
+**The projects carousel.** Three cards visible, the middle one raised over the
+two beside it. Cards are absolutely positioned in a stage and placed by
+transform, which is the only way to make them overlap — a flow layout can put
+them beside each other and nothing more. Transform and opacity only: both are
+compositor properties, so moving four cards costs no layout, where animating
+`left` or `width` would reflow the stage on every frame.
+
+This replaced a native `scroll-snap` rail, and that trade is worth being
+explicit about. A scroll container gets keyboard scrolling, touch momentum,
+scrollbar dragging and reduced-motion handling from the browser for free; a
+carousel has to implement all four itself and most do not. This one does —
+prev/next buttons, arrow keys plus Home and End, pointer swipe (one code path
+for finger, pen and mouse), and transitions that vanish under
+`prefers-reduced-motion`, where the cards still change places but do not travel.
+
+Only the centre card is in the tab order. The side cards are visible but partly
+covered, and sending focus to a link underneath another card is worse than not
+reaching it, so `inert` holds them out until they are brought to the middle.
+Positions wrap, so the middle is never empty at either end.
 
 **The card gives up its own height.** On a page that cannot scroll, a
 fixed-aspect image well is what pushes copy out of a card, so the well is
