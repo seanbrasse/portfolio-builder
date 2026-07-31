@@ -1537,6 +1537,96 @@ a:hover {
   color: var(--ink-muted);
 }
 
+/* The modal's image carousel. The positioning parent for the arrows, dots and
+   count that overlay the shot; with one image it adds nothing, so a
+   single-shot project looks exactly as it did. */
+.gallery-viewer {
+  position: relative;
+}
+
+/* Arrows, sat over the image and out of the way of its middle. Circular so they
+   read as controls on top of a photo, and translucent so the image is still
+   the thing. */
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease);
+}
+
+.gallery-nav:hover,
+.gallery-nav:focus-visible {
+  background: var(--surface);
+}
+
+.gallery-nav-prev {
+  left: 10px;
+}
+
+.gallery-nav-next {
+  right: 10px;
+}
+
+/* Dots, centred along the bottom edge of the image. */
+.gallery-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  gap: 7px;
+  margin: 0;
+  padding: 6px 9px;
+  list-style: none;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  border-radius: 999px;
+}
+
+.gallery-dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--rule-strong);
+  cursor: pointer;
+  transition: background var(--dur) var(--ease);
+}
+
+.gallery-dot[aria-current] {
+  background: var(--accent-a);
+}
+
+/* Announced, not drawn. The dots already show the position; a number under them
+   was the same fact twice, sitting on top of the dots. This keeps the live
+   announcement for a screen reader and takes the duplicate off the screen. */
+.gallery-counter {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* The gallery panel has no image, so it pads itself. */
 .dialog[data-wide] .dialog-panel {
   padding: 24px;
@@ -2360,6 +2450,47 @@ a:hover {
   display: grid;
   gap: 8px;
   justify-items: start;
+}
+
+/* The image's order label and its move controls, on one line above the
+   preview. The label carries which position it holds and, for the first, that
+   it is the card's picture. */
+.admin-shot-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.admin-reorder {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.admin-reorder-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.admin-reorder-button:hover:not(:disabled) {
+  border-color: var(--ink-muted);
+}
+
+.admin-reorder-button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 /* The framing editor: the card's well beside its controls, wrapping to a stack

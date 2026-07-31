@@ -392,6 +392,63 @@ export async function removeImage(id: string): Promise<Result> {
 }
 
 /**
+ * Move one image earlier or later in its project's order.
+ *
+ * Order is `sort_order`, and the first image is the one the card shows — so
+ * moving an image to the front is how you choose the card's picture. This swaps
+ * the row with its neighbour rather than rewriting the whole list: two updates,
+ * and the values stay a clean sequence because that is all `addImage` ever put
+ * there. A move off either end is a no-op that still reports success, so the
+ * buttons at the ends do nothing rather than erroring.
+ */
+export async function moveImage(id: string, direction: 'up' | 'down'): Promise<Result> {
+  if (!(await isAdmin())) return DENIED;
+  const supabase = await supabaseServer();
+
+  const target = await supabase
+    .from('project_images')
+    .select('id, project_id, sort_order')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (target.error) return { ok: false, error: target.error.message };
+  if (!target.data) return { ok: false, error: 'That image no longer exists.' };
+
+  const siblings = await supabase
+    .from('project_images')
+    .select('id, sort_order')
+    .eq('project_id', target.data.project_id)
+    .order('sort_order', { ascending: true });
+
+  if (siblings.error) return { ok: false, error: siblings.error.message };
+
+  const rows = siblings.data ?? [];
+  const at = rows.findIndex((row) => row.id === id);
+  const swapWith = direction === 'up' ? at - 1 : at + 1;
+
+  // Already at the end it is moving toward: nothing to do, and not an error.
+  if (swapWith < 0 || swapWith >= rows.length) return { ok: true };
+
+  const a = rows[at];
+  const b = rows[swapWith];
+
+  const first = await supabase
+    .from('project_images')
+    .update({ sort_order: b.sort_order })
+    .eq('id', a.id);
+  if (first.error) return { ok: false, error: first.error.message };
+
+  const second = await supabase
+    .from('project_images')
+    .update({ sort_order: a.sort_order })
+    .eq('id', b.id);
+  if (second.error) return { ok: false, error: second.error.message };
+
+  republish();
+  return { ok: true };
+}
+
+/**
  * How an already-uploaded image sits in the card's well.
  *
  * `contain` shows the whole image and makes the focal point moot, so it is
