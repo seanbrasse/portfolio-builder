@@ -13,7 +13,7 @@ import { PanelContentView, isInteractive, panelClassName } from './panels';
  * ACC-1 still holds: panels are emitted by walking the template's slot list, so
  * DOM order matches the reading order even though the page no longer scrolls.
  */
-function ComicLeaf({ page, inkOffset = 0 }: { page: Page; inkOffset?: number }) {
+function ComicLeaf({ page }: { page: Page }) {
   const template = getTemplate(page.templateId);
   const bySlot = new Map(page.panels.map((panel) => [panel.slot, panel]));
 
@@ -21,15 +21,12 @@ function ComicLeaf({ page, inkOffset = 0 }: { page: Page; inkOffset?: number }) 
     <>
       <p className="page-caption">{page.caption}</p>
       <div className="comic-page" style={gridStyle(template)}>
-        {template.slots.map((slot, index) => {
+        {template.slots.map((slot) => {
           const panel: PanelData = bySlot.get(slot) ?? { slot, content: { type: 'empty' } };
           return (
             <Panel
               key={slot}
               slot={slot}
-              // Offset rather than index: on a spread the right page continues
-              // the left page's sequence instead of restarting alongside it.
-              index={inkOffset + index}
               overrides={panel.overrides}
               interactive={isInteractive(panel.content)}
               empty={panel.content.type === 'empty'}
@@ -82,10 +79,6 @@ function CoverLeaf() {
   );
 }
 
-export function BookLeaf({ leaf, inkOffset = 0 }: { leaf: Leaf; inkOffset?: number }) {
-  return leaf.kind === 'cover' ? (
-    <CoverLeaf />
-  ) : (
-    <ComicLeaf page={leaf.page} inkOffset={inkOffset} />
-  );
+export function BookLeaf({ leaf }: { leaf: Leaf }) {
+  return leaf.kind === 'cover' ? <CoverLeaf /> : <ComicLeaf page={leaf.page} />;
 }

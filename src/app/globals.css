@@ -34,34 +34,19 @@
   --font-quote: ui-serif, Georgia, 'Times New Roman', serif;
 
   /* ---------------------------------------------------------------------
-     Motion (PRD section 9). Two numbers drive the entrance.
+     Motion (PRD section 9).
 
-     The page's *structure* does not animate — the panel grid is simply there,
-     because a comic page is laid out before it is lettered and a reader
-     watching an empty sheet acquire its own layout is watching the wrong
-     thing. What draws in is the contents, panel by panel, in reading order and
-     across the spread.
+     Pages carry no entrance animation. They arrive drawn — panels, flats and
+     lettering together — because a staggered reveal put the reader in front of
+     a page that was still assembling itself, and watching an issue write
+     itself is only charming the first time.
 
-     MOTION-2 asks for a 60ms stagger and a six-panel page resolving inside
-     500ms, and this deliberately overruns the cap — the second override of the
-     PRD here, after MODE-8. At the 44ms stagger the cap forces, a page did not
-     read as being lettered; it read as popping in. An eight-panel spread takes
-     about 1.1s (7 gutters x 130ms + 190ms), which is slow enough to watch and
-     short enough that nobody waits for it: every panel is legible the moment
-     its copy lands, and the reader is still on the left page while the right
-     one is being written.
-
-     Anyone who has asked not to be animated at gets none of this: the reduced
-     motion block collapses the whole sequence to one short fade.
+     MOTION-2's ink-in and MOTION-3's SFX stamp are therefore not implemented;
+     see the README. What is left is motion a reader asks for: the page turn,
+     and the hover lift on a panel that links somewhere.
   --------------------------------------------------------------------- */
-  --stage-letter: 190ms;
-  --gutter-beat: 130ms;
-
   --dur-hover: 140ms;
-  --dur-stamp: 320ms;
   --dur-page: 280ms;
-  --dur-reduced: 120ms;
-  --ease-stamp: cubic-bezier(0.2, 1.5, 0.4, 1);
 
   --border-ink: 5px;
   --panel-ink: 4px;
@@ -315,23 +300,6 @@ main {
 .curl-page--blank {
   background: var(--paper);
   border: var(--border-ink) solid var(--ink);
-}
-
-/* A page that is ruled but not yet lettered.
- *
- * `visibility` rather than `display`, so the panels keep the exact size they
- * will have once the copy lands and nothing reflows underneath the reader when
- * it does. The panel grid itself is untouched: borders, flats and screens are
- * how a comic page arrives from the printer, and only the lettering is still
- * to come. */
-.book-leaf[data-unlettered] .panel-body,
-.book-leaf[data-unlettered] .sfx,
-.book-leaf[data-unlettered] .page-caption,
-.book-leaf[data-unlettered] .cover-head,
-.book-leaf[data-unlettered] .cover-lockup,
-.book-leaf[data-unlettered] .cover-flash,
-.book-leaf[data-unlettered] .cover-foot {
-  visibility: hidden;
 }
 
 /* Shading. A curve is only legible if the light changes across it — without
@@ -1362,118 +1330,10 @@ main {
 }
 
 /* ---------------------------------------------------------------------------
-   The ink-in sequence (MOTION-2)
-
-   The default state in CSS is the *finished* state. Nothing here is hidden
-   until JavaScript decides to reveal it, so a page whose script never runs is
-   fully readable. `.is-inking` is added by the IntersectionObserver, once per
-   page, and never removed.
---------------------------------------------------------------------------- */
-
-/* The panels themselves do not draw in — the *contents* do.
- *
- * The border, the flat and the screen are the page's structure, and staggering
- * those meant a reader watched an empty sheet acquire its own layout before
- * anything readable arrived. A comic page is laid out first and lettered
- * after; the panel grid is the thing that says "this is a page", so it is
- * simply there, and what fills in is what a reader is actually waiting for.
- *
- * That is also why the stack of `.panel-rule` / `.panel-fill` / `.panel-screen`
- * animations that used to live here is gone rather than merely retimed: their
- * resting state is the finished state, so removing the animation *is* the
- * fix. */
-.is-inking .panel-body {
-  animation: ink-letter var(--stage-letter) ease-out both;
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat));
-}
-
-.is-inking .sfx {
-  animation: sfx-stamp var(--dur-stamp) var(--ease-stamp) both;
-  /* Stamped onto its own panel once that panel is finished. This used to wait
-     on a `--panel-count` that nothing ever set, so every SFX fired on the
-     fallback of three regardless of where its panel actually was in the
-     sequence — early on a long page, late on a short one. Its own `--i` is the
-     number it always wanted. */
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-letter));
-}
-
-@keyframes rule-x {
-  from {
-    transform: scaleX(0);
-  }
-}
-
-@keyframes rule-y {
-  from {
-    transform: scaleY(0);
-  }
-}
-
-@keyframes rule-cut {
-  from {
-    transform: rotate(45deg) scaleX(0);
-  }
-}
-
-@keyframes ink-appear {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes ink-screen {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 0.2;
-  }
-}
-
-@keyframes ink-letter {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-}
-
-@keyframes sfx-stamp {
-  0% {
-    opacity: 0;
-    transform: rotate(var(--sfx-rotate, -11deg)) scale(0.7);
-  }
-  55% {
-    opacity: 1;
-    transform: rotate(var(--sfx-rotate, -11deg)) scale(1.06);
-  }
-  100% {
-    opacity: 1;
-    transform: rotate(var(--sfx-rotate, -11deg)) scale(1);
-  }
-}
-
-/* MOTION-4: opt-in type-on for a balloon quote. Steps, not a smooth reveal,
-   so it reads as lettering appearing rather than a fade. */
-.is-inking .balloon[data-type-on='true'] .balloon-quote {
-  animation: type-on 700ms steps(40, end) both;
-  animation-delay: calc(var(--i, 0) * var(--gutter-beat) + var(--stage-letter));
-}
-
-@keyframes type-on {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-/* ---------------------------------------------------------------------------
    Reduced motion (MOTION-6)
 
-   Everything above collapses to one short opacity fade with zero stagger.
-   Both the OS-level preference and the in-page toggle route here, so there is
-   exactly one reduced-motion implementation to keep correct.
+   Pages carry no entrance animation at all now, so what is left to suppress is
+   the page turn and the interaction motion.
 --------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1481,19 +1341,10 @@ main {
     scroll-behavior: auto;
   }
 
-  .is-inking .panel-body,
-  .is-inking .sfx,
-  .is-inking .balloon[data-type-on='true'] .balloon-quote {
-    /* Opacity only. Transforms stay at their resting value, so the border
-       rules are already full-size and nothing scales or slides. */
-    animation: ink-appear var(--dur-reduced) ease-out both !important;
-    animation-delay: 0s !important;
-    clip-path: none !important;
-  }
-
   /* Belt and braces. Book.tsx does not render a turning leaf under this
      setting at all, so this only matters if that check ever regresses. */
-  .turn-sheet {
+  .curl-sheet,
+  .turn-cast {
     animation: none !important;
     display: none;
   }
