@@ -1399,7 +1399,17 @@ function useReducedMotion() {
  * shot and the modal's gallery, so framing, video behaviour and the well are
  * defined once rather than twice.
  */
-function Media({ shot }: { shot: Asset }) {
+/**
+ * `viewer` is the difference between the card and the opened modal.
+ *
+ * On the card a video is a preview — a moving thumbnail — so it behaves like an
+ * image: muted, looping, autoplaying, no controls. In the modal you have
+ * deliberately opened the thing to watch it, so it gets the native controls
+ * (play/pause, scrub, and a volume control to turn the sound on) and does not
+ * loop or autoplay with sound, because a browser will not allow sound without a
+ * gesture and a viewer wants to press play rather than have it start silently.
+ */
+function Media({ shot, viewer = false }: { shot: Asset; viewer?: boolean }) {
   const reduced = useReducedMotion();
 
   /**
@@ -1415,16 +1425,19 @@ function Media({ shot }: { shot: Asset }) {
       : undefined,
   };
 
-  /**
-   * A clip of the thing running says more than a still of it stopped.
-   *
-   * Muted, looping and inline, so it behaves like an image rather than like
-   * media — and `poster` carries the still. Autoplay is dropped and controls
-   * appear under `prefers-reduced-motion`: something moving on its own is
-   * exactly what that setting is asking not to happen, and a play button is the
-   * honest alternative to silently showing nothing.
-   */
   if (shot.media === 'video') {
+    /**
+     * The modal is a player, the card is a preview.
+     *
+     * In the modal the native controls are always on — that is where pause,
+     * scrub and the volume/unmute control live, which is the whole answer to
+     * "how do I hear it". It does not autoplay there: sound cannot start
+     * without a gesture, so a viewer is better served pressing play (and
+     * getting sound) than watching it start muted. On the card it stays the
+     * muted, looping, autoplaying preview it was — a still that happens to
+     * move — with controls only under reduced motion, where autoplay is off
+     * and a play button is the honest alternative to showing nothing.
+     */
     return (
       <video
         className="project-shot"
@@ -1434,11 +1447,11 @@ function Media({ shot }: { shot: Asset }) {
         width={640}
         height={360}
         style={framing}
-        muted
+        muted={!viewer}
         playsInline
-        loop
-        controls={reduced}
-        autoPlay={!reduced}
+        loop={!viewer}
+        controls={viewer || reduced}
+        autoPlay={!viewer && !reduced}
         preload="metadata"
       />
     );
@@ -1519,7 +1532,7 @@ function ProjectGallery({ project }: { project: Project }) {
           : undefined
       }
     >
-      <Media key={images[index].id} shot={images[index]} />
+      <Media key={images[index].id} shot={images[index]} viewer />
 
       {many ? (
         <>
