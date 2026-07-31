@@ -43,7 +43,14 @@
      Opacity and blend are per theme because one photograph cannot serve both:
      a mid-grey asphalt laid over near-black needs to be lightened and held
      back, and the same map over an off-white ground needs to be multiplied. */
-  --texture: none;
+  /* Poly Haven's clean_asphalt, CC0, diffuse map only. Resized to 512 and
+     re-encoded: it is tiled at --texture-size regardless, so the 1024 source
+     was detail the browser threw away, and 684KB became 2.8KB. `image-set`
+     gives WebP to anything that takes it and JPEG to anything that does not. */
+  --texture: image-set(
+    url('/textures/asphalt.webp') type('image/webp'),
+    url('/textures/asphalt.jpg') type('image/jpeg')
+  );
   --texture-blend: soft-light;
   --texture-opacity: 0.5;
   --texture-size: 520px;
@@ -55,8 +62,16 @@
 
 [data-theme='light'] {
   color-scheme: light;
+  /* Its own file, not just its own blend. The untreated map is a mid-grey
+     photograph; multiplied against an off-white ground it lands the whole page
+     near 50% grey and took body copy to 1.6:1. The light variant has the same
+     grain with its range compressed into the top of the scale, so multiplying
+     modulates the surface instead of darkening it. */
+  --texture: image-set(
+    url('/textures/asphalt-light.webp') type('image/webp'),
+    url('/textures/asphalt-light.jpg') type('image/jpeg')
+  );
   --texture-blend: multiply;
-  --texture-opacity: 0.35;
 }
 
 * {
@@ -680,11 +695,16 @@ a:hover {
   top: 0;
   bottom: 0;
   left: 50%;
-  /* Wide and low. At a fixed 16:9 the width sets the image height, so a wider
-     card is a taller image — the card stays short by giving almost nothing to
-     the copy beneath it. Company, title, one line. The dialog carries the
-     rest, which is what makes that affordable. */
-  width: clamp(280px, 30vw, 420px);
+  /* Wider and shorter, which only both hold if the image stops spanning the
+     card.
+     With the well on top, a fixed 16:9 means image height *is* card width x
+     0.5625 — widening the card makes it taller, every time, and the only way
+     to claw the height back is to starve the copy underneath. Putting the well
+     down one side breaks that: it takes a share of the width, so its height is
+     a fraction of a fraction, and the card gets wider and lower together while
+     the image keeps its ratio exactly. */
+  width: clamp(320px, 42vw, 580px);
+  flex-direction: row;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -772,21 +792,24 @@ a:hover {
 
 .project-shot {
   aspect-ratio: 16 / 9;
-  flex: none;
-  width: 100%;
+  /* A share of the width, not all of it. This is what sets the card's height:
+     58% of the card, at 16:9, is about 0.33 of its width. */
+  flex: 0 0 58%;
+  width: 58%;
+  height: auto;
   object-fit: cover;
   background: var(--surface-sunk);
-  border-bottom: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
 }
 
 .project-shot-empty {
   aspect-ratio: 16 / 9;
-  flex: none;
-  width: 100%;
+  flex: 0 0 58%;
+  width: 58%;
   display: grid;
   place-items: center;
   background: var(--surface-sunk);
-  border-bottom: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
   color: var(--ink-muted);
   font-size: 12px;
   letter-spacing: 0.1em;
@@ -794,12 +817,13 @@ a:hover {
 }
 
 .project-body {
-  padding: 11px 14px 13px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
+  gap: 6px;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
@@ -897,14 +921,6 @@ a:hover {
   list-style: none;
   margin: 0;
   padding: 0;
-}
-
-/* Nor the summary. At a fixed 16:9 the image is 56% of the card's width in
-   height, so on a wide card there is almost nothing left underneath it — the
-   card is a company, a title and a picture, and the dialog is where the rest
-   of the record lives. */
-.screen .project-summary {
-  display: none;
 }
 
 /* Not on the carousel card. The card is the poster — image, company, title,
@@ -1314,6 +1330,14 @@ a:hover {
 .dialog-title {
   font-size: 24px;
   letter-spacing: -0.02em;
+}
+
+.dialog .project-shot,
+.dialog .project-shot-empty {
+  flex: none;
+  width: 100%;
+  border-right: 0;
+  border-bottom: 1px solid var(--rule);
 }
 
 .detail-body {
