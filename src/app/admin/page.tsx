@@ -82,6 +82,7 @@ export default async function AdminHome() {
                 name="education_start_date"
                 defaultValue={settings.education_start_date}
                 pattern="\d{4}-\d{2}"
+                title="Four-digit year, a hyphen, two-digit month — for example 2023-04."
                 placeholder="2017-09"
               />
             </label>

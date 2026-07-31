@@ -111,6 +111,8 @@ const experiences: Issue['experiences'] = [
 const projects: Issue['projects'] = [
   {
     id: 'knowledge-engine',
+    status: 'shipped',
+    duration: '',
     title: 'LLM Knowledge Engine',
     context: 'professional',
     experienceId: 'mailchimp',
@@ -124,6 +126,8 @@ const projects: Issue['projects'] = [
   },
   {
     id: 'pass-the-interview',
+    status: 'shipped',
+    duration: '',
     title: 'Pass the Interview',
     context: 'personal',
     summary:
@@ -136,6 +140,8 @@ const projects: Issue['projects'] = [
   },
   {
     id: 'cadence',
+    status: 'building',
+    duration: '',
     title: 'Cadence',
     context: 'personal',
     summary:
@@ -148,6 +154,8 @@ const projects: Issue['projects'] = [
   },
   {
     id: 'life-os',
+    status: 'building',
+    duration: '',
     title: 'JARVIS Life OS',
     context: 'personal',
     summary:

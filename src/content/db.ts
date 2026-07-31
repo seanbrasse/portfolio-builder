@@ -73,6 +73,8 @@ type ImageRow = {
   width: number;
   height: number;
   kind: Asset['kind'];
+  media: 'image' | 'video';
+  poster: string | null;
   focal_x: number | null;
   focal_y: number | null;
 };
@@ -84,6 +86,8 @@ type ProjectRow = {
   experience_id: string | null;
   summary: string;
   impact: string;
+  status: Project['status'];
+  duration: string;
   tech: string[];
   links: Link[];
   date: string;
@@ -162,6 +166,8 @@ function toAsset(row: ImageRow): Asset {
     width: row.width,
     height: row.height,
     kind: row.kind,
+    media: row.media ?? 'image',
+    poster: row.poster ?? undefined,
     focalPoint:
       row.focal_x === null || row.focal_y === null
         ? undefined
@@ -177,6 +183,8 @@ function toProject(row: ProjectRow, images: Asset[]): Project {
     experienceId: row.experience_id ?? undefined,
     summary: row.summary,
     impact: row.impact,
+    status: row.status ?? 'shipped',
+    duration: row.duration ?? '',
     tech: row.tech ?? [],
     links: row.links ?? [],
     images,

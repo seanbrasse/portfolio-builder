@@ -96,6 +96,13 @@ export type Experience = {
   links?: Link[];
 };
 
+/**
+ * How far along a project is. `shipped` is the default and the quiet one — a
+ * badge on every card saying "finished" is wallpaper, so only the other two
+ * render.
+ */
+export type ProjectStatus = 'shipped' | 'building' | 'archived';
+
 export type Project = {
   id: string;
   title: string;
@@ -106,6 +113,9 @@ export type Project = {
   summary: string;
   /** The one number. */
   impact: string;
+  status: ProjectStatus;
+  /** How long it took, in whatever unit reads best: "3 months", "a weekend". */
+  duration: string;
   tech: string[];
   links: Link[];
   images: Asset[];

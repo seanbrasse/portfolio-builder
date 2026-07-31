@@ -7,7 +7,13 @@ import { supabaseBrowser } from '@/lib/supabase/browser';
 import type { Result } from './actions';
 
 /** What the browser can tell us about a file without decoding it twice. */
-type Measured = { file: File; width: number; height: number; preview: string };
+type Measured = {
+  file: File;
+  width: number;
+  height: number;
+  preview: string;
+  media: 'image' | 'video';
+};
 
 /**
  * Intrinsic dimensions, measured rather than assumed.
@@ -18,11 +24,29 @@ type Measured = { file: File; width: number; height: number; preview: string };
  * which is correct and is why the columns allow it.
  */
 function measure(file: File): Promise<Measured> {
+  const media = file.type.startsWith('video/') ? 'video' : 'image';
+
   return new Promise((resolve, reject) => {
     const preview = URL.createObjectURL(file);
+
+    if (media === 'video') {
+      // `videoWidth` is only populated once metadata has arrived, which is a
+      // different event from an image's load — an image is decoded whole, a
+      // video announces its dimensions long before it has finished arriving.
+      const clip = document.createElement('video');
+      clip.onloadedmetadata = () =>
+        resolve({ file, width: clip.videoWidth, height: clip.videoHeight, preview, media });
+      clip.onerror = () => {
+        URL.revokeObjectURL(preview);
+        reject(new Error('That file could not be read as a video.'));
+      };
+      clip.src = preview;
+      return;
+    }
+
     const image = new Image();
     image.onload = () =>
-      resolve({ file, width: image.naturalWidth, height: image.naturalHeight, preview });
+      resolve({ file, width: image.naturalWidth, height: image.naturalHeight, preview, media });
     image.onerror = () => {
       URL.revokeObjectURL(preview);
       reject(new Error('That file could not be read as an image.'));
@@ -56,11 +80,20 @@ export function Upload({
   onSave,
   label,
   altHint,
+  accept = 'image/png,image/jpeg,image/webp,image/avif,image/svg+xml,video/mp4,video/webm',
 }: {
   folder: string;
-  onSave: (image: { src: string; alt: string; width: number; height: number }) => Promise<Result>;
+  onSave: (image: {
+    src: string;
+    alt: string;
+    width: number;
+    height: number;
+    media: 'image' | 'video';
+  }) => Promise<Result>;
   label: string;
   altHint: string;
+  /** Narrowed where only a still makes sense — a company logo, for instance. */
+  accept?: string;
 }) {
   const [picked, setPicked] = useState<Measured | null>(null);
   const [alt, setAlt] = useState('');
@@ -105,6 +138,7 @@ export function Upload({
         alt: alt.trim(),
         width: picked.width,
         height: picked.height,
+        media: picked.media,
       });
 
       if (!result.ok) {
@@ -127,15 +161,19 @@ export function Upload({
         <input
           ref={input}
           type="file"
-          accept="image/png,image/jpeg,image/webp,image/avif,image/svg+xml"
+          accept={accept}
           onChange={(event) => choose(event.target.files?.[0])}
         />
       </label>
 
       {picked ? (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="admin-preview" src={picked.preview} alt="" />
+          {picked.media === 'video' ? (
+            <video className="admin-preview" src={picked.preview} controls muted playsInline />
+          ) : (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img className="admin-preview" src={picked.preview} alt="" />
+          )}
           <p className="admin-note">
             {picked.width} × {picked.height}
           </p>

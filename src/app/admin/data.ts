@@ -38,6 +38,8 @@ export type AdminProject = {
   experience_id: string | null;
   summary: string;
   impact: string;
+  status: 'shipped' | 'building' | 'archived';
+  duration: string;
   tech: string[];
   links: { label: string; url: string; type?: string }[];
   date: string;
@@ -51,6 +53,7 @@ export type AdminImage = {
   alt: string;
   width: number;
   height: number;
+  media: 'image' | 'video';
   sort_order: number;
 };
 

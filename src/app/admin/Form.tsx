@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 
 import type { Result } from './actions';
 
@@ -25,23 +25,54 @@ export function Form({
 }) {
   const [pending, start] = useTransition();
   const [state, setState] = useState<Result | null>(null);
+  const node = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
   return (
     <form
+      ref={node}
       className="admin-form"
-      action={(form) =>
+      /**
+       * `noValidate` so the browser does not silently swallow the submit.
+       *
+       * A React form action bypasses the native submit event, which means a
+       * field failing its `pattern` can stop the submit with no visible reason.
+       * Validity is checked explicitly instead: `reportValidity` shows the
+       * browser's own message on the offending field and focuses it, and the
+       * summary below names how many there are, so a failure at the bottom of a
+       * long form is not silent at the top.
+       */
+      noValidate
+      action={(form) => {
+        const element = node.current;
+        if (element && !element.checkValidity()) {
+          element.reportValidity();
+          const bad = element.querySelectorAll(':invalid').length;
+          setState({
+            ok: false,
+            error:
+              bad === 1
+                ? 'One field needs fixing — it is highlighted above.'
+                : `${bad} fields need fixing — the first is highlighted above.`,
+          });
+          return;
+        }
+
         start(async () => {
           const result = await action(form);
           setState(result);
           // The list this form sits beside is server-rendered, so a save that
           // does not refresh leaves the page showing what it showed before.
           if (result.ok) router.refresh();
-        })
-      }
+        });
+      }}
     >
       {children}
 
+      {/* Sticky, because these forms are longer than a screen and a Save button
+          you have to go looking for is a Save button that does not get pressed.
+          It is also where every failure is reported, so the message and the
+          control that produced it stay together. */}
       <div className="admin-actions">
         <button type="submit" className="admin-button" disabled={pending}>
           {pending ? 'Saving…' : submit}

@@ -182,6 +182,22 @@ a:hover {
   top: 8px;
 }
 
+/* The site's wrapper. Below the lock it is an ordinary column that grows with
+   its content; above it, the query further down pins it to the viewport. */
+.site-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.site-frame > main {
+  min-height: 0;
+}
+
+.site-footer {
+  flex: none;
+}
+
 /* One screen ---------------------------------------------------------------
 
    The page does not scroll. `100dvh` rather than `100vh` because mobile
@@ -230,22 +246,20 @@ a:hover {
    unreachable. Below either threshold the page is an ordinary scrolling
    document, which is also what 400% zoom and a short laptop get. */
 @media (min-height: 760px) and (min-width: 900px) {
-  html,
-  body {
-    height: 100%;
+  /* The frame holds the height, not the document.
+     This was on `html`/`body`, so every page inherited it — the admin
+     included, where it clipped the form at one viewport and left the Save
+     button, the timeline editor and the project list rendered but unreachable.
+     Sizing the site's own wrapper instead keeps the body's content exactly one
+     viewport tall, so this page still does not scroll, and anything outside the
+     wrapper is an ordinary scrolling document again. */
+  .site-frame {
+    height: 100dvh;
+    min-height: 0;
     overflow: hidden;
   }
 
-  body {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .site-footer {
-    flex: none;
-  }
-
-  main {
+  .site-frame > main {
     flex: 1;
     min-height: 0;
   }
@@ -253,7 +267,6 @@ a:hover {
   .screen {
     padding-top: clamp(16px, 3vh, 36px);
   }
-
 }
 
 /* The toggle hangs off this block, top right, so it starts on the same line
@@ -1632,6 +1645,10 @@ a:hover {
   body {
     overflow-x: clip;
   }
+
+  .site-frame {
+    min-height: 100dvh;
+  }
 }
 
 /* Narrow. A phone: one card at a time rather than three overlapping, and a
@@ -1954,11 +1971,29 @@ a:hover {
   font-size: 14px;
 }
 
+/* Sticky. These forms run longer than a screen, and a Save button you have to
+   scroll to find is one that does not get pressed. It sits above the page's own
+   background so the fields do not show through it. */
 .admin-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
+  padding: 12px 0;
+  margin-top: 4px;
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+}
+
+/* A field that failed its own rule. The browser names the problem on the field
+   itself; this is what makes the field findable in a long form. */
+.admin input:invalid,
+.admin textarea:invalid,
+.admin select:invalid {
+  border-color: var(--accent-a);
 }
 
 .admin-button {
@@ -2124,3 +2159,34 @@ a:hover {
 .admin-door h1 {
   font-size: 24px;
 }
+
+/* A project's state, when it is worth saying. `Status` renders nothing for the
+   default, so this only ever marks work in progress or work put down. */
+.project-status {
+  flex: none;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border: 1px solid var(--accent-a);
+  border-radius: 999px;
+  padding: 2px 7px;
+  line-height: 1.3;
+}
+
+/* Put down rather than in flight. Same shape, quieter rule — the distinction is
+   also in the word, so the border is a second signal and not the only one. */
+.project-status[data-status='archived'] {
+  border-color: var(--rule-strong);
+  color: var(--ink-muted);
+}
+
+/* A clip fills the same well a screenshot does. `object-fit: cover` because the
+   well is 16:9 and a recording rarely is — letterboxing a video inside a frame
+   that is already a frame reads as a mistake. */
+.project-shot {
+  object-fit: cover;
+  background: var(--surface-sunk);
+}
+
