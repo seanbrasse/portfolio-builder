@@ -294,11 +294,17 @@ export function Work({
          * squeezing the card to nothing to avoid a scrollbar would trade a
          * scrollbar for an unreadable card. Below this it stops shrinking and
          * the page scrolls, which is what WCAG 1.4.10 asks for anyway.
+         *
+         * 78 rather than 84 because rounding the card onto a 16px grid costs up
+         * to fifteen pixels of width, and at 360x640 that was the difference
+         * between fitting and overflowing by three.
          */
-        const room = Math.max(window.innerHeight - fromTop - beneath - chrome - 4, 84);
+        const room = Math.max(window.innerHeight - fromTop - beneath - chrome - 4, 78);
 
-        const only = Math.round(Math.min(byWidth, room * (16 / 9)));
-        node.style.setProperty('--card-h', `${Math.round((only * 9) / 16) + chrome + 2}px`);
+        const only = toGrid(Math.min(byWidth, room * (16 / 9)));
+        // No slack added: the card *is* this height now, so a margin here is
+        // just height the page does not have, and `even` already rounds up.
+        node.style.setProperty('--card-h', `${even(wellHeight(only) + chrome)}px`);
         if (Math.abs(only - (parseFloat(node.style.getPropertyValue('--card-w')) || 0)) < 2) return;
         node.style.setProperty('--card-w', `${only}px`);
         paint();
@@ -318,7 +324,7 @@ export function Work({
        * that nobody is trying to see.
        */
       const bySpan = (window.innerWidth - 48) / (2 * spacing.current + 0.87);
-      const next = Math.round(Math.min(byHeight, byWidth, bySpan));
+      const next = toGrid(Math.min(byHeight, byWidth, bySpan));
 
       /**
        * Written every pass, deadband or not: the copy can rewrap without the
@@ -333,8 +339,8 @@ export function Work({
        * climbs into the intro above it. Clamping lets the card overflow the
        * stage instead, which is what a too-short window did before.
        */
-      const height = Math.round((next * 9) / 16) + chrome + 2;
-      node.style.setProperty('--card-h', `${Math.min(height, Math.max(budget, 0))}px`);
+      const height = even(wellHeight(next) + chrome);
+      node.style.setProperty('--card-h', `${even(Math.min(height, Math.max(budget, 0)))}px`);
 
       const current = parseFloat(node.style.getPropertyValue('--card-w')) || 0;
       if (Math.abs(next - current) < 2) return;
@@ -632,6 +638,39 @@ export function Work({
 ------------------------------------------------------------------------- */
 
 type Geometry = ReturnType<typeof timelineGeometry>;
+
+/**
+ * Card widths are rounded down to a multiple of this.
+ *
+ * The well is 16:9, so a width divisible by 16 makes its height a whole number
+ * of pixels — and a card whose parts are whole pixels is a card whose centring
+ * translate is one too. Rounding down rather than to nearest, because every
+ * bound this is applied to is a maximum.
+ */
+const GRID = 16;
+
+/**
+ * The card's rule, both sides. `box-sizing` is border-box everywhere, so the
+ * well is this much narrower than the card — and it is the well that has to
+ * divide by 16, not the card. Coupled to `.project-card`'s border-width in the
+ * stylesheet; if that changes, this does.
+ */
+const BORDER = 2;
+
+/** An even number at least as large, so `translate(-50%)` is a whole pixel. */
+function even(value: number) {
+  return Math.ceil(value / 2) * 2;
+}
+
+/** A card width whose 16:9 well is a whole number of pixels tall. */
+function toGrid(bound: number) {
+  return Math.max(Math.floor((bound - BORDER) / GRID) * GRID, GRID) + BORDER;
+}
+
+/** The well's height, given that card width. Exact by construction. */
+function wellHeight(cardWidth: number) {
+  return ((cardWidth - BORDER) * 9) / 16;
+}
 
 /** The least whitespace two labels on the line may sit apart. */
 const GUTTER = 20;
