@@ -24,11 +24,28 @@ import { chromium } from 'playwright';
 
 const BASE = process.env.BASE || 'http://localhost:3000';
 /**
- * Each spread renders two leaves, so these two URLs cover all four pages. `/`
- * is deliberately not one of them — it opens on the cover, which carries no
- * panel grid, and a route that yields no leaves would otherwise pass silently.
+ * Every page route, from the generated sitemap rather than a list kept here —
+ * pages are content, so a hardcoded list stops covering the site the first
+ * time somebody adds one.
+ *
+ * `/` is dropped: it opens on the cover, which carries no panel grid, and a
+ * route yielding no leaves is a failure below. Visiting every page rather than
+ * one URL per spread measures some leaves twice, which costs a few seconds and
+ * removes the need to know how pages pair up.
  */
-const ROUTES = ['/origin', '/builds'];
+async function discoverRoutes() {
+  const res = await fetch(`${BASE}/sitemap.xml`);
+  if (!res.ok) throw new Error(`sitemap.xml returned ${res.status}`);
+  const paths = [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)]
+    .map((m) => new URL(m[1]).pathname)
+    // `/` opens on the cover and `/plain` is a scrolling document; neither has
+    // a panel grid, and a route yielding no leaves is a failure below.
+    .filter((path) => path !== '/' && path !== '/plain');
+  if (paths.length === 0) throw new Error('sitemap.xml listed no page URLs');
+  return paths;
+}
+
+const ROUTES = await discoverRoutes();
 /** A painted gutter may sit this far from its declared width. */
 const TOLERANCE = 0.75;
 
@@ -43,7 +60,19 @@ const TOLERANCE = 0.75;
  */
 const ADJACENCY = { overlapMin: 40, reach: 30 };
 
-function collect({ overlapMin, reach }) {
+/**
+ * Templates whose mounted panels deliberately overlap each other, so the space
+ * between them is not a gutter and measuring it reports negative widths.
+ *
+ * Being mounted is not by itself a reason to skip a panel — `case-study` mounts
+ * its panels and tiles them in a grid with real gutters, and skipping those
+ * meant two whole pages silently measured nothing. What makes `splash-rail`
+ * different is the negative margins it sets on its rail, which is a property of
+ * the template rather than of the frame.
+ */
+const OVERLAPPING_TEMPLATES = ['splash-rail'];
+
+function collect({ overlapMin, reach, overlappingTemplates }) {
   return [...document.querySelectorAll('.book-leaf')]
     .map((leaf) => {
       const page = leaf.querySelector('.comic-page');
@@ -62,11 +91,9 @@ function collect({ overlapMin, reach }) {
         const r = el.getBoundingClientRect();
         const cs = getComputedStyle(el);
         return {
-          // Neither of these is part of the tiling, so neither has a gutter to
-          // measure. A page-bleed panel underlies the whole leaf; a mounted one
-          // is lying on top of it, overlapping its neighbours on purpose. A
-          // rail of mounts measured as a grid reports every overlap as a
-          // negative gutter.
+          // A page-bleed panel underlies the whole leaf and is never part of
+          // the tiling. A mounted one is only exempt on the templates that
+          // overlap their mounts — see OVERLAPPING_TEMPLATES.
           bleed: el.dataset.bleed,
           frame: el.dataset.frame,
           slope: parseFloat(cs.getPropertyValue('--slope')) || 0,
@@ -77,7 +104,10 @@ function collect({ overlapMin, reach }) {
         };
       });
 
-      const grid = boxes.filter((b) => b.bleed !== 'page' && b.frame !== 'mat');
+      const overlaps = overlappingTemplates.includes(page.dataset.template);
+      const grid = boxes.filter(
+        (b) => b.bleed !== 'page' && !(overlaps && b.frame === 'mat'),
+      );
       const rows = [];
       const cols = [];
 
@@ -133,7 +163,10 @@ let checked = 0;
 
 for (const route of ROUTES) {
   await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' });
-  const leaves = await page.evaluate(collect, ADJACENCY);
+  const leaves = await page.evaluate(collect, {
+    ...ADJACENCY,
+    overlappingTemplates: OVERLAPPING_TEMPLATES,
+  });
   if (leaves.length === 0) {
     failures.push(`${route} rendered no panel grid — nothing was measured`);
   }

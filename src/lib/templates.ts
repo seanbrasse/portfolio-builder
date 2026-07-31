@@ -109,6 +109,36 @@ export const TEMPLATES = {
     rows: '0.9fr 1.04fr 0.94fr 1.12fr',
     slots: ['splash', 'rail-a', 'rail-b', 'rail-c', 'rail-d'],
   },
+  /**
+   * A case study, in beats: what broke, what the theory was, what was done,
+   * what happened.
+   *
+   * This is the one template whose slot names are the argument rather than
+   * positions. `problem` / `approach` / `work` / `result` have to be filled in
+   * that order for the page to say anything, which is the point — a portfolio
+   * page that lists capabilities is a claim, and the same page told as a
+   * sequence with a number at the end is evidence.
+   *
+   * `scene` is not in `areas` on purpose. It is meant to be a `bleed: 'page'`
+   * panel, and a bleed panel is spanned across the whole grid from the
+   * component rather than placed by name — so giving it a named area would
+   * reserve a cell that nothing ever occupies. A `scene` panel *without*
+   * `bleed: 'page'` will land as an implicit grid item, which is the one way
+   * to use this template wrong.
+   */
+  'case-study': {
+    id: 'case-study',
+    name: 'Case study in four beats',
+    areas: ['problem approach', 'work work', 'result result'],
+    columns: '1.06fr 1fr',
+    // The middle band is the largest because it holds the artifact — the
+    // reconstructed thing, which needs room to be legible in a way a paragraph
+    // does not. The last is the smallest: a result is a sentence, and giving it
+    // a band proportional to its importance rather than to its length leaves a
+    // loud flat two-thirds empty.
+    rows: '1.06fr 1.24fr 0.7fr',
+    slots: ['scene', 'problem', 'approach', 'work', 'result'],
+  },
   'splash-4': {
     id: 'splash-4',
     name: 'Splash four',

@@ -12,7 +12,32 @@ import { chromium } from 'playwright';
 import { PNG } from 'pngjs';
 
 const BASE = process.env.BASE || 'http://localhost:3000';
-const ROUTES = ['/', '/work', '/builds', '/contact', '/plain'];
+
+/**
+ * Routes come from the generated sitemap rather than a list kept here.
+ *
+ * The pages are content now — adding one is an entry in `issue.ts` — so a
+ * hardcoded list is a list that silently stops covering the site the first
+ * time somebody adds a page. Two case-study pages were added in the same
+ * change that wrote this, and neither would have been audited. The sitemap is
+ * generated from the same content the pages are, so it cannot drift from them.
+ *
+ * `/plain` is appended because it is a view rather than a page and is not in
+ * the sitemap. It is also the route most likely to break, since it renders
+ * every panel kind on one scrolling page.
+ */
+async function discoverRoutes() {
+  const res = await fetch(`${BASE}/sitemap.xml`);
+  if (!res.ok) throw new Error(`sitemap.xml returned ${res.status}`);
+  const xml = await res.text();
+
+  const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+  if (paths.length === 0) throw new Error('sitemap.xml listed no URLs');
+
+  return [...new Set([...paths, '/plain'])];
+}
+
+const ROUTES = await discoverRoutes();
 /**
  * These must be real theme ids. An unknown one is not an error anywhere in the
  * app — `ThemeScript` falls back to the default and the page renders fine — so

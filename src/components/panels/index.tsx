@@ -282,6 +282,145 @@ function TextPanel({
   );
 }
 
+/* ---------------------------------------------------------------------------
+   Artifact panels
+
+   The work itself, drawn in DOM. See the note on `PanelContent` for why these
+   are reconstructed rather than screenshotted — the short version is that most
+   of what is worth showing belongs to a former employer, and a drawn artifact
+   is both the lawful option and the accessible one.
+
+   Each of these leads with its caption as an `h2`, so an artifact is a real
+   section in the document outline rather than a picture with a label.
+--------------------------------------------------------------------------- */
+
+function CodePanel({
+  caption,
+  language,
+  lines,
+  highlight = [],
+}: {
+  caption: string;
+  language: string;
+  lines: string[];
+  highlight?: number[];
+}) {
+  const marked = new Set(highlight);
+  return (
+    <div className="artifact artifact--code">
+      <h2 className="panel-title panel-title--small">{caption}</h2>
+      {/* The language is a caption for sighted readers and noise for a screen
+          reader working through the source line by line. */}
+      <p className="artifact-lang" aria-hidden="true">
+        {language}
+      </p>
+      <pre className="code-block">
+        <code>
+          {lines.map((line, i) => (
+            <span
+              key={`${i}-${line}`}
+              className="code-line"
+              data-marked={marked.has(i + 1) || undefined}
+            >
+              {line === '' ? ' ' : line}
+            </span>
+          ))}
+        </code>
+      </pre>
+    </div>
+  );
+}
+
+function FlowPanel({ caption, steps }: { caption: string; steps: string[] }) {
+  return (
+    <div className="artifact artifact--flow">
+      <h2 className="panel-title panel-title--small">{caption}</h2>
+      {/* An ordered list, because that is what a pipeline is. The arrows
+          between stages are drawn by CSS and carry no text, so the order is
+          the list's own rather than something a reader has to infer from
+          chevrons a screen reader would have to announce. */}
+      <ol className="flow-steps">
+        {steps.map((step) => (
+          <li key={step} className="flow-step">
+            {step}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function ChartPanel({
+  caption,
+  label,
+  from,
+  to,
+  unit,
+}: {
+  caption: string;
+  label: string;
+  from: number;
+  to: number;
+  unit: string;
+}) {
+  // Both bars are scaled against the larger value so the pair is readable as a
+  // ratio. A bar scaled against 100 makes every improvement look small.
+  const peak = Math.max(from, to, 1);
+  const bar = (value: number) => `${Math.max((value / peak) * 100, 2)}%`;
+
+  return (
+    <div className="artifact artifact--chart">
+      <h2 className="panel-title panel-title--small">{caption}</h2>
+      {/* The figures are text in the document. The bars are `aria-hidden`
+          decoration sized from the same numbers, so nothing is announced twice
+          and nothing exists only as a width. */}
+      <dl className="chart-pair">
+        <div className="chart-row">
+          <dt>Before</dt>
+          <dd>
+            {from}
+            {unit}
+          </dd>
+          <span className="chart-bar" style={{ width: bar(from) }} aria-hidden="true" />
+        </div>
+        <div className="chart-row" data-after="true">
+          <dt>After</dt>
+          <dd>
+            {to}
+            {unit}
+          </dd>
+          <span className="chart-bar" style={{ width: bar(to) }} aria-hidden="true" />
+        </div>
+      </dl>
+      <p className="artifact-note">{label}</p>
+    </div>
+  );
+}
+
+function EndpointsPanel({
+  caption,
+  rows,
+}: {
+  caption: string;
+  rows: { method: string; path: string }[];
+}) {
+  return (
+    <div className="artifact artifact--endpoints">
+      <h2 className="panel-title panel-title--small">{caption}</h2>
+      <ul className="endpoint-list">
+        {rows.map((row) => (
+          <li key={`${row.method} ${row.path}`}>
+            <span className="endpoint-method" data-method={row.method.toLowerCase()}>
+              {row.method}
+            </span>
+            <code className="endpoint-path">{row.path}</code>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** Does a panel's content contain something clickable? Drives the hover lift. */
 export function isInteractive(content: PanelContent): boolean {
   if (content.type === 'cta') return true;
@@ -296,6 +435,8 @@ export function isInteractive(content: PanelContent): boolean {
 export function panelClassName(content: PanelContent): string | undefined {
   if (content.type === 'metric') return 'metric-panel';
   if (content.type === 'cta') return 'cta-panel';
+  if (content.type === 'code' || content.type === 'flow') return 'artifact-panel';
+  if (content.type === 'chart' || content.type === 'endpoints') return 'artifact-panel';
   return undefined;
 }
 
@@ -324,6 +465,29 @@ export function PanelContentView({ content }: { content: PanelContent }) {
     }
     case 'art':
       return <ArtPanel art={content.art} />;
+    case 'code':
+      return (
+        <CodePanel
+          caption={content.caption}
+          language={content.language}
+          lines={content.lines}
+          highlight={content.highlight}
+        />
+      );
+    case 'flow':
+      return <FlowPanel caption={content.caption} steps={content.steps} />;
+    case 'chart':
+      return (
+        <ChartPanel
+          caption={content.caption}
+          label={content.label}
+          from={content.from}
+          to={content.to}
+          unit={content.unit}
+        />
+      );
+    case 'endpoints':
+      return <EndpointsPanel caption={content.caption} rows={content.rows} />;
     case 'empty':
       return null;
   }
