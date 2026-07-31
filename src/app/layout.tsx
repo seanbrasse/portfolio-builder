@@ -66,9 +66,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {settings.displayName.charAt(0)}
             </p>
 
+            {/* All of the contact information, in one row. This is the only
+                place it appears — the page above has no contact section and no
+                call-to-action buttons, so the footer is not a duplicate of
+                anything, it is the whole answer to "how do I reach him". */}
             <div className="footer-col">
-              <p className="footer-label">Socials</p>
               <ul>
+                <li>
+                  <a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a>
+                </li>
                 {settings.links.map((link) => (
                   <li key={link.url}>
                     <a href={link.url} target="_blank" rel="noopener noreferrer">
@@ -76,17 +82,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     </a>
                   </li>
                 ))}
-              </ul>
-            </div>
-
-            <div className="footer-col">
-              <p className="footer-label">Get in touch</p>
-              <ul>
                 <li>
-                  <a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a>
-                </li>
-                <li>
-                  <a href={settings.resumeHref}>Résumé (PDF)</a>
+                  <a href={settings.resumeHref}>Résumé</a>
                 </li>
               </ul>
             </div>

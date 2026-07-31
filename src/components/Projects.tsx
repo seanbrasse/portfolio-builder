@@ -1,24 +1,19 @@
-'use client';
-
-import { useState } from 'react';
-
 import type { Experience, Project } from '@/content/types';
 
 /**
- * Projects, as a scroll-snap rail that expands to a grid.
+ * Projects, as a horizontally scrolling rail.
  *
- * The rail is native horizontal scrolling with snap points, not a JS carousel.
- * The browser already handles keyboard scrolling, touch momentum, scrollbar
- * dragging and reduced motion; a carousel reimplements all four and, unlike
- * scrolling, hides every card past the first behind a control most visitors
- * never touch.
+ * Native `scroll-snap` on a real scroll container, not a JS carousel. The
+ * browser already implements keyboard scrolling, touch momentum, scrollbar
+ * dragging and reduced motion; a carousel reimplements all four.
  *
- * That last part is why the expand button exists. A rail is still serial
- * access — you see two cards and have to act to see the third. `Show all`
- * turns the same cards into a grid, so nothing is ever more than one click
- * from being visible at once. Same DOM either way: this toggles a class, it
- * does not mount a second copy of the list, so nothing is duplicated for a
- * screen reader and no card is ever in the document twice.
+ * There is no expand-to-grid control any more. It existed because a rail hides
+ * cards behind an interaction, and a grid was the escape hatch — but the page
+ * is one screen now and a grid has nowhere to expand into. The rail is the
+ * page's subject rather than one section of it, which is a different bargain:
+ * a visitor who scrolls the rail is doing the thing the page is for.
+ *
+ * A server component again, now that there is no state.
  */
 export function Projects({
   projects,
@@ -27,38 +22,23 @@ export function Projects({
   projects: Project[];
   employers: Record<string, Experience>;
 }) {
-  const [expanded, setExpanded] = useState(false);
-
   return (
-    <>
-      <div
-        className={expanded ? 'project-grid' : 'project-rail'}
-        // Scrollable regions need to be reachable and labelled for keyboard
-        // users; in grid form there is nothing to scroll, so the role goes.
-        {...(expanded ? {} : { tabIndex: 0, role: 'region', 'aria-label': 'Projects, scrollable' })}
-      >
-        {projects.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            employer={project.experienceId ? employers[project.experienceId] : undefined}
-          />
-        ))}
-      </div>
-
-      {/* Only worth offering when there is something off-screen to reveal. */}
-      {projects.length > 2 ? (
-        <button
-          type="button"
-          className="button rail-toggle"
-          data-variant="ghost"
-          aria-expanded={expanded}
-          onClick={() => setExpanded((open) => !open)}
-        >
-          {expanded ? 'Show as a row' : `Show all ${projects.length} projects`}
-        </button>
-      ) : null}
-    </>
+    <div
+      className="project-rail"
+      // A scrollable region has to be focusable and named, or a keyboard user
+      // cannot reach the cards past the first.
+      tabIndex={0}
+      role="region"
+      aria-label="Projects, scroll horizontally"
+    >
+      {projects.map((project) => (
+        <ProjectCard
+          key={project.id}
+          project={project}
+          employer={project.experienceId ? employers[project.experienceId] : undefined}
+        />
+      ))}
+    </div>
   );
 }
 

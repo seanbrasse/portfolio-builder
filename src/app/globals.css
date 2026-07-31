@@ -32,6 +32,7 @@
      decoration would otherwise have to, and halving these numbers is the
      fastest way to make this look like a generic template again. */
   --space-section: clamp(96px, 14vw, 200px);
+  --footer-h: 78px;
   --radius: 10px;
 
   --dur: 180ms;
@@ -135,6 +136,133 @@ a:hover {
 .skip-link:focus {
   left: 8px;
   top: 8px;
+}
+
+/* One screen ---------------------------------------------------------------
+
+   The page does not scroll. `100dvh` rather than `100vh` because mobile
+   browsers report `vh` against a viewport that includes the URL bar, which is
+   exactly the amount a fixed-height page then overflows by.
+
+   The lock is conditional, and that is not a hedge. Locking scroll makes
+   anything that does not fit unreachable — at 400% zoom, on a short laptop, or
+   with a large default font, "no scrollbar" becomes "the projects do not
+   exist". Below the height this layout needs, the page goes back to being an
+   ordinary scrolling document. WCAG 1.4.10 is the rule; the honest version is
+   that a design constraint should never win against being able to read the
+   page.
+--------------------------------------------------------------------------- */
+
+/* The lock. `html`/`body` become the frame and `main` takes what is left, so
+   the screen is sized by subtraction rather than by `100dvh` arithmetic that
+   has to know how tall the header and footer are. Getting that arithmetic
+   wrong is what put the cards under the footer the first time. */
+/* The screen: the intro, then the rail taking whatever height is left.
+   `minmax(0, 1fr)` rather than `1fr`, because a grid row's automatic minimum
+   size is its content — with a plain `1fr` the rail is sized by its tallest
+   card and grows straight out of the viewport it was meant to fit. */
+.screen {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  /* Both axes need the explicit zero minimum. A grid track's automatic minimum
+     is its content's max-content size, so the column grew to the rail's full
+     unwrapped width — about 1340px — and pushed the document sideways instead
+     of letting the rail scroll. `railScrollX` reading 0 while cards visibly ran
+     off the screen was the tell: nothing was overflowing the rail, because the
+     rail had been given room for all of it. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(24px, 4.5vh, 56px);
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: clamp(36px, 8vh, 96px) var(--gutter) clamp(16px, 3vh, 32px);
+}
+
+/* Both dimensions, not just height. A phone is tall enough to pass a height
+   check and nowhere near wide enough to hold a name, a skills row and a card
+   rail in one view — locking scroll there does not produce a one-screen
+   layout, it produces a clipped one, with the cards past the second
+   unreachable. Below either threshold the page is an ordinary scrolling
+   document, which is also what 400% zoom and a short laptop get. */
+@media (min-height: 760px) and (min-width: 900px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .site-header,
+  .site-footer {
+    flex: none;
+  }
+
+  main {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .screen {
+    padding-top: clamp(20px, 5vh, 56px);
+  }
+}
+
+.intro h1 {
+  font-size: clamp(40px, 7vw, 82px);
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}
+
+.intro-role {
+  font-size: clamp(14px, 1.6vw, 17px);
+  color: var(--ink-muted);
+  margin-top: 12px;
+  letter-spacing: 0.01em;
+}
+
+.intro-tagline {
+  font-size: clamp(17px, 2.1vw, 22px);
+  line-height: 1.4;
+  margin-top: 20px;
+  max-width: 30ch;
+}
+
+.intro-skills-label {
+  margin-top: clamp(24px, 4vh, 44px);
+  margin-bottom: 14px;
+}
+
+.skills {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skills li {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 5px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  color: var(--ink);
+}
+
+/* The rail owns whatever height is left, and the cards fill it rather than
+   setting it — a card sized by its own content on a fixed-height page is the
+   thing that pushes the page past the fold. */
+.work {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Layout ------------------------------------------------------------------ */
@@ -484,11 +612,15 @@ a:hover {
 .project-rail {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(280px, 360px);
+  grid-auto-columns: minmax(250px, 320px);
+  grid-template-rows: minmax(0, 1fr);
   gap: 20px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding-bottom: 16px;
+  padding-bottom: 14px;
+  min-height: 0;
+  flex: 1;
+  align-items: stretch;
   /* The rail bleeds to the window edge so a partly-visible next card signals
      that it scrolls, then pads itself back to the page measure. */
   margin-inline: calc(var(--gutter) * -1);
@@ -506,6 +638,7 @@ a:hover {
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
@@ -518,8 +651,12 @@ a:hover {
   transform: translateY(-2px);
 }
 
+/* The well absorbs whatever height the rail has left rather than demanding a
+   fixed ratio. On a page that cannot scroll, a fixed-aspect image is the thing
+   that pushes copy out of the card. */
 .project-shot {
-  aspect-ratio: 16 / 10;
+  flex: 1 1 30%;
+  min-height: 48px;
   width: 100%;
   object-fit: cover;
   background: var(--surface-sunk);
@@ -530,7 +667,8 @@ a:hover {
    grey box — the card still says what the project is, and the empty state is
    honest about being an empty state. */
 .project-shot-empty {
-  aspect-ratio: 16 / 10;
+  flex: 1 1 30%;
+  min-height: 48px;
   width: 100%;
   display: grid;
   place-items: center;
@@ -543,14 +681,16 @@ a:hover {
 }
 
 .project-body {
-  padding: 18px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  flex: 1;
+  gap: 9px;
+  flex: 0 1 auto;
+  min-height: 0;
 }
 
 .project-context {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -569,12 +709,44 @@ a:hover {
 }
 
 .project-title {
-  font-size: 19px;
+  flex: none;
+  font-size: 18px;
 }
 
+/* Clamped rather than scrolled. A scroll container inside a card inside a
+   horizontally scrolling rail is three nested scrolls in one component, and a
+   summary is a summary — the link is where the whole thing lives. */
 .project-summary {
-  font-size: 14.5px;
+  font-size: 14px;
   color: var(--ink-muted);
+  /* `flex: none`, or the flex parent shrinks the box below the two lines the
+     clamp allows and the text is cut through the middle of a line rather than
+     ending in an ellipsis. The clamp decides the height; flex must not
+     re-decide it. */
+  flex: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Three chips, not six. A tech list wrapping to three rows is the single
+   biggest consumer of card height here, and it was pushing the summary — the
+   line that says what the project actually is — out of the frame. `display:
+   none` rather than slicing in the component so the same card renders in full
+   anywhere it has room; it also hides them from assistive tech, which matches
+   what a sighted reader gets. */
+.screen .tech-row li:nth-child(n + 4) {
+  display: none;
+}
+
+/* Not on the one-screen card. The summary says what the thing is and the
+   impact says how it went, and at this height only one of them fits — a
+   visitor who does not know what the project is cannot use the outcome. It
+   still renders anywhere the card has room. */
+.screen .project-impact {
+  display: none;
 }
 
 .project-impact {
@@ -663,7 +835,7 @@ a:hover {
 }
 
 .site-footer {
-  padding-block: clamp(56px, 9vw, 96px) 40px;
+  padding-block: 0 clamp(16px, 3vh, 28px);
   font-size: 14px;
   color: var(--ink-muted);
 }
@@ -672,10 +844,10 @@ a:hover {
   max-width: var(--page-max);
   margin: 0 auto;
   padding-inline: var(--gutter);
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 32px;
-  align-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 26px;
 }
 
 .footer-label {
@@ -691,8 +863,9 @@ a:hover {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 7px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
 }
 
 .footer-col a {
@@ -709,8 +882,8 @@ a:hover {
 
 /* The mark, drawn rather than set — a circle with the initial in it. */
 .footer-mark {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -721,7 +894,7 @@ a:hover {
 }
 
 .footer-fine {
-  grid-column: 1 / -1;
+  margin-left: auto;
   font-size: 12.5px;
   color: var(--ink-muted);
 }

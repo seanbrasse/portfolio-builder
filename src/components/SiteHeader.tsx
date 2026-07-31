@@ -44,12 +44,6 @@ export function SiteHeader({ name }: { name: string }) {
           {name}
         </a>
 
-        <nav className="site-nav" aria-label="Sections">
-          <a href="#work">Work</a>
-          <a href="#projects">Projects</a>
-          <a href="#contact">Contact</a>
-        </nav>
-
         <button
           type="button"
           className="theme-toggle"

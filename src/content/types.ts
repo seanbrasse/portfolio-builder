@@ -48,6 +48,14 @@ export type SiteSettings = {
   tagline: string;
   availabilityStatus: AvailabilityStatus;
   rolesOpenTo: string[];
+  /**
+   * The short list, for the one-screen layout. Every entry here also appears
+   * somewhere else in this file — in an experience summary, a bullet, or a
+   * project's tech — because a skills list is a summary of evidence, and one
+   * that names things the rest of the page cannot support is the least
+   * believable thing on a portfolio.
+   */
+  skills: string[];
   location: string;
   contactEmail: string;
   resumeHref: string;

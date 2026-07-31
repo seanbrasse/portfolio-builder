@@ -30,6 +30,19 @@ const settings: Issue['settings'] = {
   // Employed and not urgently looking, but open to the right conversation.
   availabilityStatus: 'selective',
   rolesOpenTo: ['Senior Frontend', 'Full Stack'],
+  // Each of these is carried by something else in this file: React and
+  // TypeScript by the Mailchimp and Avarint work, PHP and Dojo by Mailchimp's
+  // summary, Jest by the PayPal bullet, and the rest by the projects' tech.
+  skills: [
+    'React',
+    'TypeScript',
+    'Node',
+    'PHP',
+    'Swift',
+    'Python',
+    'Supabase',
+    'Jest',
+  ],
   location: 'New York, NY',
   contactEmail: 'seanbrasse@gmail.com',
   // MEDIA-6: stable path so links in old applications never rot.

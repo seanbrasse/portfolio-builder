@@ -1,7 +1,13 @@
 # Portfolio
 
-Sean Brasse's engineering portfolio. One scrolling page: who he is, where he
-has worked, what he has built, how to reach him.
+Sean Brasse's engineering portfolio. One screen: name, what he does, what he
+knows, and a horizontally scrolling rail of what he has built. Contact is in
+the footer.
+
+The page does not scroll on a desktop viewport. That is the constraint the
+layout is built around, and it is why so little is on it — the career timeline,
+the headline metrics, the long intro and the call-to-action buttons were all
+cut because they could not earn a place in a single view.
 
 > **Note on the repo name.** This was a comic-book portfolio — an issue you
 > turned page by page, with panels, templates and a page-curl animation. That
@@ -51,23 +57,39 @@ shapes, and nothing in the rendering layer needs to change.
 the server, so `next build` fails with the offending field named. A test can be
 skipped; this cannot.
 
+**The scroll lock is conditional, and that is not a hedge.** Locking scroll
+makes anything that does not fit unreachable. At 400% zoom, on a short laptop,
+or on a phone, "no scrollbar" becomes "the projects do not exist" — which is
+exactly what happened when the lock keyed on height alone: a 390x844 phone
+passed the height check, the cards were clipped rather than scrolled, and
+everything past the second was gone. It now takes both `min-height: 760px` and
+`min-width: 900px`; below either, the page is an ordinary scrolling document.
+
+**Sizing the screen is subtraction, not arithmetic.** `html`/`body` become the
+frame, header and footer are `flex: none`, and `main` takes what is left. The
+first attempt used `100dvh` on the content and had to know how tall the header
+and footer were; it did not, so the cards ran underneath the footer.
+
+Both grid axes need `minmax(0, 1fr)`. A grid track's automatic minimum is its
+content's max-content size, so the column grew to the rail's full unwrapped
+width — about 1340px — and pushed the document sideways instead of letting the
+rail scroll. The tell was a rail reporting zero horizontal overflow while cards
+visibly ran off the screen: nothing was overflowing it, because it had been
+given room for everything.
+
 **The projects rail is native scrolling, not a carousel.** Horizontal
 `scroll-snap` on a real scroll container. The browser already implements
 keyboard scrolling, touch momentum, scrollbar dragging and reduced motion
-correctly, and a carousel is a reimplementation of all four that also hides
-every card past the first behind a control most visitors never use.
+correctly, and a carousel reimplements all four.
 
-The rail is still serial access, though — you see two cards and have to act to
-see the third. `Show all` turns the same cards into a grid, so nothing is ever
-more than one click from being visible at once. It toggles a class rather than
-mounting a second list, so no card is ever in the document twice.
-
-**The timeline is an ordered list.** The order *is* the meaning, and that has
-to survive the CSS being ignored. The rule down the left and the markers carry
-no text: a screen reader gets a numbered list of dated entries, which is the
-same information the rule conveys visually. The current role is marked twice —
-a filled marker and the word "Present" in its dates — because a color is never
-the only signal.
+**The card gives up its own height.** On a page that cannot scroll, a
+fixed-aspect image well is what pushes copy out of a card, so the well is
+`flex: 1 1 30%` and absorbs whatever is left instead of demanding a ratio. The
+summary is clamped to two lines and marked `flex: none` — the clamp decides its
+height and flex must not re-decide it, or the text is cut through the middle of
+a line instead of ending in an ellipsis. At this size the card shows three tech
+chips and drops the impact line: a visitor who does not yet know what the
+project is cannot use its outcome.
 
 **Dark is the design, not a preference.** The palette is two values — a warm
 near-black and a cream — plus a single ember used on the primary button, focus
