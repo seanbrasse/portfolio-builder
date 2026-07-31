@@ -271,22 +271,25 @@ export function Work({
       if (!locked) {
         const fromTop = stageBox.top + window.scrollY;
         /**
-         * The footer's box — the last thing actually laid out.
+         * Heights, not positions.
          *
-         * Two earlier attempts got this wrong the same way. The root's
-         * `scrollHeight` is clamped to at least the viewport, and the site
-         * frame carries `min-height: 100dvh`, so both report the window's
-         * height rather than the content's once the page fits. Everything below
-         * the stage then appears to include the empty space beneath the footer,
-         * the budget comes out short, and the card sits at its floor with room
-         * to spare above it.
+         * Every earlier attempt at this measured how far down something sat and
+         * got the same answer wrong three ways: the root's `scrollHeight` is
+         * clamped to the viewport, the frame carries `min-height: 100dvh`, and
+         * the footer is pushed to the bottom by an auto margin. All three report
+         * where the empty space ends rather than where the content does, so the
+         * slack gets counted as chrome, the budget comes out short, and the card
+         * shrinks to make room for the emptiness that shrinking creates.
          *
-         * Measuring the footer sidesteps both: it is the bottom of the content
-         * whatever the containers claim about themselves.
+         * Adding up what is actually below the stage cannot be fooled by any of
+         * them: the rest of `main` is the controls, and the footer's own height
+         * is its height wherever it has been pushed to.
          */
-        const tail = document.querySelector('.site-footer') ?? document.body;
-        const content = tail.getBoundingClientRect().bottom + window.scrollY;
-        const beneath = content - (fromTop + stageBox.height);
+        const region = node.closest('main');
+        const footer = document.querySelector<HTMLElement>('.site-footer');
+        const beneath =
+          (region ? region.getBoundingClientRect().bottom - stageBox.bottom : 0) +
+          (footer?.offsetHeight ?? 0);
 
         /**
          * A floor, not a hard bound. On a very short window — or at large text
