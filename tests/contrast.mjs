@@ -18,7 +18,7 @@ import { PNG } from 'pngjs';
 
 const BASE = process.env.BASE || 'http://localhost:3000';
 const ROUTES = ['/'];
-const THEMES = ['four-color', 'noir'];
+const THEMES = ['dark', 'light'];
 
 function srgb(c) {
   const v = c / 255;
