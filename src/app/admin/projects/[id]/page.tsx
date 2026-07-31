@@ -42,6 +42,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
               readOnly={!creating}
               required
               pattern="[a-z0-9-]+"
+              title="Lowercase letters, numbers and hyphens only — no spaces."
               placeholder="pass-the-interview"
             />
           </label>
@@ -57,6 +58,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
               name="date"
               defaultValue={item?.date ?? ''}
               pattern="\d{4}-\d{2}"
+              title="Four-digit year, a hyphen, two-digit month — for example 2023-04."
               required
               placeholder="2026-07"
             />
@@ -68,6 +70,26 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
               <option value="personal">Personal</option>
               <option value="professional">Professional</option>
             </select>
+          </label>
+
+          {/* State of completion. Only the two non-default values render on the
+              site — a badge saying "shipped" on every card is wallpaper. */}
+          <label className="field">
+            <span className="field-label">State</span>
+            <select name="status" defaultValue={item?.status ?? 'shipped'}>
+              <option value="shipped">Shipped</option>
+              <option value="building">Still building</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
+
+          <label className="field">
+            <span className="field-label">Took — free text, optional</span>
+            <input
+              name="duration"
+              defaultValue={item?.duration ?? ''}
+              placeholder="3 months"
+            />
           </label>
 
           {/* A professional project must name its employer — the badge on the
@@ -118,16 +140,23 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
         <section className="admin-section">
           <h2>Images</h2>
           <p className="admin-note">
-            The first is the card&rsquo;s screenshot. The well is 16:9, so
-            anything else is letterboxed rather than cropped.
+            The first is what the card shows. The well is 16:9, so anything
+            else is letterboxed rather than cropped. An MP4 or WebM works too —
+            a clip of the thing running says more than a still, and it plays
+            muted and looping unless the visitor has asked for reduced motion.
           </p>
 
           <ul className="admin-shots">
             {images.map((image) => (
               <li key={image.id}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={image.src} alt={image.alt} />
+                {image.media === 'video' ? (
+                  <video src={image.src} controls muted playsInline />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={image.src} alt={image.alt} />
+                )}
                 <span className="admin-note">
+                  {image.media === 'video' ? 'Video · ' : ''}
                   {image.width} × {image.height} · {image.alt}
                 </span>
                 <DeleteButton
@@ -149,7 +178,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
 
           <Upload
             folder={`projects/${id}`}
-            label="Add screenshot"
+            label="Add screenshot or clip"
             altHint={`${item!.title} — what the screenshot shows`}
             onSave={async (image) => {
               'use server';

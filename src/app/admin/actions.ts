@@ -217,6 +217,8 @@ export async function saveProject(form: FormData): Promise<Result> {
     experience_id: employer || null,
     summary: text(form, 'summary'),
     impact: text(form, 'impact'),
+    status: text(form, 'status') || 'shipped',
+    duration: text(form, 'duration'),
     tech: commas(form.get('tech')),
     links: links(form),
     date: text(form, 'date'),
@@ -253,7 +255,7 @@ export async function deleteProject(id: string): Promise<Result> {
  */
 export async function addImage(
   projectId: string,
-  image: { src: string; alt: string; width: number; height: number },
+  image: { src: string; alt: string; width: number; height: number; media: 'image' | 'video' },
 ): Promise<Result> {
   if (!(await isAdmin())) return DENIED;
   if (!image.alt.trim()) return { ok: false, error: 'Alt text is required.' };
@@ -272,6 +274,7 @@ export async function addImage(
     width: image.width,
     height: image.height,
     kind: 'screenshot',
+    media: image.media,
     sort_order: count ?? 0,
   });
 

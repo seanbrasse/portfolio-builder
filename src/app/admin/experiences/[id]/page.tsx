@@ -43,6 +43,7 @@ export default async function EditExperience({
               readOnly={!creating}
               required
               pattern="[a-z0-9-]+"
+              title="Lowercase letters, numbers and hyphens only — no spaces."
               placeholder="mailchimp"
             />
           </label>
@@ -68,6 +69,7 @@ export default async function EditExperience({
               name="start_date"
               defaultValue={item?.start_date ?? ''}
               pattern="\d{4}-\d{2}"
+              title="Four-digit year, a hyphen, two-digit month — for example 2023-04."
               required
               placeholder="2023-04"
             />
@@ -79,6 +81,7 @@ export default async function EditExperience({
               name="end_date"
               defaultValue={item?.end_date ?? ''}
               pattern="\d{4}-\d{2}"
+              title="Four-digit year, a hyphen, two-digit month — for example 2023-04."
               placeholder="2023-02"
             />
           </label>
@@ -151,6 +154,7 @@ export default async function EditExperience({
             folder={`logos/${id}`}
             label={item!.logo_src ? 'Replace logo' : 'Upload logo'}
             altHint={`${item!.company} logo`}
+            accept="image/png,image/jpeg,image/webp,image/avif,image/svg+xml"
             onSave={async (image) => {
               'use server';
               return saveLogo(id, image);

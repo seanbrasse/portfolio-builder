@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import type { Asset, Experience, Project, SiteSettings } from '@/content/types';
 import { formatMonth, formatRange, isoRange } from '@/lib/format';
@@ -271,16 +271,21 @@ export function Work({
       if (!locked) {
         const fromTop = stageBox.top + window.scrollY;
         /**
-         * The body's box, not `scrollHeight`.
+         * The footer's box — the last thing actually laid out.
          *
-         * The root element's scroll height is clamped to at least the viewport,
-         * so once the page fits it stops reporting how tall the content is and
-         * starts reporting how tall the window is. Everything below the stage
-         * then appears to include the empty space under the footer, the budget
-         * comes out short, and the card sits at its floor with room to spare
-         * above it — which is exactly what it did.
+         * Two earlier attempts got this wrong the same way. The root's
+         * `scrollHeight` is clamped to at least the viewport, and the site
+         * frame carries `min-height: 100dvh`, so both report the window's
+         * height rather than the content's once the page fits. Everything below
+         * the stage then appears to include the empty space beneath the footer,
+         * the budget comes out short, and the card sits at its floor with room
+         * to spare above it.
+         *
+         * Measuring the footer sidesteps both: it is the bottom of the content
+         * whatever the containers claim about themselves.
          */
-        const content = document.body.getBoundingClientRect().bottom + window.scrollY;
+        const tail = document.querySelector('.site-footer') ?? document.body;
+        const content = tail.getBoundingClientRect().bottom + window.scrollY;
         const beneath = content - (fromTop + stageBox.height);
 
         /**
@@ -1212,15 +1217,86 @@ function Badge({ name, logo }: { name: string; logo?: Asset }) {
    Cards
 ------------------------------------------------------------------------- */
 
+/**
+ * Whether the visitor has asked for less movement.
+ *
+ * Read at render rather than in CSS, because a stylesheet cannot stop a video
+ * playing — `autoplay` has to actually not be set. `useSyncExternalStore` keeps
+ * the answer in the platform rather than in a second copy React owns, and the
+ * server has no opinion at all.
+ */
+const QUIET = '(prefers-reduced-motion: reduce)';
+
+function watchMotion(onChange: () => void) {
+  const query = window.matchMedia(QUIET);
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+}
+
+function useReducedMotion() {
+  return useSyncExternalStore(
+    watchMotion,
+    () => window.matchMedia(QUIET).matches,
+    () => false,
+  );
+}
+
 function Shot({ project }: { project: Project }) {
   const [shot] = project.images;
-  if (shot) {
-    return <img className="project-shot" src={shot.src} alt={shot.alt} width={640} height={360} />;
+  const reduced = useReducedMotion();
+
+  if (!shot) {
+    return (
+      <div className="project-shot-empty" aria-hidden="true">
+        No screenshot yet
+      </div>
+    );
   }
+
+  /**
+   * A clip of the thing running says more than a still of it stopped.
+   *
+   * Muted, looping and inline, so it behaves like an image rather than like
+   * media — and `poster` carries the still. Autoplay is dropped and controls
+   * appear under `prefers-reduced-motion`: something moving on its own is
+   * exactly what that setting is asking not to happen, and a play button is the
+   * honest alternative to silently showing nothing.
+   */
+  if (shot.media === 'video') {
+    return (
+      <video
+        className="project-shot"
+        src={shot.src}
+        poster={shot.poster}
+        aria-label={shot.alt}
+        width={640}
+        height={360}
+        muted
+        playsInline
+        loop
+        controls={reduced}
+        autoPlay={!reduced}
+        preload="metadata"
+      />
+    );
+  }
+
+  return <img className="project-shot" src={shot.src} alt={shot.alt} width={640} height={360} />;
+}
+
+/**
+ * How far along it is — but only when that is news.
+ *
+ * Every finished project carrying a "shipped" badge is a column of the same
+ * word, which reads as decoration rather than information. The two states worth
+ * saying out loud are the ones that change how the work should be read.
+ */
+function Status({ status }: { status: Project['status'] }) {
+  if (status === 'shipped') return null;
   return (
-    <div className="project-shot-empty" aria-hidden="true">
-      No screenshot yet
-    </div>
+    <span className="project-status" data-status={status}>
+      {status === 'building' ? 'Still building' : 'Archived'}
+    </span>
   );
 }
 
@@ -1232,6 +1308,7 @@ function CardFace({ project, employer }: { project: Project; employer?: Experien
         <p className="project-context">
           {employer ? <Badge name={employer.company} logo={employer.logo} /> : null}
           {employer ? employer.company : 'Personal project'}
+          <Status status={project.status} />
         </p>
         <h3 className="project-title">{project.title}</h3>
         <p className="project-summary">{project.summary}</p>
@@ -1254,6 +1331,8 @@ function ProjectDetail({ project, employer }: { project: Project; employer?: Exp
           {employer ? <Badge name={employer.company} logo={employer.logo} /> : null}
           {employer ? `Built at ${employer.company}` : 'Personal project'} ·{' '}
           {formatMonth(project.date)}
+          {project.duration ? ` · ${project.duration}` : ''}
+          <Status status={project.status} />
         </p>
         <h2 className="dialog-title">{project.title}</h2>
         <p className="detail-summary">{project.summary}</p>
