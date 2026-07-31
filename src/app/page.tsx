@@ -1,4 +1,4 @@
-import { Projects } from '@/components/Projects';
+import { Work } from '@/components/Work';
 import { getExperiences, getProjects, getSettings } from '@/content';
 import { personSchema } from '@/lib/schema';
 
@@ -10,8 +10,8 @@ import { personSchema } from '@/lib/schema';
  * cannot earn a place in a single view does not belong here; the career
  * history, the metrics and the long intro all failed that test.
  *
- * The one thing that scrolls is the project rail, horizontally, because a
- * carousel of work is the page's actual subject.
+ * The carousel is the page's subject, and the timeline above it marks where the
+ * card currently in the middle sits in the career.
  *
  * TECH-1: statically generated. A visitor's page load touches no data source.
  */
@@ -21,11 +21,6 @@ export default function Home() {
   const settings = getSettings();
   const projects = getProjects();
   const experiences = getExperiences();
-
-  // Projects name their employer by id and the card wants the company. Resolved
-  // here rather than in the client component, which would otherwise ship every
-  // experience to the browser to read one field.
-  const employers = Object.fromEntries(experiences.map((item) => [item.id, item]));
 
   return (
     <>
@@ -52,7 +47,7 @@ export default function Home() {
           <h2 className="section-label" id="work-label">
             Selected work
           </h2>
-          <Projects projects={projects} employers={employers} />
+          <Work projects={projects} experiences={experiences} />
         </section>
       </div>
     </>
