@@ -35,6 +35,19 @@
   --footer-h: 78px;
   --radius: 10px;
 
+  /* A photographic ground, if one has been supplied.
+     `none` by default, so the procedural layers below are what paints until a
+     file exists — a missing background-image is silently ignored rather than
+     erroring, which means these can point at files that are not there yet and
+     the page still looks finished.
+     Opacity and blend are per theme because one photograph cannot serve both:
+     a mid-grey asphalt laid over near-black needs to be lightened and held
+     back, and the same map over an off-white ground needs to be multiplied. */
+  --texture: none;
+  --texture-blend: soft-light;
+  --texture-opacity: 0.5;
+  --texture-size: 520px;
+
   --dur: 180ms;
   --ease: cubic-bezier(0.2, 0, 0, 1);
 
@@ -42,6 +55,8 @@
 
 [data-theme='light'] {
   color-scheme: light;
+  --texture-blend: multiply;
+  --texture-opacity: 0.35;
 }
 
 * {
@@ -71,6 +86,10 @@ body {
      word on the page, and the audit samples the worst pixel behind each glyph
      rather than the average. */
   background-image:
+    /* Supplied texture first, so it is the top layer. `image-set` is not used
+       because these are a single file each; add a WebP alternate here if the
+       JPEG turns out to cost more than it is worth. */
+    var(--texture),
     radial-gradient(
       120% 90% at 22% 12%,
       color-mix(in srgb, var(--ink) 3%, transparent),
@@ -78,7 +97,8 @@ body {
     ),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03' numOctaves='5' seed='3' result='t'/%3E%3CfeDisplacementMap in='t' in2='t' scale='22'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23f)' opacity='0.08'/%3E%3C/svg%3E"),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='3' seed='11'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)' opacity='0.07'/%3E%3C/svg%3E");
-  background-size: auto, 300px 300px, 120px 120px;
+  background-size: var(--texture-size), auto, 300px 300px, 120px 120px;
+  background-blend-mode: var(--texture-blend), normal, normal, normal;
   background-attachment: fixed;
   font-family: var(--font-body);
   font-size: 16px;
