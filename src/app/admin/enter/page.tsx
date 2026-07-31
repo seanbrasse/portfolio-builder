@@ -16,14 +16,20 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function Enter() {
+export default async function Enter({
+  searchParams,
+}: {
+  searchParams: Promise<{ problem?: string }>;
+}) {
+  const { problem } = await searchParams;
+
   return (
     <div className="admin-door">
       <h1>Sign in</h1>
       <p className="admin-note">
         A one-time link will be sent if this address belongs to the site owner.
       </p>
-      <SignIn />
+      <SignIn problem={problem} />
     </div>
   );
 }
