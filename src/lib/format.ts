@@ -44,40 +44,22 @@ export function availabilityLabel(status: AvailabilityStatus): string {
   }
 }
 
-type AvailabilityCopy = {
-  kicker: string;
-  headline: string;
-  body: string;
-};
-
 /**
- * The CTA panel's copy is driven by `availability_status` rather than written
- * per page, so changing one enum value changes what a recruiter reads.
+ * The contact section's copy is driven by `availability_status` rather than
+ * written into the page, so changing one enum value changes what a recruiter
+ * reads. Returns the sentence only — the heading above it is the same in every
+ * case, and having the enum supply that too was a comic-era flourish
+ * ("To be continued...") that said nothing.
  */
-export function availabilityCopy(
-  status: AvailabilityStatus,
-  settings: SiteSettings,
-): AvailabilityCopy {
+export function availabilityBody(status: AvailabilityStatus, settings: SiteSettings): string {
   const roles = settings.rolesOpenTo.join(' or ').toLowerCase();
 
   switch (status) {
     case 'open':
-      return {
-        kicker: 'Next issue',
-        headline: 'To be continued...',
-        body: `Actively looking for ${roles} work in ${settings.location}. The fastest way to reach me is email.`,
-      };
+      return `Actively looking for ${roles} work in ${settings.location}.`;
     case 'selective':
-      return {
-        kicker: 'Next issue',
-        headline: 'To be continued...',
-        body: `Happily employed, but open to ${roles} roles in ${settings.location} for the right team. Email is the fastest way to reach me.`,
-      };
+      return `Happily employed, but open to ${roles} roles in ${settings.location} for the right team.`;
     case 'not_looking':
-      return {
-        kicker: 'Next issue',
-        headline: 'To be continued...',
-        body: `Not looking right now, but always glad to talk shop. Email still works.`,
-      };
+      return 'Not looking right now, but always glad to talk shop.';
   }
 }

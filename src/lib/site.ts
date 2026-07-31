@@ -15,12 +15,3 @@ export function siteUrl(): string {
 
   return 'http://localhost:3000';
 }
-
-/**
- * The first page of the issue is the site root, and is also reachable at its
- * own slug so deep links from anywhere keep working. Everything canonicalises
- * to `/`.
- */
-export function pageHref(slug: string, index: number): string {
-  return index === 0 ? '/' : `/${slug}`;
-}

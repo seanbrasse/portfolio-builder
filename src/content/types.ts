@@ -9,7 +9,6 @@
  * layout.
  */
 
-import type { TemplateId } from '@/lib/templates';
 
 export type AvailabilityStatus = 'open' | 'selective' | 'not_looking';
 
@@ -47,7 +46,6 @@ export type Asset = {
 export type SiteSettings = {
   displayName: string;
   tagline: string;
-  issueNumber: string;
   availabilityStatus: AvailabilityStatus;
   rolesOpenTo: string[];
   location: string;
@@ -115,168 +113,8 @@ export type Metric = {
   label: string;
 };
 
-/**
- * A piece of art that crosses panel borders, positioned in page percentages.
- * Decoration only — see `components/Breakout.tsx`.
- */
-export type Breakout = {
-  kind: 'skyline-band' | 'speed-streak' | 'burst-star';
-  x: number;
-  y: number;
-  w: number;
-  h?: number;
-  rotate?: number;
-  accent?: 'a' | 'b' | 'c';
-  opacity?: number;
-};
-
-export type PanelOverrides = {
-  /** Which of the three spot colors this panel flats with. */
-  accent?: 'a' | 'b' | 'c';
-  /**
-   * How heavily the flat is laid down.
-   *
-   * `tint` is a wash over the paper, for panels carrying body copy.
-   * `solid` is the flat at full strength with the lettering inverted on top —
-   * the loud panels a comic page needs so it does not read as beige. Contrast
-   * is easier on a solid panel than a tinted one, not harder: light type on a
-   * saturated flat clears AA comfortably, where dark type over a pale wash and
-   * a halftone dot does not.
-   */
-  fill?: 'tint' | 'solid';
-  /** Halftone screen on or off for this panel. */
-  screen?: boolean;
-  /** Radiating rays behind the content. One per page at most. */
-  rays?: boolean;
-  /**
-   * The panel's outline.
-   *
-   * A comic page is not a grid of rectangles — edges cant, panels lean, and
-   * the gutter between two leaning panels is a diagonal, which is most of what
-   * makes a page read as laid out rather than tabulated.
-   *
-   * `canted` cuts one corner. `lean-l` / `lean-r` make the panel a
-   * parallelogram, which suits a tall panel. `band-up` / `band-down` slant a
-   * wide band — both edges the same way, so the band keeps its full height and
-   * a run of them leaves parallel diagonal gutters.
-   */
-  shape?: 'rect' | 'canted' | 'lean-l' | 'lean-r' | 'band-up' | 'band-down';
-  /**
-   * How the panel is edged.
-   *
-   * `ink` is a printed panel: a black rule, flush with its neighbours, sharing
-   * a gutter. `mat` is a mounted one — a cream mat and a shadow, laid on top of
-   * whatever is behind it rather than tiled beside it. `none` removes the edge
-   * entirely, for a panel that *is* the page rather than one on it.
-   *
-   * Mounting only means anything over a `bleed: 'page'` panel. A mat on paper
-   * is a thick white border and a shadow on paper is a mistake.
-   */
-  frame?: 'ink' | 'mat' | 'none';
-  /**
-   * Degrees of tilt. Small values only — this is a printing skew, not a fan.
-   *
-   * Nothing uses it, and a grid panel should not: rotating a rectangle grows
-   * its bounding box by `height * sin θ`, and the grid lays out the box. Half a
-   * degree on a 330px panel eats 1.4px off the near corner and adds it to the
-   * far one, so a 9px gutter runs 7.5px at one end and 10.4px at the other.
-   * That taper is exactly the inconsistency the split gutters exist to remove,
-   * and it costs more than the hand-set wobble is worth. Reserved for a panel
-   * that has no grid neighbours to be out of parallel with.
-   */
-  tilt?: number;
-  /**
-   * Stacking order, for panels that share grid area and overlap. Higher sits
-   * on top. Leave unset for the common case where panels tile.
-   */
-  layer?: number;
-  /**
-   * `page` makes this panel the whole leaf, with every other panel on the page
-   * layered over part of it. Not a column in a two-track grid — the difference
-   * shows in the gutters, which become this panel's own art showing between
-   * the panels laid on top of it.
-   */
-  bleed?: 'page';
-};
-
-export type PanelContent =
-  /**
-   * `body` is the page's opening paragraph, set inside the establishing shot
-   * rather than in a panel beside it. Optional because the hero carried none
-   * when it was one panel among several on a tiled page; a hero that *is* the
-   * page has the room, and the lead copy belongs in the picture.
-   */
-  | { type: 'hero'; body?: string }
-  | { type: 'experience'; ref: string }
-  | { type: 'project'; ref: string }
-  | { type: 'testimonial'; ref: string }
-  | { type: 'metric'; ref: string }
-  | { type: 'cta' }
-  | { type: 'image'; ref: string }
-  | {
-      type: 'text';
-      heading: string;
-      body: string;
-      /**
-       * The shape the copy sits in. A comic page does not set every block of
-       * text in the same box: narration goes in a caption, a voice goes in a
-       * balloon. `plain` is the caption case.
-       */
-      blurb?: 'plain' | 'balloon';
-    }
-  /**
-   * An establishing shot: a panel that carries a drawing rather than copy.
-   *
-   * This is the slot a figure goes in once one exists. Until then it holds the
-   * skyline, so the composition the reference calls for — one big image beside
-   * a stack of text panels — is the real composition and not a blank box
-   * waiting for art.
-   */
-  | { type: 'art'; art: 'skyline' }
-  /** COMP-4: a slot deliberately left quiet. Renders as a blank inked panel. */
-  | { type: 'empty' };
-
-export type Panel = {
-  /** The named grid area in the page's template. */
-  slot: string;
-  content: PanelContent;
-  overrides?: PanelOverrides;
-};
-
-/**
- * MOTION-3 / the noise budget: at most one of these per page, so the type is
- * a single optional field rather than a panel kind. It overlays a panel
- * instead of occupying a slot, which is how SFX actually sit on a comic page.
- * `aria-hidden` at render (ACC-6).
- */
-export type Sfx = {
-  text: string;
-  /** Which slot in the template it stamps over. */
-  slot: string;
-  /** Degrees. Negative tilts counter-clockwise. */
-  rotate?: number;
-};
-
-export type Page = {
-  id: string;
-  slug: string;
-  /** Shown in the issue index rail. */
-  title: string;
-  /** The yellow caption box. */
-  caption: string;
-  templateId: TemplateId;
-  panels: Panel[];
-  sfx?: Sfx;
-  /** Art that crosses this page's panel borders. Decoration only. */
-  breakouts?: Breakout[];
-  status: 'draft' | 'published';
-  /** Overrides the site tagline in this page's social card. */
-  ogTagline?: string;
-};
-
 export type Issue = {
   settings: SiteSettings;
-  pages: Page[];
   experiences: Experience[];
   projects: Project[];
   testimonials: Testimonial[];

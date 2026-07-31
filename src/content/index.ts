@@ -4,8 +4,8 @@
  * Everything the rendering layer knows about content goes through here, so
  * Phase 2 can swap the hardcoded module for database queries by changing this
  * file alone. Lookups are indexed once at module load rather than scanned per
- * panel, because a page renders every panel and `find()` in a render path is
- * how a static site quietly becomes quadratic.
+ * item, because the page renders every experience and project, and `find()` in
+ * a render path is how a static site quietly becomes quadratic.
  */
 
 import { issue } from './issue';
@@ -14,7 +14,6 @@ import type {
   Experience,
   Issue,
   Metric,
-  Page,
   Project,
   SiteSettings,
   Testimonial,
@@ -31,21 +30,6 @@ const testimonialsById = index(issue.testimonials);
 
 export function getSettings(): SiteSettings {
   return issue.settings;
-}
-
-/** Published pages only, in issue order. This is the reader's issue. */
-export function getPages(): Page[] {
-  return issue.pages.filter((page) => page.status === 'published');
-}
-
-export function getPage(slug: string): Page | undefined {
-  return getPages().find((page) => page.slug === slug);
-}
-
-export function getFirstPage(): Page {
-  const [first] = getPages();
-  if (!first) throw new Error('The issue has no published pages.');
-  return first;
 }
 
 export function getExperience(id: string): Experience | undefined {
@@ -163,4 +147,4 @@ if (typeof window === 'undefined') {
   }
 }
 
-export type { Experience, Issue, Metric, Page, Project, SiteSettings, Testimonial };
+export type { Experience, Issue, Metric, Project, SiteSettings, Testimonial };
