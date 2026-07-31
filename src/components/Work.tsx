@@ -927,8 +927,18 @@ function Timeline({
 
     const stack = () => {
       const joins = [...node.querySelectorAll<HTMLElement>('.timeline-join')];
-      const width = node.clientWidth;
+      // The band, not the track, is what percentages resolve against — it is
+      // inset on wide screens — so its width is what turns a join's `left`
+      // percentage into the pixel centre the collision and nudge math need.
+      const band = node.querySelector<HTMLElement>('.timeline-band');
+      const width = band?.clientWidth ?? node.clientWidth;
       if (joins.length === 0 || width === 0) return;
+
+      // How far the band is held back from each edge of the track. A label
+      // centred on an end tick may spill this far past the band before it hits
+      // the track edge, which is the room that lets the first and last labels
+      // sit under their marks instead of being nudged off them.
+      const inset = Math.max(0, (node.clientWidth - width) / 2);
 
       const gutter =
         parseFloat(getComputedStyle(node).getPropertyValue('--join-gutter')) || GUTTER;
@@ -943,15 +953,40 @@ function Timeline({
       for (const join of joins) {
         const label = join.querySelector<HTMLElement>('.timeline-company');
         const box = label?.getBoundingClientRect();
-        const left = (parseFloat(join.style.left) / 100) * width;
-        const right = left + (box?.width ?? 0) + gutter;
+        const center = (parseFloat(join.style.left) / 100) * width;
+        const half = (box?.width ?? 0) / 2;
 
-        let row = edges.findIndex((edge) => left >= edge);
+        /**
+         * Keep the centred label on the track.
+         *
+         * Centred on its tick, the first label (at 0%) hangs half its width off
+         * the left edge and the last could hang off the right. `--nudge` is the
+         * push, in pixels, that brings a clipping label back inside — zero for
+         * the labels that already fit, which is most of them. The tick does not
+         * move with it, so a clamped label points slightly to one side of its
+         * mark rather than being cut in half, the honest trade at a line's ends.
+         */
+        // Clamp against the track, not the band: a centred label may use the
+        // band's own margin, so it only needs pushing when it would leave the
+        // track itself. `center + inset` is the label's centre in track space.
+        let nudge = 0;
+        const trackCenter = center + inset;
+        if (trackCenter - half < 0) nudge = -(trackCenter - half);
+        else if (trackCenter + half > node.clientWidth) nudge = node.clientWidth - (trackCenter + half);
+
+        // The label's real span after the nudge — this, not the centred span,
+        // is what can collide, because the nudge is exactly what moved a flush
+        // edge label off centre and into its neighbour's space.
+        const start = center - half + nudge;
+        const end = center + half + nudge + gutter;
+
+        let row = edges.findIndex((edge) => start >= edge);
         if (row === -1) row = edges.length;
-        edges[row] = right;
+        edges[row] = end;
         tallest = Math.max(tallest, box?.height ?? 0);
 
         join.style.setProperty('--row', String(row));
+        join.style.setProperty('--nudge', `${Math.round(nudge)}px`);
       }
 
       node.style.setProperty('--rows', String(edges.length));
@@ -997,13 +1032,22 @@ function Timeline({
           focusable control inside an `aria-hidden` subtree is unreachable by
           keyboard while still being in the tab order. */}
       <div className="timeline-track" ref={track}>
-        {/* Two pieces, because the scale changes between them. The lighter one
-            covers the years before the first job, which are compressed. */}
-        <span
-          aria-hidden="true"
-          className="timeline-rule timeline-rule-lead"
-          style={{ left: 0, width: `${geometry.lead}%` }}
-        />
+        {/* The positioned band. Everything on the line lives in here, and on a
+            wide screen it is inset from the track's edges — the labels centre on
+            their ticks, so the first and last need room to sit under their mark
+            instead of hanging off the end. The inset is zero on a phone, where
+            the labels are hidden and only the narrow badges remain, so nothing
+            is given away to a margin that is not needed. Percentages resolve
+            against this band's width, which is why the inset moves the whole
+            line inward rather than distorting it. */}
+        <div className="timeline-band">
+          {/* Two pieces, because the scale changes between them. The lighter one
+              covers the years before the first job, which are compressed. */}
+          <span
+            aria-hidden="true"
+            className="timeline-rule timeline-rule-lead"
+            style={{ left: 0, width: `${geometry.lead}%` }}
+          />
         <span
           aria-hidden="true"
           className="timeline-rule"
@@ -1059,14 +1103,14 @@ function Timeline({
                   }
                   onBlur={() => setOpen((current) => (current?.sticky ? current : null))}
                 >
-                  <Badge name={join.label} logo={join.logo} />
-                  {/* The company, and only the company.
-                      The role used to sit under it permanently, which put four
-                      job titles across a line whose subject is the companies —
-                      and it was already in the tooltip a hover away, so it was
-                      being said twice. One line each keeps the row half as tall
-                      and gives the height back to the cards. */}
+                  {/* Name over mark, both centred on the tick. The name reads
+                      first and labels the mark under it, and the column is
+                      centred so a wide name and a square badge share one axis
+                      rather than hanging off the left of the tick. The role is
+                      not here — it is a hover away in the tooltip, and putting
+                      it back would be saying it twice and doubling the row. */}
                   <span className="timeline-name">{join.label}</span>
+                  <Badge name={join.label} logo={join.logo} />
                 </button>
 
                 {/* Flipped past halfway, so a tooltip on a late join opens back
@@ -1097,10 +1141,11 @@ function Timeline({
           />
         ))}
 
-        {/* Rides the carousel's continuous position, so it slides between two
-            projects rather than snapping to whichever is nearest. Placed from
-            the animation frame, which is why it is a ref. */}
-        <span ref={cursorRef} aria-hidden="true" className="timeline-cursor" />
+          {/* Rides the carousel's continuous position, so it slides between two
+              projects rather than snapping to whichever is nearest. Placed from
+              the animation frame, which is why it is a ref. */}
+          <span ref={cursorRef} aria-hidden="true" className="timeline-cursor" />
+        </div>
       </div>
 
       {/* Only the projects. The companies used to be listed here too, and are
