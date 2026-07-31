@@ -1,0 +1,249 @@
+/**
+ * The database read layer.
+ *
+ * Every function here returns one of the shapes in `types.ts` — the same shapes
+ * `issue.ts` exports — because the whole point of the indirection in `index.ts`
+ * is that the rendering layer never learns where content came from. A row that
+ * cannot be mapped onto those types is a schema that has drifted from the
+ * model, and the fix is the migration, not a cast.
+ *
+ * Reads use the anon key and go through row-level security, so an unpublished
+ * project is invisible here for the same reason it is invisible to anyone with
+ * the key: the database will not return it. Draft state is not something this
+ * layer has to remember to filter.
+ */
+
+import { createClient } from '@supabase/supabase-js';
+
+import type { Asset, Experience, Issue, Link, Project, SiteSettings, Testimonial } from './types';
+import { SUPABASE_KEY, SUPABASE_URL } from '@/lib/supabase/config';
+
+/**
+ * A plain anon client, deliberately not the cookie-backed one.
+ *
+ * Reading the session would mean touching `cookies()`, and a page that touches
+ * cookies cannot be statically generated — the public page would go from a file
+ * on a CDN to a function invocation per visitor, to personalise content that is
+ * identical for everyone. Public reads are anonymous by definition; the admin
+ * has its own client for the requests where identity matters.
+ */
+function anon() {
+  return createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+type SettingsRow = {
+  display_name: string;
+  tagline: string;
+  availability_status: SiteSettings['availabilityStatus'];
+  roles_open_to: string[];
+  skills: string[];
+  education_school: string;
+  education_credential: string;
+  education_start_date: string;
+  location: string;
+  contact_email: string;
+  resume_href: string;
+  links: Link[];
+  og_tagline: string;
+};
+
+type ExperienceRow = {
+  id: string;
+  company: string;
+  role: string;
+  location: string;
+  start_date: string;
+  end_date: string | null;
+  summary: string;
+  impact_bullets: string[];
+  logo_src: string | null;
+  logo_alt: string;
+  logo_width: number | null;
+  logo_height: number | null;
+  links: Link[];
+};
+
+type ImageRow = {
+  id: string;
+  project_id: string;
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  kind: Asset['kind'];
+  focal_x: number | null;
+  focal_y: number | null;
+};
+
+type ProjectRow = {
+  id: string;
+  title: string;
+  context: Project['context'];
+  experience_id: string | null;
+  summary: string;
+  impact: string;
+  tech: string[];
+  links: Link[];
+  date: string;
+};
+
+type TestimonialRow = {
+  id: string;
+  quote: string;
+  author_name: string;
+  author_role: string;
+  author_company: string;
+  experience_id: string | null;
+  approved: boolean;
+};
+
+function toSettings(row: SettingsRow): SiteSettings {
+  return {
+    displayName: row.display_name,
+    tagline: row.tagline,
+    availabilityStatus: row.availability_status,
+    rolesOpenTo: row.roles_open_to,
+    skills: row.skills,
+    education: {
+      school: row.education_school,
+      credential: row.education_credential,
+      startDate: row.education_start_date,
+    },
+    location: row.location,
+    contactEmail: row.contact_email,
+    resumeHref: row.resume_href,
+    links: row.links ?? [],
+    ogTagline: row.og_tagline,
+  };
+}
+
+/**
+ * The company's mark, if one has been uploaded.
+ *
+ * Returned as an `Asset` so that a logo and a screenshot are the same kind of
+ * thing to everything downstream. Undefined when there is no file, which is
+ * what makes the badge fall back to a monogram rather than render a broken
+ * image — the absence has to survive the mapping.
+ */
+function toLogo(row: ExperienceRow): Asset | undefined {
+  if (!row.logo_src) return undefined;
+  return {
+    id: `${row.id}-logo`,
+    src: row.logo_src,
+    alt: row.logo_alt,
+    width: row.logo_width ?? 0,
+    height: row.logo_height ?? 0,
+    kind: 'logo',
+  };
+}
+
+function toExperience(row: ExperienceRow): Experience {
+  return {
+    id: row.id,
+    company: row.company,
+    role: row.role,
+    location: row.location,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    summary: row.summary,
+    impactBullets: row.impact_bullets ?? [],
+    logo: toLogo(row),
+    links: row.links ?? [],
+  };
+}
+
+function toAsset(row: ImageRow): Asset {
+  return {
+    id: row.id,
+    src: row.src,
+    alt: row.alt,
+    width: row.width,
+    height: row.height,
+    kind: row.kind,
+    focalPoint:
+      row.focal_x === null || row.focal_y === null
+        ? undefined
+        : { x: row.focal_x, y: row.focal_y },
+  };
+}
+
+function toProject(row: ProjectRow, images: Asset[]): Project {
+  return {
+    id: row.id,
+    title: row.title,
+    context: row.context,
+    experienceId: row.experience_id ?? undefined,
+    summary: row.summary,
+    impact: row.impact,
+    tech: row.tech ?? [],
+    links: row.links ?? [],
+    images,
+    date: row.date,
+  };
+}
+
+function toTestimonial(row: TestimonialRow): Testimonial {
+  return {
+    id: row.id,
+    quote: row.quote,
+    authorName: row.author_name,
+    authorRole: row.author_role,
+    authorCompany: row.author_company,
+    experienceId: row.experience_id ?? undefined,
+    approved: row.approved,
+  };
+}
+
+/**
+ * The whole issue in one pass.
+ *
+ * Five queries rather than a query per item: the page renders every experience
+ * and every project, so fetching them one at a time is a round trip per row for
+ * a page that always needs all of them. Images are fetched flat and grouped in
+ * memory, which is one query instead of one per project.
+ *
+ * Returns null on any failure — an unreachable database, a schema mismatch, an
+ * empty settings row — so the caller can fall back to the content module rather
+ * than serve a half-empty page. A portfolio that renders yesterday's copy is a
+ * better outcome than one that renders a blank hero.
+ */
+export async function readIssue(): Promise<Issue | null> {
+  try {
+    const supabase = anon();
+
+    const [settings, experiences, projects, images, testimonials] = await Promise.all([
+      supabase.from('settings').select('*').eq('id', true).maybeSingle(),
+      supabase.from('experiences').select('*').order('start_date', { ascending: false }),
+      supabase.from('projects').select('*').order('date', { ascending: false }),
+      supabase.from('project_images').select('*').order('sort_order', { ascending: true }),
+      supabase.from('testimonials').select('*'),
+    ]);
+
+    if (settings.error || !settings.data) return null;
+    if (experiences.error || projects.error || images.error || testimonials.error) return null;
+
+    const byProject = new Map<string, Asset[]>();
+    for (const row of (images.data ?? []) as ImageRow[]) {
+      const list = byProject.get(row.project_id);
+      if (list) list.push(toAsset(row));
+      else byProject.set(row.project_id, [toAsset(row)]);
+    }
+
+    return {
+      settings: toSettings(settings.data as SettingsRow),
+      experiences: ((experiences.data ?? []) as ExperienceRow[]).map(toExperience),
+      projects: ((projects.data ?? []) as ProjectRow[]).map((row) =>
+        toProject(row, byProject.get(row.id) ?? []),
+      ),
+      testimonials: ((testimonials.data ?? []) as TestimonialRow[]).map(toTestimonial),
+      // Not in the database. The metrics panel belonged to the comic layout and
+      // nothing renders it now; adding a table for a surface that does not
+      // exist would be inventing a requirement.
+      metrics: [],
+    };
+  } catch {
+    return null;
+  }
+}

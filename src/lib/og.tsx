@@ -38,7 +38,7 @@ export async function renderOgImage({
   title: string;
   subtitle: string;
 }) {
-  const settings = getSettings();
+  const settings = await getSettings();
   const palette = PALETTES.dark;
   const font = await displayFont();
 

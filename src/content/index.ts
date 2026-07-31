@@ -1,15 +1,34 @@
 /**
  * The read API over the issue.
  *
- * Everything the rendering layer knows about content goes through here, so
- * Phase 2 can swap the hardcoded module for database queries by changing this
- * file alone. Lookups are indexed once at module load rather than scanned per
- * item, because the page renders every experience and project, and `find()` in
- * a render path is how a static site quietly becomes quadratic.
+ * Everything the rendering layer knows about content goes through here, which
+ * is what made moving the content into a database a change to this file rather
+ * than to every page. Callers ask for settings, experiences and projects; where
+ * those live is not their business and never was.
+ *
+ * Two sources, one shape:
+ *
+ *   • The database, when it is configured. Row-level security does the
+ *     filtering, so an unpublished project is absent rather than fetched and
+ *     discarded.
+ *
+ *   • `issue.ts`, when it is not — or when a read fails. A deploy without the
+ *     environment variables set, a local checkout, a database having a bad
+ *     afternoon: all of them serve the module. A portfolio that renders content
+ *     from the last deploy beats one that renders an empty hero.
+ *
+ * Everything is async now, because a database read is. Nothing here is called
+ * from a client component; the page, the metadata, the OG image and the
+ * structured data are all server-side, so this costs a keyword and nothing
+ * else.
  */
 
-import { issue } from './issue';
+import { cache } from 'react';
+
+import { readIssue } from './db';
+import { issue as fallback } from './issue';
 import { CAPS } from './types';
+import { hasDatabase } from '@/lib/supabase/config';
 import type {
   Experience,
   Issue,
@@ -19,47 +38,56 @@ import type {
   Testimonial,
 } from './types';
 
+/**
+ * One read per request, however many callers ask.
+ *
+ * A single page render asks for settings from the layout's metadata, the page
+ * body, the OG image and the structured data. `cache` collapses those into one
+ * round trip and hands every caller the same object, which also means they
+ * cannot disagree about what the content is midway through a render.
+ */
+export const getIssue = cache(async (): Promise<Issue> => {
+  if (!hasDatabase()) return fallback;
+  return (await readIssue()) ?? fallback;
+});
+
 function index<T extends { id: string }>(rows: T[]): Map<string, T> {
   return new Map(rows.map((row) => [row.id, row]));
 }
 
-const experiencesById = index(issue.experiences);
-const projectsById = index(issue.projects);
-const metricsById = index(issue.metrics);
-const testimonialsById = index(issue.testimonials);
-
-export function getSettings(): SiteSettings {
-  return issue.settings;
+export async function getSettings(): Promise<SiteSettings> {
+  return (await getIssue()).settings;
 }
 
-export function getExperience(id: string): Experience | undefined {
-  return experiencesById.get(id);
+export async function getExperience(id: string): Promise<Experience | undefined> {
+  return index((await getIssue()).experiences).get(id);
 }
 
-export function getProject(id: string): Project | undefined {
-  return projectsById.get(id);
+export async function getProject(id: string): Promise<Project | undefined> {
+  return index((await getIssue()).projects).get(id);
 }
 
-export function getMetric(id: string): Metric | undefined {
-  return metricsById.get(id);
+export async function getMetric(id: string): Promise<Metric | undefined> {
+  return index((await getIssue()).metrics).get(id);
 }
 
 /**
  * Unapproved quotes are invisible to the rendering layer entirely — this
  * returns `undefined` for them rather than a row with a flag the caller might
- * forget to check.
+ * forget to check. The database enforces the same rule in its read policy, so
+ * this is the second of two locks rather than the only one.
  */
-export function getTestimonial(id: string): Testimonial | undefined {
-  const row = testimonialsById.get(id);
+export async function getTestimonial(id: string): Promise<Testimonial | undefined> {
+  const row = index((await getIssue()).testimonials).get(id);
   return row?.approved ? row : undefined;
 }
 
-export function getExperiences(): Experience[] {
-  return issue.experiences;
+export async function getExperiences(): Promise<Experience[]> {
+  return (await getIssue()).experiences;
 }
 
-export function getProjects(): Project[] {
-  return issue.projects;
+export async function getProjects(): Promise<Project[]> {
+  return (await getIssue()).projects;
 }
 
 export type ContentProblem = { where: string; problem: string };
@@ -72,7 +100,7 @@ export type ContentProblem = { where: string; problem: string };
  * silently overflowing a panel. Returns problems rather than throwing so the
  * caller can report all of them at once.
  */
-export function validateIssue(content: Issue = issue): ContentProblem[] {
+export function validateIssue(content: Issue = fallback): ContentProblem[] {
   const problems: ContentProblem[] = [];
 
   const tooLong = (where: string, value: string, cap: number) => {

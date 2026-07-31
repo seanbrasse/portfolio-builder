@@ -17,19 +17,19 @@ import { personSchema } from '@/lib/schema';
  */
 export const dynamic = 'force-static';
 
-export default function Home() {
-  const settings = getSettings();
+export default async function Home() {
+  const settings = await getSettings();
   // Newest first: the carousel opens on the most recent project and scrolling
   // forward walks back through time. The order is a presentation choice, so it
   // is made here rather than baked into the content file.
-  const projects = [...getProjects()].sort((a, b) => b.date.localeCompare(a.date));
-  const experiences = getExperiences();
+  const projects = [...(await getProjects())].sort((a, b) => b.date.localeCompare(a.date));
+  const experiences = await getExperiences();
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema()) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(await personSchema()) }}
       />
 
       <div className="screen">

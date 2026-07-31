@@ -9,25 +9,32 @@ import { siteUrl } from '@/lib/site';
 
 import './globals.css';
 
-const settings = getSettings();
+/**
+ * Generated rather than declared. The content is a read now, and a module-scope
+ * constant cannot await one. `getIssue` is request-cached, so this shares the
+ * page's fetch instead of adding a second.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSettings();
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl()),
-  title: {
-    default: `${settings.displayName} — ${settings.tagline}`,
-    template: `%s — ${settings.displayName}`,
-  },
-  description: settings.ogTagline,
-  alternates: { canonical: '/' },
-  openGraph: {
-    type: 'profile',
-    siteName: settings.displayName,
-    title: `${settings.displayName} — Software Engineer`,
+  return {
+    metadataBase: new URL(siteUrl()),
+    title: {
+      default: `${settings.displayName} — ${settings.tagline}`,
+      template: `%s — ${settings.displayName}`,
+    },
     description: settings.ogTagline,
-  },
-  twitter: { card: 'summary_large_image' },
-  robots: { index: true, follow: true },
-};
+    alternates: { canonical: '/' },
+    openGraph: {
+      type: 'profile',
+      siteName: settings.displayName,
+      title: `${settings.displayName} — Software Engineer`,
+      description: settings.ogTagline,
+    },
+    twitter: { card: 'summary_large_image' },
+    robots: { index: true, follow: true },
+  };
+}
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -38,7 +45,9 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const settings = await getSettings();
+
   return (
     // `data-theme` is written by the inline script below before React sees the
     // document, so the server's markup is intentionally missing it.
