@@ -48,12 +48,31 @@ export function SignIn({ problem }: { problem?: string }) {
     setState('sending');
 
     const supabase = supabaseBrowser();
-    await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
-    // Deliberately not branching on the result. A failure and a success look
-    // the same from here, which is the point.
+
+    /**
+     * One exception to saying nothing: the send limit.
+     *
+     * Every other failure stays silent, because the reply has to look the same
+     * whether or not the address is the owner's — otherwise this form is an
+     * oracle for "which email controls this site". A rate limit is different.
+     * It is a fact about how many messages have just been sent, the fix is to
+     * wait, and reporting "check your inbox" when nothing was sent leaves the
+     * only person who can sign in staring at an empty one.
+     */
+    if (error?.status === 429) {
+      router.replace(
+        `/admin/enter?problem=${encodeURIComponent(
+          'Too many links requested. The mail service allows a few per hour — wait a while and try again.',
+        )}`,
+      );
+      setState('idle');
+      return;
+    }
+
     setState('sent');
   }
 

@@ -1808,12 +1808,35 @@ a:hover {
     font-size: 11px;
   }
 
-  /* One tight block instead of three loose ones. The mark sits inline with the
-     links rather than claiming a row of its own, and the copyright closes it
-     out — 158px of footer on a 844px screen was a quarter of the page spent
-     on the least important thing on it. */
+  /* At the bottom of the screen, with room around it.
+     `margin-top: auto` is what puts it against the bottom edge rather than
+     directly under the controls with the leftover screen below it. The card's
+     height budget adds up what is beneath the stage rather than measuring how
+     far down it sits, so pushing the footer down here cannot feed back into
+     it. */
   .site-footer {
-    padding-block: 0 16px;
+    margin-top: auto;
+    padding-block: 16px 14px;
+  }
+
+  /* Two full-width rows, and the links spread across theirs. They used to bunch
+     at the left with eighty pixels of ragged gap on the right; spreading them
+     edge to edge gives the block two straight sides, which is the difference
+     between looking deliberate and looking left over. */
+  .site-footer-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .footer-col,
+  .footer-col ul {
+    width: 100%;
+  }
+
+  .footer-col ul {
+    justify-content: space-between;
+    flex-wrap: nowrap;
   }
 
   .site-footer-inner {
