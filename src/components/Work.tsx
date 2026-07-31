@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { Experience, Project, SiteSettings } from '@/content/types';
+import type { Asset, Experience, Project, SiteSettings } from '@/content/types';
 import { formatMonth, formatRange, isoRange } from '@/lib/format';
 
 /** Cards per notch of wheel travel. Tuned so a normal flick moves about one. */
@@ -191,13 +191,68 @@ export function Work({
      * is what stops that becoming a loop: once a change is smaller than a
      * couple of pixels nothing is written, no resize fires, and it settles.
      */
+    const region = node.closest<HTMLElement>('.work');
+    const label = region?.querySelector<HTMLElement>('.section-label');
+
     const fit = () => {
+      if (!region || !label) return;
+
       const chrome = body ? body.offsetHeight : 96;
+
+      /**
+       * The height budget, taken from the region rather than from the stage.
+       *
+       * The stage's own height is now written by this function, so reading it
+       * back to decide how tall it should be is circular. The work region is a
+       * grid track that fills the screen, so its height is independent of
+       * anything here — subtract the parts of it that are not the stage and
+       * what is left is the stage's budget.
+       *
+       * Measured from the label down and from the region's bottom up, never
+       * from the region's top. The block is bottom-aligned, so the space above
+       * the label is slack, and counting it as chrome would shrink the card to
+       * make room for the emptiness the shrinking creates.
+       */
+      const regionBox = region.getBoundingClientRect();
+      const stageBox = node.getBoundingClientRect();
+      const above = stageBox.top - label.getBoundingClientRect().top;
+      const below = regionBox.bottom - stageBox.bottom;
+
       // A little back, so a rounding error cannot put the card over the edge.
-      const available = node.clientHeight - chrome - 4;
+      const budget = regionBox.height - above - below;
+      const available = budget - chrome - 4;
       const byHeight = Math.max(available, 80) * (16 / 9);
-      const byWidth = Math.min(node.clientWidth * 0.5, 680);
+      /**
+       * The width bound, which is now what binds on a tall window.
+       *
+       * Three cards wide, not one: the neighbours sit `SPACING` out and scaled
+       * down, so the stack covers about `2 * SPACING + 0.87` card widths and
+       * spills well past the text column it is centred in. Bounding on the
+       * column alone let the outer cards run off a narrow screen.
+       */
+      const span = 2 * SPACING + 0.87;
+      const byWidth = Math.min(
+        node.clientWidth * 0.62,
+        (window.innerWidth - 48) / span,
+        700,
+      );
       const next = Math.round(Math.min(byHeight, byWidth));
+
+      /**
+       * Written every pass, deadband or not: the copy can rewrap without the
+       * width moving, and the stage's height has to follow the body it holds.
+       * Two pixels over, so a rounded height cannot leave the card a pixel
+       * proud of the stage it is centred in.
+       *
+       * Clamped to the budget, because on a window barely over the scroll-lock
+       * threshold the budget is genuinely smaller than the smallest card. The
+       * stage is a fixed height now, so an unclamped value cannot be absorbed
+       * the way a flexible one was — the block grows past its grid track and
+       * climbs into the intro above it. Clamping lets the card overflow the
+       * stage instead, which is what a too-short window did before.
+       */
+      const height = Math.round((next * 9) / 16) + chrome + 2;
+      node.style.setProperty('--card-h', `${Math.min(height, Math.max(budget, 0))}px`);
 
       const current = parseFloat(node.style.getPropertyValue('--card-w')) || 0;
       if (Math.abs(next - current) < 2) return;
@@ -210,6 +265,9 @@ export function Work({
     const observer = new ResizeObserver(fit);
     observer.observe(node);
     if (body) observer.observe(body);
+    // The region carries the budget, so a viewport change has to be seen here
+    // — the stage is a fixed height now and no longer resizes on its own.
+    if (region) observer.observe(region);
     return () => observer.disconnect();
   }, [paint]);
 
@@ -452,6 +510,9 @@ export function Work({
 
 type Geometry = ReturnType<typeof timelineGeometry>;
 
+/** The least whitespace two labels on the line may sit apart. */
+const GUTTER = 20;
+
 /** Months since epoch, for placing a date on a line. */
 function monthsOf(iso: string) {
   const [year, month] = iso.split('-').map(Number);
@@ -497,12 +558,14 @@ function timelineGeometry(
         id: 'education',
         label: education.school,
         sub: education.credential,
+        logo: undefined as Asset | undefined,
         left: at(education.startDate),
       },
       ...ordered.map((item) => ({
         id: item.id,
         label: item.company,
         sub: item.role,
+        logo: item.logo,
         left: at(item.startDate),
       })),
     ],
@@ -547,11 +610,71 @@ function Timeline({
   cursorRef: React.RefObject<HTMLSpanElement | null>;
   onPick: (index: number) => void;
 }) {
+  const track = useRef<HTMLDivElement>(null);
+
+  /**
+   * Which row each label sits in.
+   *
+   * Two joins eight months apart are about ninety pixels apart on a nine-year
+   * line, and the labels they carry are wider than that — PayPal and Intuit
+   * Mailchimp overlapped by a third of a label. No amount of type tuning fixes
+   * that, because the positions are the data: the line is time, and July 2022
+   * and April 2023 really are that close together.
+   *
+   * So a label that will not fit beside its neighbour moves up a row and grows
+   * a leader back down to its own tick. Greedy, left to right, first row with
+   * clearance wins — which keeps everything on row 0 when there is room and
+   * only stacks the ones that genuinely collide.
+   *
+   * Widths are measured rather than estimated. A label's width depends on the
+   * font that actually loaded, and guessing it is how a layout that passes on
+   * one machine overlaps on another.
+   */
+  useEffect(() => {
+    const node = track.current;
+    if (!node) return;
+
+    const stack = () => {
+      const joins = [...node.querySelectorAll<HTMLElement>('.timeline-join')];
+      const width = node.clientWidth;
+      if (joins.length === 0 || width === 0) return;
+
+      // The right edge of the last label placed in each row, in pixels.
+      const edges: number[] = [];
+      // A row has to be at least as tall as the tallest thing standing in it,
+      // or lifting a label by one row leaves it short of clearing the one
+      // below and overflowing the top of the track.
+      let tallest = 0;
+
+      for (const join of joins) {
+        const label = join.querySelector<HTMLElement>('.timeline-company');
+        const box = label?.getBoundingClientRect();
+        const left = (parseFloat(join.style.left) / 100) * width;
+        const right = left + (box?.width ?? 0) + GUTTER;
+
+        let row = edges.findIndex((edge) => left >= edge);
+        if (row === -1) row = edges.length;
+        edges[row] = right;
+        tallest = Math.max(tallest, box?.height ?? 0);
+
+        join.style.setProperty('--row', String(row));
+      }
+
+      node.style.setProperty('--rows', String(edges.length));
+      node.style.setProperty('--row-h', `${Math.ceil(tallest) + 4}px`);
+    };
+
+    stack();
+    const observer = new ResizeObserver(stack);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [geometry]);
+
   return (
     <div className="timeline">
       {/* Decoration. The same facts follow as a dated list, because a position
           on a line is not information anyone can hear. */}
-      <div className="timeline-track" aria-hidden="true">
+      <div className="timeline-track" ref={track} aria-hidden="true">
         <span className="timeline-rule" />
 
         {geometry.ticks.map((tick) => (
@@ -563,11 +686,14 @@ function Timeline({
         {geometry.joins.map((join) => (
           <span key={join.id} className="timeline-join" style={{ left: `${join.left}%` }}>
             <span className="timeline-company">
-              {join.label}
-              {/* The role, in the secondary face. Two lines of the same
-                  typeface at the same size read as one wrapped label; the
-                  change of face is what separates the place from the job. */}
-              <span className="timeline-role">{join.sub}</span>
+              <Badge name={join.label} logo={join.logo} />
+              <span className="timeline-text">
+                <span className="timeline-name">{join.label}</span>
+                {/* The role, in the secondary face. Two lines of the same
+                    typeface at the same size read as one wrapped label; the
+                    change of face is what separates the place from the job. */}
+                <span className="timeline-role">{join.sub}</span>
+              </span>
             </span>
           </span>
         ))}
@@ -735,6 +861,7 @@ function Gallery({
             <li key={project.id}>
               <button type="button" className="gallery-item" onClick={() => onOpen(project)}>
                 <span className="gallery-item-meta">
+                  {employer ? <Badge name={employer.company} logo={employer.logo} /> : null}
                   {employer ? employer.company : 'Personal'} · {formatMonth(project.date)}
                 </span>
                 <span className="gallery-item-title">{project.title}</span>
@@ -745,6 +872,60 @@ function Gallery({
         })}
       </ul>
     </>
+  );
+}
+
+/* -------------------------------------------------------------------------
+   Badges
+------------------------------------------------------------------------- */
+
+/**
+ * Initials, for an employer with no logo file.
+ *
+ * Capitalised words only, so "University at Buffalo" is UB rather than UAB —
+ * the connector is not part of how anyone shortens the name. One-word names
+ * keep one letter; "PP" for PayPal would be inventing an abbreviation nobody
+ * uses.
+ */
+function monogram(name: string) {
+  return name
+    .split(/\s+/)
+    .filter((word) => /^[A-Z]/.test(word))
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('');
+}
+
+/**
+ * A company's mark.
+ *
+ * Draws a monogram unless the experience carries a real logo asset. That
+ * default is deliberate: a company logo is a trademark, and Intuit and PayPal
+ * both publish guidelines governing how theirs may be shown. This site does not
+ * fetch one, approximate one, or ship one it was not given — supply an `Asset`
+ * on the experience and it renders instead.
+ *
+ * Decorative either way. The company's name is set beside it in every place
+ * this appears, so the mark is never the only thing carrying the fact.
+ */
+function Badge({ name, logo }: { name: string; logo?: Asset }) {
+  if (logo) {
+    return (
+      <img
+        className="badge"
+        src={logo.src}
+        alt=""
+        width={logo.width}
+        height={logo.height}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return (
+    <span className="badge badge-mono" aria-hidden="true">
+      {monogram(name)}
+    </span>
   );
 }
 
@@ -769,7 +950,10 @@ function CardFace({ project, employer }: { project: Project; employer?: Experien
     <>
       <Shot project={project} />
       <div className="project-body">
-        <p className="project-context">{employer ? employer.company : 'Personal project'}</p>
+        <p className="project-context">
+          {employer ? <Badge name={employer.company} logo={employer.logo} /> : null}
+          {employer ? employer.company : 'Personal project'}
+        </p>
         <h3 className="project-title">{project.title}</h3>
         <p className="project-summary">{project.summary}</p>
         <ul className="tech-row">
@@ -788,6 +972,7 @@ function ProjectDetail({ project, employer }: { project: Project; employer?: Exp
       <Shot project={project} />
       <div className="detail-body">
         <p className="project-context">
+          {employer ? <Badge name={employer.company} logo={employer.logo} /> : null}
           {employer ? `Built at ${employer.company}` : 'Personal project'} ·{' '}
           {formatMonth(project.date)}
         </p>

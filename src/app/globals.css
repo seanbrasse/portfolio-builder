@@ -309,6 +309,13 @@ a:hover {
 .work {
   display: flex;
   flex-direction: column;
+  /* Bottom-aligned, and that is what closes the gaps.
+     The block below is shrink-wrapped — the stage is exactly as tall as a card
+     — so whatever height the screen has left over has to land somewhere. Here
+     it lands above the label, where it reads as breathing room under the intro,
+     rather than being split between the timeline and the cards and the cards
+     and the controls, where it read as three things drifting apart. */
+  justify-content: flex-end;
   min-height: 0;
 }
 
@@ -518,123 +525,6 @@ a:hover {
   flex: none;
 }
 
-/* Timeline ---------------------------------------------------------------- */
-
-/* A list with a rule down the left and a marker per role. It is a `ol` because
-   the order is the meaning: this is a sequence in time, and a screen reader
-   should say so without needing the rule to be described. */
-.timeline {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  position: relative;
-}
-
-.timeline::before {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: var(--rule);
-}
-
-.timeline-item {
-  position: relative;
-  padding-left: 40px;
-  padding-bottom: 44px;
-}
-
-.timeline-item:last-child {
-  padding-bottom: 0;
-}
-
-.timeline-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 7px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--paper);
-  border: 3px solid var(--rule-strong);
-}
-
-/* The current role. Filled rather than hollow, and it says "Present" in the
-   dates as well — the fill is a second signal, never the only one. */
-.timeline-item[data-current='true']::before {
-  border-color: var(--accent-a);
-  background: var(--accent-a);
-}
-
-.timeline-dates {
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-muted);
-  letter-spacing: 0.02em;
-}
-
-.timeline-role {
-  font-size: clamp(20px, 2.6vw, 25px);
-  margin-top: 4px;
-}
-
-.timeline-company {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  margin-top: 6px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.timeline-logo {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-.timeline-location {
-  font-weight: 400;
-  color: var(--ink-muted);
-}
-
-.timeline-summary {
-  margin-top: 12px;
-  color: var(--ink-muted);
-  max-width: var(--measure);
-}
-
-.timeline-bullets {
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 8px;
-  max-width: var(--measure);
-}
-
-.timeline-bullets li {
-  position: relative;
-  padding-left: 20px;
-  font-size: 15px;
-}
-
-.timeline-bullets li::before {
-  content: '';
-  position: absolute;
-  left: 2px;
-  top: 9px;
-  width: 6px;
-  height: 6px;
-  border-radius: 1px;
-  background: var(--accent-a);
-}
-
 /* Projects ---------------------------------------------------------------- */
 
 .projects-head {
@@ -656,10 +546,10 @@ a:hover {
  * reflow the whole stage on every frame of every transition.
  */
 .carousel {
-  /* Grows to fill the row the screen gives it. The cards are absolutely
-     positioned against the stage, so if the carousel does not claim a height
-     the stage has none and the cards collapse to nothing. */
-  flex: 1;
+  /* Sized by its content, not by the row. The cards are absolutely positioned,
+     so the stage's height is written from JS — see `fit()` — and the carousel
+     is exactly a card plus the controls beneath it. */
+  flex: none;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -678,7 +568,12 @@ a:hover {
 
 .carousel-stage {
   position: relative;
-  flex: 1;
+  /* Exactly one card tall. The cards are out of flow, so the stage cannot
+     shrink-wrap them and the height is measured and written instead. Letting it
+     grow into the row was what put a hundred and fifty pixels of nothing above
+     and below the cards on a tall window. */
+  flex: none;
+  height: var(--card-h, 300px);
   min-height: 0;
   /* The stage is the full width; the cards are centred within it and then
      pushed out sideways, so the middle card is always dead centre regardless
@@ -1135,6 +1030,8 @@ a:hover {
   .carousel-stage {
     display: grid;
     gap: 16px;
+    /* The measured height holds one card. In print they are all in flow. */
+    height: auto;
   }
 
   .project-card {
@@ -1179,15 +1076,24 @@ a:hover {
    inside the column. */
 .timeline {
   flex: none;
-  margin: clamp(14px, 2.6vh, 30px) 0 10px;
+  /* Close to the cards. The line is the divider between the header and the
+     work, and a divider that sits nearer the header than the thing it divides
+     off reads as belonging to the header instead. */
+  margin: clamp(4px, 1vh, 12px) 0 8px;
   width: 100vw;
   margin-left: calc(50% - 50vw);
   padding-inline: var(--gutter);
 }
 
+/* The labels stack into rows above the rule, and the number of rows is measured
+   rather than assumed — see `stack()` in Work.tsx. Everything below the labels
+   is positioned off `--stack` so that adding a row pushes the rule down instead
+   of overrunning the block above it. */
 .timeline-track {
+  --row-h: 26px;
+  --stack: calc(var(--rows, 1) * var(--row-h));
   position: relative;
-  height: 40px;
+  height: calc(var(--stack) + 24px);
   max-width: var(--page-max);
   margin: 0 auto;
 }
@@ -1196,14 +1102,14 @@ a:hover {
   position: absolute;
   left: 0;
   right: 0;
-  top: 13px;
+  top: var(--stack);
   height: 1px;
   background: var(--rule-strong);
 }
 
 .timeline-year {
   position: absolute;
-  top: 22px;
+  top: calc(var(--stack) + 10px);
   transform: translateX(-50%);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
@@ -1212,28 +1118,67 @@ a:hover {
   line-height: 1;
 }
 
-/* A join: a tick through the rule, with the company above it. */
+/* A join: a label sitting on the rule with a tick through it.
+ *
+ * `--row` is written from JS. Row 0 rests on the rule; each row above it is
+ * lifted by one `--row-h` and grows a leader down to the rule, so a label that
+ * had to move out of the way still points at its own date. Two labels 97px
+ * apart on the line carrying 130px of type is not a spacing problem that can be
+ * tuned away — one of them has to move, and the leader is what keeps it legible
+ * when it does. */
 .timeline-join {
   position: absolute;
-  top: 6px;
+  top: 0;
+  height: var(--stack);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: calc(var(--row, 0) * var(--row-h));
+}
+
+/* The leader. Zero-height on row 0, which is the row that does not need one. */
+.timeline-join::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
   width: 1px;
-  height: 15px;
+  height: calc(var(--row, 0) * var(--row-h));
+  background: var(--rule-strong);
+}
+
+/* The tick, centred on the rule. */
+.timeline-join::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 1px;
+  height: 12px;
   background: var(--ink);
 }
 
 .timeline-company {
-  position: absolute;
-  bottom: 17px;
-  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   white-space: nowrap;
+  padding-bottom: 5px;
+}
+
+.timeline-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.timeline-name {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink);
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  line-height: 1.1;
 }
 
 .timeline-role {
@@ -1244,13 +1189,43 @@ a:hover {
   letter-spacing: 0;
   text-transform: none;
   color: var(--ink-muted);
+  line-height: 1.1;
+}
+
+/* The badge.
+ *
+ * A monogram unless a real logo has been supplied. Company logos are
+ * trademarks — Intuit and PayPal both publish guidelines restricting how their
+ * marks may be used — so the default here is a mark this site draws itself, and
+ * a real one only appears when a file is deliberately added to the experience.
+ * Nothing is fetched from a brand's servers and nothing is approximated. */
+.badge {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+
+.badge-mono {
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
 /* A project. Ember when it is the card nearest the middle, which is what ties
    the line to the carousel. */
 .timeline-mark {
   position: absolute;
-  top: 9px;
+  /* Centred on the rule: the box is 13px tall counting its border, so its
+     middle lands on the rule when its top sits 6px above it. */
+  top: calc(var(--stack) - 6px);
   width: 9px;
   height: 9px;
   margin-left: -4px;
@@ -1420,6 +1395,9 @@ a:hover {
 }
 
 .gallery-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -1467,7 +1445,7 @@ a:hover {
    and smoothing it twice would put it behind the cards it is reporting on. */
 .timeline-cursor {
   position: absolute;
-  top: 8px;
+  top: calc(var(--stack) - 5px);
   width: 11px;
   height: 11px;
   margin-left: -5px;
