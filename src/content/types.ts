@@ -178,10 +178,11 @@ export const CAPS = {
   quote: 180,
   /**
    * The line under the name, on a page that does not scroll. It is set large
-   * and it gets one or two lines before it starts taking them from the work
-   * below it, which is the whole subject of the page.
+   * and each line it takes comes off the work below it, which is the whole
+   * subject of the page — so this is a soft limit on how far that trade goes,
+   * not a layout hard stop. Roomy enough now for a two-sentence line.
    */
-  tagline: 120,
+  tagline: 180,
   /**
    * The skills row, measured as the comma-separated string rather than per
    * entry — the row wraps as one run, so its total length is what decides how
@@ -189,9 +190,10 @@ export const CAPS = {
    */
   skills: 200,
   /**
-   * The social card description. Not a layout limit: it is roughly where the
-   * platforms themselves stop showing it, so anything past this is written for
-   * nobody.
+   * The social card description. Not a layout limit: most platforms truncate
+   * the visible card around 160-200, but the full text still serves search
+   * snippets and link unfurls that show more, so there is headroom above where
+   * the card cuts off before it is written for nobody.
    */
-  ogTagline: 200,
+  ogTagline: 300,
 } as const;
