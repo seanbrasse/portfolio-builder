@@ -161,13 +161,30 @@ export type PanelOverrides = {
    * a run of them leaves parallel diagonal gutters.
    */
   shape?: 'rect' | 'canted' | 'lean-l' | 'lean-r' | 'band-up' | 'band-down';
-  /** Degrees of tilt. Small values only — this is a printing skew, not a fan. */
+  /**
+   * Degrees of tilt. Small values only — this is a printing skew, not a fan.
+   *
+   * Nothing uses it, and a grid panel should not: rotating a rectangle grows
+   * its bounding box by `height * sin θ`, and the grid lays out the box. Half a
+   * degree on a 330px panel eats 1.4px off the near corner and adds it to the
+   * far one, so a 9px gutter runs 7.5px at one end and 10.4px at the other.
+   * That taper is exactly the inconsistency the split gutters exist to remove,
+   * and it costs more than the hand-set wobble is worth. Reserved for a panel
+   * that has no grid neighbours to be out of parallel with.
+   */
   tilt?: number;
   /**
    * Stacking order, for panels that share grid area and overlap. Higher sits
    * on top. Leave unset for the common case where panels tile.
    */
   layer?: number;
+  /**
+   * `page` makes this panel the whole leaf, with every other panel on the page
+   * layered over part of it. Not a column in a two-track grid — the difference
+   * shows in the gutters, which become this panel's own art showing between
+   * the panels laid on top of it.
+   */
+  bleed?: 'page';
 };
 
 export type PanelContent =

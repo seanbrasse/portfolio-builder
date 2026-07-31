@@ -53,7 +53,18 @@
      panels to the paper edge with a hairline gutter between them. */
   --border-ink: 3px;
   --panel-ink: 2px;
-  --gutter: 7px;
+  /* Vertical and horizontal gutters are each one width, and they are not the
+     same width: a row gap has to separate two lines of reading and a column gap
+     only has to separate two columns, so the row gap is the larger.
+
+     Both are measured, not asserted — tests/gaps.mjs samples the painted gap at
+     each end of every adjacent pair on every leaf. Two things have broken it:
+     a slanted band adding its slope to the gap below (see the negative margins
+     further down), and a sub-degree panel tilt, which grew the panel's
+     bounding box and tapers the gutter beside it from 7.5px to 10.4px. */
+  --gutter-col: 9px;
+  --gutter-row: 13px;
+  --gutter: var(--gutter-col);
   --page-max: min(1760px, 95vw);
 
   color-scheme: light;
@@ -430,7 +441,8 @@ main {
   display: grid;
   flex: 1 1 auto;
   min-height: 0;
-  gap: var(--gutter);
+  column-gap: var(--gutter-col);
+  row-gap: var(--gutter-row);
   background: var(--paper);
 }
 
@@ -650,6 +662,41 @@ main {
 .panel[data-shape='band-down'] {
   --slope: 14px;
   --shape: polygon(0 0, 100% var(--slope), 100% 100%, 0 calc(100% - var(--slope)));
+}
+
+/* A slanted band is grown by the slant it is about to cut off.
+ *
+ * Without this the gutter between two stacked bands is `row-gap + slope` while
+ * the gutter beside them is `column-gap` — the slant silently widens every
+ * horizontal gap on the page and the gutters stop being one width. Growing the
+ * box by half a slant at each end and then cutting the same amount back off
+ * with the polygon lands the painted edges exactly on the grid row, so the
+ * visible gutter is the gap and nothing else, at both ends of the band.
+ */
+.panel[data-shape='band-up'],
+.panel[data-shape='band-down'] {
+  margin-top: calc(var(--slope) / -2);
+  margin-bottom: calc(var(--slope) / -2);
+}
+
+/* ...but only where there is a gutter to cancel.
+ *
+ * The page edge is not a gutter, so the outermost bands keep their half slant
+ * and are pulled off the paper by it. That is invisible at the bottom and not
+ * at the top: it lifts the first band's copy into the caption box, which is
+ * absolutely positioned on the leaf and does not move with it. The four
+ * failures that caught were the meta line reading on caption yellow.
+ *
+ * Zeroing the outer margins is the fix that costs no copy height. Padding the
+ * first band down by the same amount would also clear the caption, and would
+ * take the clearance out of the band that carries the most bullets on the page.
+ */
+.comic-page > .panel:first-of-type {
+  margin-top: 0;
+}
+
+.comic-page > .panel:last-of-type {
+  margin-bottom: 0;
 }
 
 /* The full slant at each end, not half of it.
@@ -1810,10 +1857,35 @@ main {
   opacity: 1;
 }
 
+/* A panel that *is* the page, with the others layered over part of it.
+ *
+ * Not a column in a two-track grid — the splash covers every cell, and the
+ * panels beside it sit on top of its right-hand side. The difference shows in
+ * the gutters: they are the splash's own art showing between the panels laid
+ * on it, rather than blank paper.
+ */
+.comic-page > .panel {
+  z-index: 1;
+}
+
+.comic-page > .panel[data-bleed='page'] {
+  grid-area: 1 / 1 / -1 / -1;
+  z-index: 0;
+}
+
 /* The caption sits on the first panel, so that panel's copy starts under it.
    Slots are emitted in reading order, so the first panel is always the one the
    caption lands on. An art panel is exempt — a drawing is what a caption box is
-   meant to sit on. */
+   meant to sit on.
+
+   This clears the caption by about two canvas px, and there is nowhere to take
+   more from: every band's copy already runs to its padding edge. It is a fixed
+   geometry rather than a near miss — the caption is at a fixed offset in a
+   fixed-size box — but it is a coupling between two rules that do not mention
+   each other. tests/contrast.mjs is what guards it: if the caption box ever
+   grows, /work fails with the meta line reading on caption yellow, which is
+   exactly how this was found. It also beats the band's own slope clearance,
+   which is fine only because 52px is the larger of the two. */
 .comic-page > .panel:first-of-type .panel-body {
   padding-top: 52px;
 }
@@ -1834,13 +1906,12 @@ main {
 
 .art-panel-inner .skyline {
   position: static;
-  /* A crop, not the whole drawing. The skyline is 3.75:1 and the splash is
-     roughly 1:2 — dropped in at full width it is a 90px strip at the foot of an
-     800px panel, which reads as a mistake rather than as an establishing shot.
-     Magnified and centred, the panel holds a slice of city. */
-  width: 250%;
-  margin-left: -75%;
-  opacity: 0.6;
+  /* Sized for a panel that is the whole page: a little wider than the paper so
+     the drawing runs off both edges rather than sitting inside them, and
+     aligned to the foot, which is where a horizon goes. */
+  width: 128%;
+  margin-left: -14%;
+  opacity: 0.55;
 }
 
 .panel:has(.art-panel-inner) .panel-body {

@@ -188,7 +188,7 @@ const pages: Issue['pages'] = [
       {
         slot: 'a',
         content: { type: 'metric', ref: 'qbo-merchants' },
-        overrides: { accent: 'b', fill: 'solid', rays: true, tilt: -0.5 },
+        overrides: { accent: 'b', fill: 'solid', rays: true },
       },
       {
         slot: 'b',
@@ -198,7 +198,7 @@ const pages: Issue['pages'] = [
       {
         slot: 'c',
         content: { type: 'metric', ref: 'optin-lift' },
-        overrides: { accent: 'c', fill: 'solid', tilt: 0.5 },
+        overrides: { accent: 'c', fill: 'solid' },
       },
     ],
     // The establishing shot leaves the hero and crosses the gutter beneath it,
@@ -226,7 +226,7 @@ const pages: Issue['pages'] = [
       {
         slot: 'd',
         content: { type: 'project', ref: 'knowledge-engine' },
-        overrides: { accent: 'b', fill: 'solid' },
+        overrides: { accent: 'b', fill: 'solid', shape: 'band-up' },
       },
     ],
   },
@@ -239,9 +239,13 @@ const pages: Issue['pages'] = [
     status: 'published',
     ogTagline: 'Three things built to find out whether they could be.',
     panels: [
-      // The establishing shot. A rectangle, not a lean: in the reference the
-      // splash is the plain frame and the panels beside it carry the geometry.
-      { slot: 'splash', content: { type: 'art', art: 'skyline' }, overrides: { accent: 'b' } },
+      // The establishing shot is the whole page; the three bands sit on its
+      // right-hand side, so the gutters between them show the art underneath.
+      {
+        slot: 'splash',
+        content: { type: 'art', art: 'skyline' },
+        overrides: { accent: 'b', bleed: 'page' },
+      },
       {
         slot: 'a',
         content: { type: 'project', ref: 'pass-the-interview' },
@@ -274,7 +278,7 @@ const pages: Issue['pages'] = [
           heading: "What I'm after",
           body: 'Senior frontend or full-stack work where I own a surface end to end: the technical design, the implementation, and the rollout. The problems I like best are the ones where the constraint is legal, cross-team, or ten years old.',
         },
-        overrides: { accent: 'b', tilt: -0.4 },
+        overrides: { accent: 'b' },
       },
       {
         slot: 'b',

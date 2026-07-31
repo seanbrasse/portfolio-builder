@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:contrast": "node tests/contrast.mjs",
+    "test:gaps": "node tests/gaps.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

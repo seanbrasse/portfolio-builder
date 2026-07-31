@@ -46,6 +46,7 @@ export function Panel({
   const fill = overrides?.fill ?? 'tint';
   const shape = overrides?.shape ?? 'rect';
   const rays = overrides?.rays === true;
+  const bleed = overrides?.bleed;
 
   const style = {
     gridArea: slot,
@@ -61,6 +62,7 @@ export function Panel({
       data-fill={fill}
       data-shape={shape}
       data-rays={rays || undefined}
+      data-bleed={bleed}
       data-interactive={interactive || undefined}
       data-empty={empty || undefined}
     >

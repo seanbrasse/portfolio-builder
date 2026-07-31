@@ -92,6 +92,37 @@ parallelogram and its vertical extent is identical at every x. That is what
 makes a run of them layout-predictable — a tapering band shrinks toward one end
 — and every gutter between them is a parallel diagonal.
 
+**Gutters are one width per axis, and it is measured.** Vertical gutters are
+9px and horizontal ones 13px — a row gap separates two lines of reading, a
+column gap only separates two columns. `column-gap` and `row-gap` are the gap
+between two *layout boxes* though, and twice now the paint has landed somewhere
+else:
+
+- A band's painted top edge is a slope below its box at one end and on the box
+  at the other, so a stack of bands quietly ran `row-gap + slope`. The bands are
+  grown half a slant at each end and cut back by the polygon, which puts the
+  painted edge on the grid row. The outermost band keeps its half slant — a
+  page edge is not a gutter — and zeroing that is what stops the first band's
+  copy lifting into the caption box.
+- A rotated panel's bounding box is bigger than the panel by `height · sin θ`,
+  and the grid lays out the box. Half a degree on a 330px panel took 1.4px off
+  the near corner and gave it to the far one: a 9px gutter running 7.5px at one
+  end and 10.4px at the other. Nothing tilts any more. `tilt` survives as an
+  override for a panel with no grid neighbours to be out of parallel with.
+
+Neither is visible in a screenshot and both are obvious in numbers, so
+`tests/gaps.mjs` samples the painted gap at each end of every adjacent pair on
+every leaf. 28 gutters, all on their declared width.
+
+```bash
+npm run test:gaps
+```
+
+**A page-bleed panel underlies the leaf.** `bleed: 'page'` puts a panel on the
+whole grid at `z-index: 0` and the tiled panels layer over it, so the gutters
+between them show that panel's art rather than paper. The Builds establishing
+shot is the whole page with the three project bands on its right-hand side.
+
 It does not make the slant free. A full-width line of copy does not live in the
 band's extent, it lives in the largest axis-aligned rectangle inside the
 parallelogram, and that is bounded by the top edge at its lowest and the bottom
@@ -119,8 +150,7 @@ is `aria-hidden` decoration and may never be the only place a fact appears.
 **Flats come in two weights.** A panel is `tint` or `solid`. Tint is a wash
 over the paper, for panels carrying body copy; solid lays the flat down at full
 strength with the lettering inverted on top. The loud panels are what stop a
-page of accents from reading as beige. Panels also take a sub-degree `tilt`, so
-even two rectangles are not perfectly parallel.
+page of accents from reading as beige.
 
 **Color exists in exactly one file.** `src/lib/tokens.ts` defines both palettes;
 the root layout emits them as custom properties. A lint rule fails on a hex
