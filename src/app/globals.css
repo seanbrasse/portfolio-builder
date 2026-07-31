@@ -83,6 +83,10 @@ body {
     scroll-behavior: auto;
   }
 
+  .project-card {
+    transition: none;
+  }
+
   *,
   *::before,
   *::after {
@@ -173,7 +177,7 @@ a:hover {
      rail had been given room for all of it. */
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
-  gap: clamp(24px, 4.5vh, 56px);
+  gap: clamp(16px, 3vh, 36px);
   max-width: var(--page-max);
   margin: 0 auto;
   padding: clamp(36px, 8vh, 96px) var(--gutter) clamp(16px, 3vh, 32px);
@@ -213,7 +217,10 @@ a:hover {
 }
 
 .intro h1 {
-  font-size: clamp(40px, 7vw, 82px);
+  /* Smaller than it was. The carousel is the subject of this page now, and on
+     a screen that cannot scroll every point the name grows is a point the
+     cards lose. */
+  font-size: clamp(36px, 5.4vw, 66px);
   letter-spacing: -0.045em;
   line-height: 0.95;
 }
@@ -226,15 +233,15 @@ a:hover {
 }
 
 .intro-tagline {
-  font-size: clamp(17px, 2.1vw, 22px);
+  font-size: clamp(16px, 1.9vw, 20px);
   line-height: 1.4;
-  margin-top: 20px;
+  margin-top: 14px;
   max-width: 30ch;
 }
 
 .intro-skills-label {
-  margin-top: clamp(24px, 4vh, 44px);
-  margin-bottom: 14px;
+  margin-top: clamp(16px, 3vh, 30px);
+  margin-bottom: 12px;
 }
 
 .skills {
@@ -598,44 +605,51 @@ a:hover {
   flex-wrap: wrap;
 }
 
-/* The rail.
+/* The carousel.
  *
- * Native horizontal scrolling with snap points, not a JS carousel. The browser
- * already does keyboard scrolling, touch momentum, scrollbar dragging and
- * reduced-motion correctly; a carousel is a reimplementation of all four that
- * also hides every card past the first from anyone who does not interact.
+ * Three cards visible, the middle one raised over the two beside it. Cards are
+ * absolutely positioned in a stage and placed by transform, which is what lets
+ * them overlap — a flow layout can only put them next to each other.
  *
- * The expand control below it exists because a rail is still serial access:
- * it turns the same cards into a grid, so nothing is more than one click from
- * being visible at once.
+ * Transform and opacity only. Both are compositor properties, so moving four
+ * cards costs no layout and no repaint; animating `left` or `width` here would
+ * reflow the whole stage on every frame of every transition.
  */
-.project-rail {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(250px, 320px);
-  grid-template-rows: minmax(0, 1fr);
-  gap: 20px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding-bottom: 14px;
-  min-height: 0;
+.carousel {
+  /* Grows to fill the row the screen gives it. The cards are absolutely
+     positioned against the stage, so if the carousel does not claim a height
+     the stage has none and the cards collapse to nothing. */
   flex: 1;
-  align-items: stretch;
-  /* The rail bleeds to the window edge so a partly-visible next card signals
-     that it scrolls, then pads itself back to the page measure. */
-  margin-inline: calc(var(--gutter) * -1);
-  padding-inline: var(--gutter);
-  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 16px;
+  /* Swiping should move the carousel, not scroll the page underneath it. */
+  touch-action: pan-y;
 }
 
-.project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+.carousel:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 6px;
+  border-radius: var(--radius);
+}
+
+.carousel-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  /* The stage is the full width; the cards are centred within it and then
+     pushed out sideways, so the middle card is always dead centre regardless
+     of how many there are. */
+  perspective: 1400px;
 }
 
 .project-card {
-  scroll-snap-align: start;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: clamp(260px, 34vw, 430px);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -643,32 +657,69 @@ a:hover {
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   overflow: hidden;
-  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  transform-origin: center center;
+  transition:
+    transform var(--dur-slide, 420ms) var(--ease),
+    opacity var(--dur-slide, 420ms) var(--ease);
 }
 
-.project-card:hover {
-  border-color: var(--rule-strong);
-  transform: translateY(-2px);
+/* The middle card. Full size, full strength, and on top of its neighbours. */
+.project-card[data-offset='0'] {
+  transform: translateX(-50%) scale(1);
+  opacity: 1;
+  z-index: 3;
+  box-shadow: 0 22px 48px color-mix(in srgb, var(--matte-shade) 55%, transparent);
 }
 
-/* The well absorbs whatever height the rail has left rather than demanding a
-   fixed ratio. On a page that cannot scroll, a fixed-aspect image is the thing
-   that pushes copy out of the card. */
+/* The pair beside it. Pushed out by less than their own width, which is what
+   makes them sit *under* the middle card rather than next to it. */
+.project-card[data-offset='-1'] {
+  transform: translateX(-124%) scale(0.86);
+  opacity: 0.5;
+  z-index: 2;
+}
+
+.project-card[data-offset='1'] {
+  transform: translateX(24%) scale(0.86);
+  opacity: 0.5;
+  z-index: 2;
+}
+
+/* Everything else waits off to the side. Not `display: none` — a card that is
+   removed from the layout cannot animate back in, and the transition from the
+   wings is most of what reads as a carousel rather than a swap. */
+.project-card[data-offset='-2'] {
+  transform: translateX(-165%) scale(0.74);
+  opacity: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.project-card[data-offset='2'] {
+  transform: translateX(65%) scale(0.74);
+  opacity: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* A side card is decoration until it is brought to the middle, so it does not
+   also need to advertise that it is clickable. */
+.project-card[data-offset='0'] {
+  cursor: default;
+}
+
 .project-shot {
-  flex: 1 1 30%;
-  min-height: 48px;
+  flex: 1 1 26%;
+  min-height: 44px;
   width: 100%;
   object-fit: cover;
   background: var(--surface-sunk);
   border-bottom: 1px solid var(--rule);
 }
 
-/* No screenshot yet. A labelled placeholder rather than a broken frame or a
-   grey box — the card still says what the project is, and the empty state is
-   honest about being an empty state. */
 .project-shot-empty {
-  flex: 1 1 30%;
-  min-height: 48px;
+  flex: 1 1 26%;
+  min-height: 44px;
   width: 100%;
   display: grid;
   place-items: center;
@@ -684,7 +735,7 @@ a:hover {
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 8px;
   flex: 0 1 auto;
   min-height: 0;
 }
@@ -710,20 +761,15 @@ a:hover {
 
 .project-title {
   flex: none;
-  font-size: 18px;
+  font-size: 20px;
 }
 
-/* Clamped rather than scrolled. A scroll container inside a card inside a
-   horizontally scrolling rail is three nested scrolls in one component, and a
-   summary is a summary — the link is where the whole thing lives. */
+/* Clamped rather than scrolled, and `flex: none` so the flex parent cannot
+   shrink the box below the lines the clamp allows and cut a line in half. */
 .project-summary {
+  flex: none;
   font-size: 14px;
   color: var(--ink-muted);
-  /* `flex: none`, or the flex parent shrinks the box below the two lines the
-     clamp allows and the text is cut through the middle of a line rather than
-     ending in an ellipsis. The clamp decides the height; flex must not
-     re-decide it. */
-  flex: none;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -731,30 +777,21 @@ a:hover {
   overflow: hidden;
 }
 
-/* Three chips, not six. A tech list wrapping to three rows is the single
-   biggest consumer of card height here, and it was pushing the summary — the
-   line that says what the project actually is — out of the frame. `display:
-   none` rather than slicing in the component so the same card renders in full
-   anywhere it has room; it also hides them from assistive tech, which matches
-   what a sighted reader gets. */
-.screen .tech-row li:nth-child(n + 4) {
-  display: none;
-}
-
-/* Not on the one-screen card. The summary says what the thing is and the
-   impact says how it went, and at this height only one of them fits — a
-   visitor who does not know what the project is cannot use the outcome. It
-   still renders anywhere the card has room. */
+/* Not on the one-screen card. Summary, tech and the link all have to fit in
+   the height the carousel gets, and the summary says what the thing is while
+   the impact says how it went — someone who does not yet know the first cannot
+   use the second. It renders wherever the card has room. */
 .screen .project-impact {
   display: none;
 }
 
 .project-impact {
-  font-size: 14px;
+  flex: none;
+  font-size: 13.5px;
   font-weight: 600;
   padding: 8px 11px;
   border-radius: 7px;
-  background: color-mix(in srgb, var(--accent-a) 12%, transparent);
+  background: color-mix(in srgb, var(--accent-a) 14%, transparent);
   color: var(--ink);
 }
 
@@ -765,13 +802,14 @@ a:hover {
   list-style: none;
   margin: 0;
   padding: 0;
-  margin-top: auto;
 }
 
-/* Ink, not `--ink-muted`. At 11.5px on the card surface the muted token
-   measured 4.24 in light and 3.84 in dark — under AA, and by a margin small
-   enough to read as fine by eye. The chip's quietness comes from its size and
-   its outline, not from taking value out of the text. */
+/* Four chips, not the whole stack. The list wrapping to three rows was the
+   biggest consumer of card height, and it pushed the summary out of frame. */
+.tech-row li:nth-child(n + 5) {
+  display: none;
+}
+
 .tech-row li {
   font-size: 11.5px;
   font-weight: 600;
@@ -787,13 +825,78 @@ a:hover {
   flex-wrap: wrap;
   gap: 12px;
   font-size: 14px;
+  margin-top: auto;
 }
 
-.rail-toggle {
-  margin-top: 20px;
+/* Controls ---------------------------------------------------------------- */
+
+.carousel-controls {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
 }
 
-/* Metrics ----------------------------------------------------------------- */
+.carousel-arrow {
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.carousel-arrow:hover {
+  background: var(--surface);
+  border-color: var(--ink-muted);
+}
+
+.carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The hit area is 20px even though the dot reads as 7px — a 7px target is
+   below every pointer-size guideline there is. */
+.carousel-dot {
+  display: block;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+}
+
+.carousel-dot::after {
+  content: '';
+  position: absolute;
+  inset: 50% auto auto 50%;
+  translate: -50% -50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  transition: background var(--dur) var(--ease), scale var(--dur) var(--ease);
+}
+
+.carousel-dot[aria-current]::after {
+  background: var(--accent-a);
+  scale: 1.35;
+}
 
 .metric-row {
   display: grid;
@@ -904,20 +1007,29 @@ a:hover {
 @media print {
   .site-header,
   .site-footer,
-  .hero-actions,
-  .rail-toggle {
+  .carousel-controls {
     display: none;
   }
 
-  /* The rail is the one thing that cannot survive print — a horizontal scroll
-     container prints as its first card. Unroll it. */
-  .project-rail {
+  /* A carousel prints as whichever card happened to be in the middle, with the
+     other two ghosted beside it. Unstack it: the cards go back into flow at
+     full strength and print one after another. */
+  .carousel-stage {
     display: grid;
-    grid-auto-flow: row;
-    grid-auto-columns: auto;
-    overflow: visible;
-    margin-inline: 0;
-    padding-inline: 0;
+    gap: 16px;
+  }
+
+  .project-card {
+    position: static;
+    width: auto;
+    transform: none;
+    opacity: 1;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .tech-row li:nth-child(n + 5) {
+    display: revert;
   }
 
   body {
