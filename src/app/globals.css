@@ -302,7 +302,11 @@ a:hover {
   font-size: clamp(15px, 1.5vw, 17px);
   line-height: 1.5;
   margin-top: 16px;
-  max-width: 30ch;
+  /* 30ch was sized for the one-line tagline this started with; the field now
+     holds up to 180 characters, and at 30ch that stacked into six cramped
+     lines under the name. 58ch keeps a readable measure while letting a long
+     tagline breathe across three or four lines instead of a narrow tower. */
+  max-width: 58ch;
 }
 
 .intro-skills-label {
@@ -1161,6 +1165,25 @@ a:hover {
   margin: 0 auto;
 }
 
+/* The inset band the whole line is positioned within. On a wide screen it
+   holds back a margin at each end so a label centred on the first or last tick
+   sits under its mark instead of hanging off the edge; on a phone the margin is
+   zero, because there the names are hidden and only the narrow badges show, so
+   the room is not needed and would only shorten the line. The per-label nudge
+   in Work.tsx still catches the mid widths where the band is thinner than the
+   widest label — this keeps that rare, not routine. */
+.timeline-band {
+  position: relative;
+  height: 100%;
+  margin-inline: var(--band-inset, 0px);
+}
+
+@media (min-width: 641px) {
+  .timeline-band {
+    --band-inset: clamp(64px, 8vw, 104px);
+  }
+}
+
 /* Left and width come from the component, because the rule is drawn in two
    pieces: the scale changes at the first job, and the compressed stretch
    before it is drawn fainter so the change is visible rather than implied. */
@@ -1207,10 +1230,17 @@ a:hover {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  /* The join's origin is the tick. The label centres itself on that origin and
+     the tick stays put — they move independently on purpose, because a label
+     centred over the first tick (at 0%) would run off the left edge, so it
+     clamps while its tick does not. */
+  align-items: flex-start;
   padding-bottom: calc(var(--row, 0) * var(--row-h));
 }
 
-/* The leader. Zero-height on row 0, which is the row that does not need one. */
+/* Leader and tick sit on the date — the join's left origin — not on the label,
+   which drifts sideways near the edges. Zero-height leader on row 0, the row
+   that rests on the rule and needs none. */
 .timeline-join::before {
   content: '';
   position: absolute;
@@ -1221,7 +1251,6 @@ a:hover {
   background: var(--rule-strong);
 }
 
-/* The tick, centred on the rule. */
 .timeline-join::after {
   content: '';
   position: absolute;
@@ -1257,10 +1286,16 @@ a:hover {
   --badge: 40px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  text-align: center;
   gap: 5px;
   white-space: nowrap;
   padding: 0 0 5px;
+  /* Centred on the tick, then clamped so it never runs off the track. The
+     button lays out from the tick (the join's left origin); -50% pulls its
+     middle onto the tick, and `--nudge`, written per label from JS, pushes it
+     back inside when centring alone would clip the first or last one. */
+  transform: translateX(calc(-50% + var(--nudge, 0px)));
   margin: 0;
   border: 0;
   background: none;
