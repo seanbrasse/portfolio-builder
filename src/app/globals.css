@@ -56,32 +56,29 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  /* Troweled plaster, not film grain.
-     Three layers doing three jobs: a low-frequency turbulence for the broad
-     patchiness a skim coat leaves, a stretched higher-frequency one for the
-     directional drag of the blade, and a wide soft gradient for the uneven
-     light a flat wall never quite has. Grain alone reads as noise over a flat
-     colour; what makes a surface read as plaster is that the variation has
-     *scale* to it.
+  /* Carved stone, not troweled plaster.
+     The difference between the two references is frequency. Plaster is smooth
+     with broad tonal drift; stone is *granular* — a dense fine speckle over
+     larger chipped facets. So the fine layer moves up to a high baseFrequency
+     and gains strength, and the coarse layer keeps a low one for the facets,
+     with a displacement map so its edges break rather than blend.
 
-     Opacities stay very low for the same reason the old grain did — this sits
-     behind every word on the page, and the audit samples the worst pixel
-     behind each glyph rather than the average, so anything bold enough to see
-     plainly sets the contrast floor for the whole site. */
+     Colour is untouched. Everything here is a neutral turbulence composited
+     over the palette's own ground, so the theme decides the hue and this only
+     decides the surface.
+
+     Opacities stay low for the reason they always have: this sits behind every
+     word on the page, and the audit samples the worst pixel behind each glyph
+     rather than the average. */
   background-image:
     radial-gradient(
       120% 90% at 22% 12%,
       color-mix(in srgb, var(--ink) 3%, transparent),
       transparent 60%
     ),
-    radial-gradient(
-      100% 80% at 82% 88%,
-      color-mix(in srgb, var(--ink) 2.5%, transparent),
-      transparent 62%
-    ),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.05' numOctaves='4' seed='7'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='420' height='420' filter='url(%23p)' opacity='0.07'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-  background-size: auto, auto, 420px 420px, 160px 160px;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03' numOctaves='5' seed='3' result='t'/%3E%3CfeDisplacementMap in='t' in2='t' scale='22'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23f)' opacity='0.08'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='3' seed='11'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)' opacity='0.07'/%3E%3C/svg%3E");
+  background-size: auto, 300px 300px, 120px 120px;
   background-attachment: fixed;
   font-family: var(--font-body);
   font-size: 16px;
@@ -311,7 +308,7 @@ a:hover {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ink-muted);
-  margin-bottom: 44px;
+  margin-bottom: 20px;
 }
 
 .prose {
@@ -663,10 +660,11 @@ a:hover {
   top: 0;
   bottom: 0;
   left: 50%;
-  /* Narrower than it was, because the well is now a fixed 16:9. Card width
-     directly sets image height, and on a page that cannot scroll the image is
-     competing with the copy underneath it for the same fixed budget. */
-  width: clamp(210px, 22vw, 300px);
+  /* Wide and low. At a fixed 16:9 the width sets the image height, so a wider
+     card is a taller image — the card stays short by giving almost nothing to
+     the copy beneath it. Company, title, one line. The dialog carries the
+     rest, which is what makes that affordable. */
+  width: clamp(280px, 30vw, 420px);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -675,54 +673,36 @@ a:hover {
   border-radius: var(--radius);
   overflow: hidden;
   transform-origin: center center;
-  transition:
-    transform var(--dur-slide, 420ms) var(--ease),
-    opacity var(--dur-slide, 420ms) var(--ease);
+  /* No transition. Position is written every frame from the animation loop, and
+     a transition on top of that is a filter lagging behind the value it is
+     smoothing — the cards would drift a fixed distance behind where they are
+     meant to be, and stop late every time the carousel pauses. */
+  will-change: transform, opacity;
 }
 
-/* The middle card. Full size, full strength, and on top of its neighbours. */
-.project-card[data-offset='0'] {
+/* Where the cards sit before the script runs. The loop takes over on the first
+   frame; without this every card would be stacked dead centre in the server's
+   markup and the page would flash a pile of cards. */
+.project-card:nth-child(1) {
   transform: translateX(-50%) scale(1);
   opacity: 1;
-  z-index: 3;
+  z-index: 100;
+}
+
+.project-card:nth-child(2) {
+  transform: translateX(12%) scale(0.87);
+  opacity: 0.58;
+  z-index: 90;
+}
+
+.project-card:nth-child(n + 3) {
+  transform: translateX(74%) scale(0.74);
+  opacity: 0;
+  z-index: 80;
+}
+
+.project-card[data-centre] {
   box-shadow: 0 22px 48px color-mix(in srgb, var(--matte-shade) 55%, transparent);
-}
-
-/* The pair beside it. Pushed out by less than their own width, which is what
-   makes them sit *under* the middle card rather than next to it. */
-.project-card[data-offset='-1'] {
-  transform: translateX(-124%) scale(0.86);
-  opacity: 0.5;
-  z-index: 2;
-}
-
-.project-card[data-offset='1'] {
-  transform: translateX(24%) scale(0.86);
-  opacity: 0.5;
-  z-index: 2;
-}
-
-/* Everything else waits off to the side. Not `display: none` — a card that is
-   removed from the layout cannot animate back in, and the transition from the
-   wings is most of what reads as a carousel rather than a swap. */
-.project-card[data-offset='-2'] {
-  transform: translateX(-165%) scale(0.74);
-  opacity: 0;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.project-card[data-offset='2'] {
-  transform: translateX(65%) scale(0.74);
-  opacity: 0;
-  z-index: 1;
-  pointer-events: none;
-}
-
-/* A side card is decoration until it is brought to the middle, so it does not
-   also need to advertise that it is clickable. */
-.project-card[data-offset='0'] {
-  cursor: default;
 }
 
 .project-shot {
@@ -749,10 +729,11 @@ a:hover {
 }
 
 .project-body {
-  padding: 12px 14px 14px;
+  padding: 11px 14px 13px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  justify-content: center;
+  gap: 3px;
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -851,6 +832,14 @@ a:hover {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+/* Nor the summary. At a fixed 16:9 the image is 56% of the card's width in
+   height, so on a wide card there is almost nothing left underneath it — the
+   card is a company, a title and a picture, and the dialog is where the rest
+   of the record lives. */
+.screen .project-summary {
+  display: none;
 }
 
 /* Not on the carousel card. The card is the poster — image, company, title,
@@ -1113,57 +1102,71 @@ a:hover {
    not information anyone can hear.
 --------------------------------------------------------------------------- */
 
+/* A single rule end to end, ticks where each company was joined, project dots
+   along it. It spans the full page rather than the content measure, so it reads
+   as the divider between the header and the work rather than as another block
+   inside the column. */
 .timeline {
   flex: none;
-  margin-bottom: 12px;
+  margin: 4px 0 18px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  padding-inline: var(--gutter);
 }
 
 .timeline-track {
   position: relative;
-  height: 38px;
-  border-bottom: 1px solid var(--rule);
+  height: 40px;
+  max-width: var(--page-max);
+  margin: 0 auto;
+}
+
+.timeline-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 13px;
+  height: 1px;
+  background: var(--rule-strong);
 }
 
 .timeline-year {
   position: absolute;
-  bottom: -1px;
+  top: 22px;
   transform: translateX(-50%);
-  padding-bottom: 5px;
-  font-size: 10.5px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.1em;
   color: var(--ink-muted);
-  border-left: 1px solid var(--rule);
-  padding-left: 5px;
   line-height: 1;
 }
 
-/* A job, as the stretch of line it occupied. */
-.timeline-span {
+/* A join: a tick through the rule, with the company above it. */
+.timeline-join {
   position: absolute;
-  top: 8px;
-  height: 3px;
-  background: color-mix(in srgb, var(--ink) 40%, transparent);
-  border-radius: 2px;
+  top: 6px;
+  width: 1px;
+  height: 15px;
+  background: var(--ink);
 }
 
 .timeline-company {
   position: absolute;
-  bottom: 7px;
+  bottom: 17px;
   left: 0;
   white-space: nowrap;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink);
 }
 
-/* A project. Ember when it is the card in the middle, which is what ties the
-   line to the carousel. */
+/* A project. Ember when it is the card nearest the middle, which is what ties
+   the line to the carousel. */
 .timeline-mark {
   position: absolute;
-  top: 4px;
+  top: 9px;
   width: 9px;
   height: 9px;
   margin-left: -4px;
@@ -1176,14 +1179,13 @@ a:hover {
 .timeline-mark[data-active] {
   background: var(--accent-a);
   border-color: var(--accent-a);
-  scale: 1.25;
+  scale: 1.3;
 }
 
-/* Names the card in the middle in text, so the marker moving is not the only
-   way to know which project the line is pointing at. */
 .timeline-now {
-  margin-top: 7px;
-  font-size: 11.5px;
+  max-width: var(--page-max);
+  margin: 6px auto 0;
+  font-size: 11px;
   letter-spacing: 0.04em;
   color: var(--ink-muted);
   min-height: 1.2em;
