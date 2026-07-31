@@ -33,8 +33,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: PALETTES['four-color'].paper },
-    { media: '(prefers-color-scheme: dark)', color: PALETTES.noir.paper },
+    { media: '(prefers-color-scheme: light)', color: PALETTES.light.paper },
+    { media: '(prefers-color-scheme: dark)', color: PALETTES.dark.paper },
   ],
 };
 
@@ -60,12 +60,40 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <footer className="site-footer">
           <div className="site-footer-inner">
-            <span>
-              {settings.displayName} · {settings.location}
-            </span>
-            <span>
-              <a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a>
-            </span>
+            {/* Decorative: the name is in the copyright line two columns over,
+                so a screen reader announcing an initial would be noise. */}
+            <p className="footer-mark" aria-hidden="true">
+              {settings.displayName.charAt(0)}
+            </p>
+
+            <div className="footer-col">
+              <p className="footer-label">Socials</p>
+              <ul>
+                {settings.links.map((link) => (
+                  <li key={link.url}>
+                    <a href={link.url} target="_blank" rel="noopener noreferrer">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="footer-col">
+              <p className="footer-label">Get in touch</p>
+              <ul>
+                <li>
+                  <a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a>
+                </li>
+                <li>
+                  <a href={settings.resumeHref}>Résumé (PDF)</a>
+                </li>
+              </ul>
+            </div>
+
+            <p className="footer-fine">
+              © {new Date().getFullYear()} {settings.displayName} · {settings.location}
+            </p>
           </div>
         </footer>
 

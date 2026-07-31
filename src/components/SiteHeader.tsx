@@ -19,7 +19,7 @@ function subscribe(onChange: () => void) {
 }
 
 function readTheme(): Theme {
-  return document.documentElement.dataset.theme === 'noir' ? 'noir' : DEFAULT_THEME;
+  return document.documentElement.dataset.theme === 'light' ? 'light' : DEFAULT_THEME;
 }
 
 export function SiteHeader({ name }: { name: string }) {
@@ -28,7 +28,7 @@ export function SiteHeader({ name }: { name: string }) {
   const theme = useSyncExternalStore(subscribe, readTheme, () => DEFAULT_THEME);
 
   const toggle = useCallback(() => {
-    const next: Theme = theme === 'noir' ? DEFAULT_THEME : 'noir';
+    const next: Theme = theme === 'light' ? 'dark' : 'light';
     document.documentElement.dataset.theme = next;
     try {
       localStorage.setItem(STORAGE_KEY, next);
@@ -54,10 +54,10 @@ export function SiteHeader({ name }: { name: string }) {
           type="button"
           className="theme-toggle"
           onClick={toggle}
-          aria-pressed={theme === 'noir'}
+          aria-pressed={theme === 'dark'}
         >
           <span className="theme-toggle-dot" aria-hidden="true" />
-          {theme === 'noir' ? 'Dark' : 'Light'}
+          {theme === 'dark' ? 'Dark' : 'Light'}
         </button>
       </div>
     </header>

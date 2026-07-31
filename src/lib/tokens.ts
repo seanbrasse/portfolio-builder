@@ -9,13 +9,35 @@
  * Adding a theme means adding a key here. It does not mean touching components.
  */
 
-export const THEMES = ['four-color', 'noir'] as const;
+export const THEMES = ['dark', 'light'] as const;
 export type Theme = (typeof THEMES)[number];
 
-export const DEFAULT_THEME: Theme = 'four-color';
+/**
+ * Dark is the design, not a preference. The palette is two values — near-black
+ * and cream — and the whole look depends on the ground being the dark one.
+ * Light exists because some people need it, and it is a translation rather
+ * than the original.
+ */
+export const DEFAULT_THEME: Theme = 'dark';
 
 export function isTheme(value: unknown): value is Theme {
   return typeof value === 'string' && (THEMES as readonly string[]).includes(value);
+}
+
+/**
+ * Theme ids this site has shipped under. `four-color` and `noir` named a comic
+ * palette that no longer exists; a stored choice should survive the rename
+ * rather than silently reverting, which reads as the toggle forgetting.
+ */
+const LEGACY_THEME_IDS: Record<string, Theme> = {
+  'four-color': 'light',
+  noir: 'dark',
+};
+
+export function normalizeTheme(value: unknown): Theme | null {
+  if (isTheme(value)) return value;
+  if (typeof value === 'string' && value in LEGACY_THEME_IDS) return LEGACY_THEME_IDS[value];
+  return null;
 }
 
 /**
@@ -110,100 +132,92 @@ export type Palette = {
  * the lettering. The audit in `tests/contrast.mjs` is what these values
  * are tuned against; do not adjust them without re-running it.
  */
-const fourColor: Palette = {
-  paper: '#EFE4CE',
-  paperLit: '#FBF4E3',
-  ink: '#14110F',
-  matte: '#FBF7EC',
-  matteShade: '#2A1D2E',
-  inkMuted: '#57514A',
-  surface: '#F7F0E0',
-  surfaceSunk: '#E7DAC3',
-  rule: '#DCCEB4',
-  ruleStrong: '#BFAE90',
-  // Deepened from a brighter pillarbox red. As a solid flat it has to carry
-  // cream lettering *and* the gold rays crossing behind it, and the brighter
-  // value left no headroom once the rays lightened the ground.
-  accentA: '#C4201A', // red    — fills, flags, bullet markers
-  accentB: '#154A9E', // blue   — display type and links
-  accentC: '#F5C518', // yellow — backgrounds and shadows, never text
-  screen: '#1B57B5',
-  balloon: '#FDF9EF',
-  onAccent: '#FBF4E3',
-  onAccentB: '#FBF4E3',
-  onAccentC: '#14110F',
-  titleAccent: '#154A9E',
-  railBg: '#14110F',
-  railFg: '#FBF4E3',
-  link: '#154A9E',
-  metricShadow: '#F5C518',
-  shadowInk: '#14110F',
-  focus: '#154A9E',
-  duotoneDark: '#14110F',
-  duotoneLight: '#D6291F',
+/**
+ * Dark: near-black and cream, and essentially nothing else.
+ *
+ * Two values carry the entire page. That is the design rather than a
+ * limitation — restraint is what the reference actually looks like, and every
+ * colour added past the second is one more thing competing with the type.
+ * The accent is a single warm ember, used on links and focus and nowhere
+ * decorative; the moment it starts filling shapes, the page stops being
+ * two-tone and starts being a colour scheme.
+ *
+ * The ground is not pure black. #000 with cream on it vibrates at large sizes
+ * and looks like a terminal rather than paper; a near-black with a warm cast
+ * reads as ink.
+ */
+const dark: Palette = {
+  paper: '#0D0D0D',
+  paperLit: '#121212',
+  ink: '#F1ECE1',
+  matte: '#1A1A1A',
+  matteShade: '#000000',
+  // Cream at reduced presence rather than a grey. A neutral grey against a
+  // warm cream reads as a second, dirtier colour.
+  inkMuted: '#9C968B',
+  surface: '#141414',
+  surfaceSunk: '#101010',
+  rule: '#242424',
+  ruleStrong: '#333333',
+  accentA: '#E4693B',
+  accentB: '#F1ECE1',
+  accentC: '#E4693B',
+  screen: '#242424',
+  balloon: '#141414',
+  onAccent: '#0D0D0D',
+  onAccentB: '#0D0D0D',
+  onAccentC: '#0D0D0D',
+  titleAccent: '#F1ECE1',
+  railBg: '#0D0D0D',
+  railFg: '#F1ECE1',
+  // The ember is under AA on near-black at body size, so links are set in ink
+  // and carry an underline. Colour was never the thing marking them.
+  link: '#F1ECE1',
+  metricShadow: '#0D0D0D',
+  shadowInk: '#000000',
+  focus: '#E4693B',
+  duotoneDark: '#0D0D0D',
+  duotoneLight: '#E4693B',
 };
 
 /**
- * Noir: a second art direction, not a grayscale filter. Ink black and bone
- * white, heavier blacks, colder halftone.
- *
- * Open question #2 in the PRD asked which spot color noir gets, and noted that
- * desaturated red being the obvious answer is itself a reason to look
- * elsewhere. This uses a sodium-vapor amber — streetlight through a window
- * blind. It reads as noir without borrowing the four-color red, and it is
- * warm enough to stay legible on the near-black paper at 7.5:1.
- *
- * It was lifted a step once the cover title was measured against the cover's
- * steel ground rather than against paper: at 116px the threshold is 3:1 and
- * the old amber came in at 2.98. A spot color that fails on the largest word
- * on the cover is not a spot color worth keeping two decimal places for.
+ * Light: the same two-tone idea inverted. Warm off-white and near-black, not
+ * the newsprint cream the comic used — that cream was a period reference and
+ * this is not referencing a period.
  */
-const noir: Palette = {
-  paper: '#131315',
-  paperLit: '#1C1C1F',
-  ink: '#E8E3D8',
-  // Noir mounts on a warm dark mat rather than bone. A cream mat is the one
-  // element bright enough to become the first thing the eye lands on, and in a
-  // palette whose whole argument is that light is scarce, the mat is not what
-  // the light should be spent on.
-  matte: '#33302B',
-  matteShade: '#050506',
-  // Lifted from the old value. On the comic page this sat over lit panels; on
-  // a plain dark surface it carries most of the secondary copy on the site and
-  // measured under AA at 14px there.
-  inkMuted: '#9A958A',
-  surface: '#1C1C1F',
-  surfaceSunk: '#161618',
-  rule: '#2C2C31',
-  ruleStrong: '#43434A',
-  accentA: '#D69A33', // sodium amber — the one spot color
-  // Dark enough to take light lettering as a solid flat. A mid steel looked
-  // fine as a tint and failed as a ground.
-  accentB: '#3B424C', // cold steel, for structure rather than emphasis
-  accentC: '#D69A33',
-  screen: '#3A3D44',
-  balloon: '#24242A',
-  onAccent: '#131315',
-  onAccentB: '#E8E3D8',
-  onAccentC: '#131315',
-  // Bone, not amber: noir gets one spot color and the SFX earns it. A name
-  // set in the accent would spend the budget on the quietest element.
-  titleAccent: '#E8E3D8',
-  railBg: '#0B0B0C',
-  railFg: '#E8E3D8',
-  // Noir's `accentB` is dark structural steel, far under AA as body text.
-  // Links get the amber instead.
-  link: '#D69A33',
-  metricShadow: '#0B0B0C',
-  shadowInk: '#08080A',
-  focus: '#D69A33',
-  duotoneDark: '#0B0B0C',
-  duotoneLight: '#D69A33',
+const light: Palette = {
+  paper: '#F4F1EA',
+  paperLit: '#FAF8F3',
+  ink: '#141414',
+  matte: '#FFFFFF',
+  matteShade: '#141414',
+  inkMuted: '#5F5A52',
+  surface: '#FAF8F3',
+  surfaceSunk: '#EDE9E0',
+  rule: '#E0DBD1',
+  ruleStrong: '#C6C0B4',
+  accentA: '#C24A1E',
+  accentB: '#141414',
+  accentC: '#C24A1E',
+  screen: '#E0DBD1',
+  balloon: '#FAF8F3',
+  onAccent: '#FAF8F3',
+  onAccentB: '#FAF8F3',
+  onAccentC: '#FAF8F3',
+  titleAccent: '#141414',
+  railBg: '#141414',
+  railFg: '#FAF8F3',
+  link: '#141414',
+  metricShadow: '#F4F1EA',
+  shadowInk: '#141414',
+  focus: '#C24A1E',
+  duotoneDark: '#141414',
+  duotoneLight: '#C24A1E',
 };
 
 export const PALETTES: Record<Theme, Palette> = {
-  'four-color': fourColor,
-  noir,
+  dark,
+  light,
 };
 
 const CUSTOM_PROPERTY: Record<keyof Palette, string> = {
@@ -249,7 +263,7 @@ function declarations(palette: Palette): string {
  */
 export function themeStylesheet(): string {
   return [
-    `:root{${declarations(PALETTES['four-color'])}}`,
-    `[data-theme="noir"]{${declarations(PALETTES.noir)}}`,
+    `:root{${declarations(PALETTES.dark)}}`,
+    `[data-theme="light"]{${declarations(PALETTES.light)}}`,
   ].join('');
 }

@@ -69,6 +69,23 @@ same information the rule conveys visually. The current role is marked twice —
 a filled marker and the word "Present" in its dates — because a color is never
 the only signal.
 
+**Dark is the design, not a preference.** The palette is two values — a warm
+near-black and a cream — plus a single ember used on the primary button, focus
+and the metric numerals, and nowhere decorative. Light exists because some
+people need it, and it is a translation rather than the original. The default
+is dark regardless of `prefers-color-scheme`: it is how the site is drawn, and
+the toggle is one click away.
+
+The ground carries a fine grain, at 0.035 opacity. That number is measured, not
+chosen — at 0.5 the brightest noise pixels lifted the background to about
+rgb(70,80,75) and put muted body copy at 2.7:1 against them. Grain sits behind
+every word on the page, so any value high enough to see plainly is a value that
+sets the contrast floor for the whole site.
+
+**Space is the design.** The hero takes most of a screen and the section
+rhythm is roughly double what a conventional layout uses. Halving those numbers
+is the fastest way to make this look like a generic template again.
+
 **Color exists in exactly one file.** `src/lib/tokens.ts` defines both
 palettes; the root layout emits them as custom properties. A lint rule fails on
 a hex literal anywhere else in `src/`, because a second theme is only a day's
@@ -83,7 +100,7 @@ state cannot disagree with the attribute.
 
 **Contrast was measured, not assumed.** `tests/contrast.mjs` loads the page in
 both themes, makes all text transparent, screenshots, and samples the real
-composited pixel behind each glyph. 178 text elements pass AA in both themes.
+composited pixel behind each glyph. 188 text elements pass AA in both themes.
 
 It captures full-page and works in document coordinates, because the site is
 one long scroll — a viewport-sized capture measures the hero and silently skips
@@ -91,9 +108,9 @@ everything below the fold, which is most of the site. The sticky header is
 pinned to `static` for the capture, or it paints its own background across text
 it does not actually cover.
 
-Two things it has found so far, both invisible by eye: 11.5px tech chips set in
-`--ink-muted` measured 4.24 in light and 3.84 in dark, and `--ink-muted` itself
-was under AA on dark surfaces at body size once it left the comic's lit panels.
+Three things it has found, all invisible by eye: 11.5px tech chips set in
+`--ink-muted`, `--ink-muted` itself on dark surfaces at body size, and the
+background grain at the opacity it was first written with.
 
 ```bash
 npm run build && npm start &

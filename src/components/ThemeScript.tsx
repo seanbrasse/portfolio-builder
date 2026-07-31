@@ -1,21 +1,24 @@
 /**
  * Sets `data-theme` before first paint.
  *
- * This has to be a blocking inline script rather than an effect: resolving the
- * theme in React means the browser paints four-color first and then repaints
- * noir, which is a white flash in a dark room — exactly the case MODE-8 exists
- * to handle.
+ * A blocking inline script rather than an effect: resolving the theme in React
+ * means the browser paints the default and then repaints the other one, which
+ * on a near-black site is a full-screen white flash.
  *
  * Precedence, highest first:
- *   1. `?theme=` in the URL, so a shared link carries its mode (section 7).
+ *   1. `?theme=` in the URL, so a shared link carries its mode.
  *   2. A stored explicit choice.
- *   3. Four-color.
+ *   3. Dark.
  *
- * MODE-8 asked for `prefers-color-scheme: dark` to select noir on a first
- * visit. That is overridden deliberately: four-color is the art direction this
- * portfolio leads with, and a majority of people browse in dark mode, so
- * honouring the OS preference meant most first-time visitors never saw the
- * default palette at all. Noir stays one click away in the rail.
+ * `four-color` and `noir` are accepted and mapped across — they are the ids
+ * this site shipped under while it was a comic, and a stored choice should
+ * survive the rename rather than appearing to be forgotten. The mapping is
+ * duplicated from `normalizeTheme` in tokens.ts because this is a string that
+ * runs before any module has loaded.
+ *
+ * Dark is the design rather than a preference, so `prefers-color-scheme` does
+ * not select it — it is already the default, and someone whose OS is light
+ * should still see the site as drawn. The toggle is one click away.
  */
 const SCRIPT = `(function(){
   var d = document.documentElement;
@@ -23,11 +26,11 @@ const SCRIPT = `(function(){
   try {
     var q = new URLSearchParams(location.search).get('theme');
     theme = q || localStorage.getItem('comic-portfolio:theme');
-    if (theme !== 'noir' && theme !== 'four-color') {
-      theme = 'four-color';
-    }
+    if (theme === 'four-color') theme = 'light';
+    if (theme === 'noir') theme = 'dark';
+    if (theme !== 'light' && theme !== 'dark') theme = 'dark';
   } catch (e) {
-    theme = 'four-color';
+    theme = 'dark';
   }
   d.dataset.theme = theme;
 })();`;

@@ -39,7 +39,7 @@ export async function renderOgImage({
   subtitle: string;
 }) {
   const settings = getSettings();
-  const palette = PALETTES['four-color'];
+  const palette = PALETTES.dark;
   const font = await displayFont();
 
   return new ImageResponse(
