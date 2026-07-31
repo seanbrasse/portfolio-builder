@@ -1,44 +1,37 @@
 # Ground textures
 
-Empty on purpose. The page renders its procedural stone until files land here,
-and `--texture` in `globals.css` is `none` by default — a missing
-`background-image` is ignored rather than failing, so nothing breaks in the gap.
-
-## What to put here
-
-From <https://polyhaven.com/a/clean_asphalt>, the **diffuse** map (`diff`):
+Poly Haven's [clean_asphalt](https://polyhaven.com/a/clean_asphalt), diffuse map
+only, CC0 — nothing to attribute.
 
 | File | Used by |
 |---|---|
-| `asphalt-dark.jpg` | the dark theme |
-| `asphalt-light.jpg` | the light theme |
+| `asphalt.webp` / `.jpg` | dark theme, `soft-light` |
+| `asphalt-light.webp` / `.jpg` | light theme, `multiply` |
 
-Point both at the same download if only one map is wanted — the two themes
-already blend it differently (`soft-light` at 0.5 on near-black, `multiply` at
-0.35 on off-white), which is most of what makes one photograph work on both.
+## Why two files rather than one and two blends
 
-## Take the 1K, not the 4K
+The untreated map is a mid-grey photograph. Multiplied against the light
+theme's off-white ground it lands the whole page near 50% grey and took body
+copy to **1.6:1** — the audit caught it the moment the texture went in. The
+light variant is the same grain with its range shifted into the top of the
+scale, so multiplying modulates the surface instead of darkening it.
 
-The map tiles seamlessly, so resolution buys nothing here: it is repeated at
-`--texture-size` (520px) regardless. A 4K JPEG is several megabytes of
-background on a page whose entire job is to load instantly. 1K, saved as JPEG
-at around 80, is the right trade — and run it through a WebP conversion if it
-still comes out over ~150KB.
+Regenerate with `sharp`:
 
-## Licence
-
-Poly Haven publishes under CC0, so there is no attribution requirement and
-nothing to add to the page. Worth knowing rather than assuming: most texture
-libraries are not this permissive.
-
-## Wiring them up
-
-In `src/app/globals.css`:
-
-```css
-:root      { --texture: url('/textures/asphalt-dark.jpg'); }
-[data-theme='light'] { --texture: url('/textures/asphalt-light.jpg'); }
+```js
+sharp(diff).resize(512, 512, { fit: 'cover' })          // dark
+sharp(diff).resize(512, 512).greyscale().linear(0.30, 190)  // light
 ```
 
-That is the whole change. Everything else — the blend modes, the tile size, the
-procedural layers underneath — is already in place.
+## Why 512 and not the 1K source
+
+It tiles at `--texture-size` (520px) regardless, so anything larger is detail
+the browser scales away immediately. 684KB became under 4KB each — asphalt is
+low-contrast noise, which is close to the best case for an image codec.
+
+## The contrast floor
+
+This sits behind every word on the page and the audit samples the *worst* pixel
+behind each glyph, not the average. Raising the grain's contrast lowers the
+whole site's floor: the light theme's `--ink-muted` had to darken twice to
+carry it. Re-run `npm run test:contrast` after touching either file.
