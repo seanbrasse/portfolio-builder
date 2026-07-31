@@ -16,12 +16,21 @@ type PanelProps = {
 };
 
 /**
- * The panel shell: four layers in the order a comic page is actually made.
+ * The panel shell: ink plate, paper plate, flat, screen, lettering — the order
+ * a comic page is actually made in.
  *
- * The border is four rules rather than a CSS border or an SVG stroke, so the
- * ink can be drawn on one edge at a time. Its resting state is the finished
- * state, so the border renders identically whether or not the animation ever
- * runs — see the note in globals.css.
+ * The border is the panel's own background showing through a slightly smaller
+ * plate laid on top of it, rather than four rules along the edges. The rules
+ * existed so the ink could be drawn on one edge at a time; that animation is
+ * gone, and once it went they were four elements doing what one background
+ * already does. They also could not follow a border that is not a rectangle,
+ * which is the whole point of `data-shape` — a clip-path takes no border, so a
+ * panel cut on the diagonal had no way to ink its own edge.
+ *
+ * Both plates take the same `--shape`, and the inner one is inset by the ink
+ * weight. The inset is a plain `inset`, not a scale: scaling a wide panel by a
+ * percentage gives a thick top and a thin side, which is the same failure mode
+ * that ruled out an SVG stroke here in the first place.
  */
 export function Panel({
   slot,
@@ -41,6 +50,7 @@ export function Panel({
   const style = {
     gridArea: slot,
     ...(overrides?.tilt ? { '--tilt': `${overrides.tilt}deg` } : {}),
+    ...(overrides?.layer ? { zIndex: overrides.layer } : {}),
   } as CSSProperties;
 
   return (
@@ -54,22 +64,11 @@ export function Panel({
       data-interactive={interactive || undefined}
       data-empty={empty || undefined}
     >
-      <span className="panel-fill" aria-hidden="true" />
-      {showScreen ? <span className="panel-screen" aria-hidden="true" /> : null}
-
-      {/* The border, as four rules rather than an SVG stroke. Each one scales
-          in from the corner the previous one finished at, so the ink travels
-          around the panel clockwise. See the note in globals.css for why this
-          beat a dashed stroke. */}
-      <span className="panel-rule panel-rule--t" aria-hidden="true" />
-      <span className="panel-rule panel-rule--r" aria-hidden="true" />
-      <span className="panel-rule panel-rule--b" aria-hidden="true" />
-      <span className="panel-rule panel-rule--l" aria-hidden="true" />
-      {/* The inked edge across a cut corner. The panel's clip-path removes the
-          corner; this draws the diagonal that replaces it. */}
-      {shape === 'canted' ? (
-        <span className="panel-rule panel-rule--cut" aria-hidden="true" />
-      ) : null}
+      {/* The paper the panel is printed on, inset inside the ink. */}
+      <span className="panel-plate" aria-hidden="true">
+        <span className="panel-fill" />
+        {showScreen ? <span className="panel-screen" /> : null}
+      </span>
 
       <div className="panel-body">{children}</div>
 

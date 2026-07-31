@@ -4,6 +4,7 @@ import type { Leaf } from '@/lib/book';
 import { getTemplate, gridStyle } from '@/lib/templates';
 import { availabilityLabel } from '@/lib/format';
 
+import { BreakoutLayer } from './Breakout';
 import { Panel } from './Panel';
 import { PanelContentView, isInteractive, panelClassName } from './panels';
 
@@ -37,6 +38,9 @@ function ComicLeaf({ page }: { page: Page }) {
             </Panel>
           );
         })}
+
+        {/* Above the grid, so it can cross the borders the panels clip at. */}
+        <BreakoutLayer specs={page.breakouts ?? []} />
       </div>
     </>
   );

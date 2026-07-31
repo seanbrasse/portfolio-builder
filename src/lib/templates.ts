@@ -35,12 +35,17 @@ export type Template = {
 };
 
 export const TEMPLATES = {
+  /**
+   * Origin. The hero runs the width, then an uneven pair, then three unequal
+   * columns. Nothing here is a repeat() — equal tracks are what made the old
+   * pages read as tabulated rather than laid out.
+   */
   'hero-2-3': {
     id: 'hero-2-3',
     name: 'Hero, two, three',
     areas: ['hero  hero  hero', 'left  left  right', 'a     b     c'],
-    columns: 'repeat(3, minmax(0, 1fr))',
-    rows: '0.92fr 1.02fr 1.06fr',
+    columns: '1.18fr 0.72fr 1.02fr',
+    rows: '0.88fr 1.06fr 1.06fr',
     slots: ['hero', 'left', 'right', 'a', 'b', 'c'],
   },
   'stack-3': {
@@ -48,7 +53,7 @@ export const TEMPLATES = {
     name: 'Three bands',
     areas: ['a', 'b', 'c'],
     columns: 'minmax(0, 1fr)',
-    rows: 'repeat(3, 1fr)',
+    rows: '1.14fr 0.92fr 0.98fr',
     slots: ['a', 'b', 'c'],
   },
   'stack-4': {
@@ -56,23 +61,40 @@ export const TEMPLATES = {
     name: 'Four bands',
     areas: ['a', 'b', 'c', 'd'],
     columns: 'minmax(0, 1fr)',
-    rows: '1.12fr 1.02fr 0.98fr 0.88fr',
+    // A slope costs a band the height of its clearance, so the two sloped
+    // bands are given it back — but not out of the first band, which carries
+    // three bullets and lost its last one when it paid for them.
+    rows: '1.1fr 1.12fr 1.02fr 0.82fr',
     slots: ['a', 'b', 'c', 'd'],
+  },
+  /**
+   * A tall panel down one side with the rest stacked beside it — the shape a
+   * comic reaches for when one image has to carry the page. The splash is the
+   * narrower track on purpose: a tall panel reads as large from its height, and
+   * giving it the wider column as well leaves the stack too cramped to letter.
+   */
+  'splash-side': {
+    id: 'splash-side',
+    name: 'Splash and stack',
+    areas: ['splash a', 'splash b'],
+    columns: '0.92fr 1.22fr',
+    rows: '1.08fr 0.94fr',
+    slots: ['splash', 'a', 'b'],
   },
   'splash-4': {
     id: 'splash-4',
     name: 'Splash four',
     areas: ['a b', 'c d'],
-    columns: 'repeat(2, minmax(0, 1fr))',
-    rows: 'repeat(2, 1fr)',
+    columns: '1.22fr 0.86fr',
+    rows: '0.94fr 1.1fr',
     slots: ['a', 'b', 'c', 'd'],
   },
   'hero-2': {
     id: 'hero-2',
     name: 'Hero and two',
     areas: ['hero hero', 'a    b'],
-    columns: 'repeat(2, minmax(0, 1fr))',
-    rows: '1.15fr 1fr',
+    columns: '1.24fr 0.84fr',
+    rows: '1.2fr 1fr',
     slots: ['hero', 'a', 'b'],
   },
   'full-bleed': {

@@ -115,6 +115,21 @@ export type Metric = {
   label: string;
 };
 
+/**
+ * A piece of art that crosses panel borders, positioned in page percentages.
+ * Decoration only — see `components/Breakout.tsx`.
+ */
+export type Breakout = {
+  kind: 'skyline-band' | 'speed-streak' | 'burst-star';
+  x: number;
+  y: number;
+  w: number;
+  h?: number;
+  rotate?: number;
+  accent?: 'a' | 'b' | 'c';
+  opacity?: number;
+};
+
 export type PanelOverrides = {
   /** Which of the three spot colors this panel flats with. */
   accent?: 'a' | 'b' | 'c';
@@ -133,10 +148,26 @@ export type PanelOverrides = {
   screen?: boolean;
   /** Radiating rays behind the content. One per page at most. */
   rays?: boolean;
-  /** A cut corner, so the page is not a grid of identical boxes. */
-  shape?: 'rect' | 'canted';
+  /**
+   * The panel's outline.
+   *
+   * A comic page is not a grid of rectangles — edges cant, panels lean, and
+   * the gutter between two leaning panels is a diagonal, which is most of what
+   * makes a page read as laid out rather than tabulated.
+   *
+   * `canted` cuts one corner. `lean-l` / `lean-r` make the panel a
+   * parallelogram, which suits a tall panel. `slope-t` / `slope-b` tilt a
+   * single edge — pair them on adjacent bands and the gutter between the two
+   * runs diagonally, which is the point of the whole vocabulary.
+   */
+  shape?: 'rect' | 'canted' | 'lean-l' | 'lean-r' | 'slope-t' | 'slope-b';
   /** Degrees of tilt. Small values only — this is a printing skew, not a fan. */
   tilt?: number;
+  /**
+   * Stacking order, for panels that share grid area and overlap. Higher sits
+   * on top. Leave unset for the common case where panels tile.
+   */
+  layer?: number;
 };
 
 export type PanelContent =
@@ -192,6 +223,8 @@ export type Page = {
   templateId: TemplateId;
   panels: Panel[];
   sfx?: Sfx;
+  /** Art that crosses this page's panel borders. Decoration only. */
+  breakouts?: Breakout[];
   status: 'draft' | 'published';
   /** Overrides the site tagline in this page's social card. */
   ogTagline?: string;
