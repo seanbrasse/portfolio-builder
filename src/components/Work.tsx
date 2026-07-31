@@ -586,6 +586,8 @@ export function Work({
                 <CardFace
                   project={project}
                   employer={project.experienceId ? employers[project.experienceId] : undefined}
+                  near={near}
+                  front={index === active}
                 />
               </article>
             );
@@ -1409,8 +1411,37 @@ function useReducedMotion() {
  * loop or autoplay with sound, because a browser will not allow sound without a
  * gesture and a viewer wants to press play rather than have it start silently.
  */
-function Media({ shot, viewer = false }: { shot: Asset; viewer?: boolean }) {
+function Media({
+  shot,
+  viewer = false,
+  play = false,
+}: {
+  shot: Asset;
+  viewer?: boolean;
+  play?: boolean;
+}) {
   const reduced = useReducedMotion();
+  const video = useRef<HTMLVideoElement>(null);
+  const isVideo = shot.media === 'video';
+
+  /**
+   * A card video plays only while its card is the front one, and it is driven
+   * from here rather than by the `autoPlay` attribute.
+   *
+   * The same element stays mounted as a card slides between front and
+   * neighbour, and `autoPlay` acts once, at mount — so it cannot start a clip
+   * that becomes the front card later, nor stop one that stops being it. Play
+   * and pause are called directly on the `play` flag instead. Reduced motion
+   * keeps it paused: a clip starting itself is exactly what that setting asks
+   * not to happen. The modal drives its own playback through the native
+   * controls, so this stands aside there.
+   */
+  useEffect(() => {
+    const el = video.current;
+    if (!el || viewer || !isVideo) return;
+    if (play && !reduced) el.play().catch(() => {});
+    else el.pause();
+  }, [play, viewer, isVideo, reduced]);
 
   /**
    * The per-image framing, as inline style so it wins over the stylesheet's
@@ -1425,21 +1456,23 @@ function Media({ shot, viewer = false }: { shot: Asset; viewer?: boolean }) {
       : undefined,
   };
 
-  if (shot.media === 'video') {
+  if (isVideo) {
     /**
      * The modal is a player, the card is a preview.
      *
-     * In the modal the native controls are always on — that is where pause,
-     * scrub and the volume/unmute control live, which is the whole answer to
-     * "how do I hear it". It does not autoplay there: sound cannot start
-     * without a gesture, so a viewer is better served pressing play (and
-     * getting sound) than watching it start muted. On the card it stays the
-     * muted, looping, autoplaying preview it was — a still that happens to
-     * move — with controls only under reduced motion, where autoplay is off
-     * and a play button is the honest alternative to showing nothing.
+     * Both start muted — a clip should never make noise on its own. The modal
+     * carries the native controls, and its volume/unmute button is how a
+     * viewer turns the sound on when they want it; that is the answer to "how
+     * do I hear it", now behind a deliberate click rather than automatic.
+     * Neither surface autoplays through the attribute: the modal waits for a
+     * gesture, and the card's muted, looping preview is started by the effect
+     * above only when it is the front card. Controls also appear on the card
+     * under reduced motion, where a play button is the honest alternative to a
+     * clip that will not move on its own.
      */
     return (
       <video
+        ref={video}
         className="project-shot"
         src={shot.src}
         poster={shot.poster}
@@ -1447,11 +1480,10 @@ function Media({ shot, viewer = false }: { shot: Asset; viewer?: boolean }) {
         width={640}
         height={360}
         style={framing}
-        muted={!viewer}
+        muted
         playsInline
         loop={!viewer}
         controls={viewer || reduced}
-        autoPlay={!viewer && !reduced}
         preload="metadata"
       />
     );
@@ -1474,7 +1506,7 @@ function Media({ shot, viewer = false }: { shot: Asset; viewer?: boolean }) {
  * shape in a moving carousel — it is a glance, not a viewer — so it shows the
  * one image the admin ordered to the front and leaves the rest to the modal.
  */
-function Shot({ project }: { project: Project }) {
+function Shot({ project, play = false }: { project: Project; play?: boolean }) {
   const [shot] = project.images;
 
   if (!shot) {
@@ -1485,7 +1517,7 @@ function Shot({ project }: { project: Project }) {
     );
   }
 
-  return <Media shot={shot} />;
+  return <Media shot={shot} play={play} />;
 }
 
 /**
@@ -1591,10 +1623,29 @@ function Status({ status }: { status: Project['status'] }) {
   );
 }
 
-function CardFace({ project, employer }: { project: Project; employer?: Experience }) {
+function CardFace({
+  project,
+  employer,
+  near,
+  front,
+}: {
+  project: Project;
+  employer?: Experience;
+  near: boolean;
+  front: boolean;
+}) {
   return (
     <>
-      <Shot project={project} />
+      {/* Media loads only for the cards in the visible ring. The ones stacked
+          out of sight render an empty well of the same shape instead — same
+          height, no image fetched and no video decoding — and mount their real
+          media as they slide into view. The front card's video is the only one
+          that plays; a neighbour holds on its first frame until it is next. */}
+      {near ? (
+        <Shot project={project} play={front} />
+      ) : (
+        <div className="project-shot-empty" aria-hidden="true" />
+      )}
       <div className="project-body">
         <p className="project-context">
           {employer ? <Badge name={employer.company} logo={employer.logo} /> : null}
