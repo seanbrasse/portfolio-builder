@@ -31,12 +31,28 @@ const SEGMENTS = 12;
 const SAMPLES = 24;
 
 type CurlSheetProps = {
-  /** 'forward' turns the right page left about the spine; 'back' mirrors it. */
-  dir: 'forward' | 'back';
+  /**
+   * Which edge the leaf is bound at, and so which edge it pivots on. A spread
+   * is bound down the middle, so the leaf on the right hinges left and the one
+   * on the left hinges right. A single leaf has no spine — the book is bound
+   * on its left — so it hinges left whichever way the reader is going.
+   */
+  hinge: 'left' | 'right';
+  /**
+   * Play the swing backwards, for a leaf coming *back* onto its hinge rather
+   * than leaving it. Turning back is not a mirrored turn: the page that moves
+   * is the one you are returning to, and it arrives face-up rather than
+   * leaving face-down.
+   */
+  reverse?: boolean;
+  /** Which side of the book the raised leaf shadows. */
+  castTo: 'left' | 'right';
   durationMs: number;
   pageW: number;
-  /** The page being turned away from. Rendered once per strip, clipped. */
+  /** The side of the leaf that ends face-up. Rendered per strip, clipped. */
   face: ReactNode;
+  /** The other side. Bare stock when the page there has not been drawn yet. */
+  backFace?: ReactNode;
 };
 
 /**
@@ -64,7 +80,15 @@ function bendAt(t: number) {
   return 58 * arch;
 }
 
-export function CurlSheet({ dir, durationMs, pageW, face }: CurlSheetProps) {
+export function CurlSheet({
+  hinge,
+  reverse = false,
+  castTo,
+  durationMs,
+  pageW,
+  face,
+  backFace,
+}: CurlSheetProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const segW = pageW / SEGMENTS;
 
@@ -76,11 +100,10 @@ export function CurlSheet({ dir, durationMs, pageW, face }: CurlSheetProps) {
     const shades = Array.from(root.querySelectorAll<HTMLElement>('.curl-shade'));
     const animations: Animation[] = [];
 
-    // One sign for both directions. A backward turn is a forward turn seen in
-    // a mirror, and the sheet is already mirrored in CSS — flipping the sign
-    // here as well undid the mirror, so the bend fought the sweep going one
-    // way and reinforced it going the other. The two turns were not opposites
-    // of each other; they were different animations.
+    // One sign, always. Which way the leaf appears to travel is decided by the
+    // hinge (mirrored in CSS for a right-hand hinge) and by `reverse`, never by
+    // negating the angles: doing that as well undid the mirror, so the bend
+    // fought the sweep going one way and reinforced it going the other.
     const way = -1;
 
     for (let i = 0; i < segs.length; i++) {
@@ -89,8 +112,11 @@ export function CurlSheet({ dir, durationMs, pageW, face }: CurlSheetProps) {
 
       for (let s = 0; s < SAMPLES; s++) {
         const t = s / (SAMPLES - 1);
-        const sweep = easeSweep(t) * 180;
-        const bend = bendAt(t);
+        // Sampled backwards for a returning leaf, so the keyframes still run
+        // forwards in time while the swing runs the other way.
+        const along = reverse ? 1 - t : t;
+        const sweep = easeSweep(along) * 180;
+        const bend = bendAt(along);
 
         // The strip at the spine carries the sweep exactly; every strip after
         // it adds a share of the bend, so the outer edge runs ahead by the
@@ -138,7 +164,7 @@ export function CurlSheet({ dir, durationMs, pageW, face }: CurlSheetProps) {
     }
 
     return () => animations.forEach((animation) => animation.cancel());
-  }, [dir, durationMs]);
+  }, [hinge, reverse, durationMs]);
 
   // Built inside out, so strip i ends up nested in strip i-1 and inherits its
   // rotation — which is the whole mechanism.
@@ -156,9 +182,13 @@ export function CurlSheet({ dir, durationMs, pageW, face }: CurlSheetProps) {
         <div className="curl-window">
           <div className="curl-page">{face}</div>
         </div>
-        {/* Bare stock: the page being turned to has not been drawn yet. */}
         <div className="curl-window curl-window--back">
-          <div className="curl-page curl-page--blank" />
+          {backFace ? (
+            <div className="curl-page">{backFace}</div>
+          ) : (
+            /* Bare stock: the page on this side has not been drawn yet. */
+            <div className="curl-page curl-page--blank" />
+          )}
         </div>
         <span className="curl-shade" aria-hidden="true" />
         {stack}
@@ -174,11 +204,11 @@ export function CurlSheet({ dir, durationMs, pageW, face }: CurlSheetProps) {
           would rotate away with the strip it was attached to. */}
       <span
         className="turn-cast"
-        data-dir={dir}
+        data-cast={castTo}
         style={{ animationDuration: `${durationMs}ms` }}
         aria-hidden="true"
       />
-      <div className="curl-sheet" data-dir={dir} ref={rootRef} aria-hidden="true">
+      <div className="curl-sheet" data-hinge={hinge} ref={rootRef} aria-hidden="true">
         {stack}
       </div>
     </>

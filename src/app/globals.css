@@ -265,14 +265,14 @@ main {
   pointer-events: none;
 }
 
-.curl-sheet[data-dir='forward'] {
+.curl-sheet[data-hinge='left'] {
   right: 0;
 }
 
-.curl-sheet[data-dir='back'] {
+.curl-sheet[data-hinge='right'] {
   left: 0;
-  /* The mirror image: a backward turn pivots on the outer edge, so the strips
-     are stacked from the spine outward in the other direction. */
+  /* The mirror image: this leaf pivots on its right edge, so the strips stack
+     from the spine outward in the other direction. */
   transform: scaleX(-1);
 }
 
@@ -317,6 +317,23 @@ main {
   border: var(--border-ink) solid var(--ink);
 }
 
+/* A page that is ruled but not yet lettered.
+ *
+ * `visibility` rather than `display`, so the panels keep the exact size they
+ * will have once the copy lands and nothing reflows underneath the reader when
+ * it does. The panel grid itself is untouched: borders, flats and screens are
+ * how a comic page arrives from the printer, and only the lettering is still
+ * to come. */
+.book-leaf[data-unlettered] .panel-body,
+.book-leaf[data-unlettered] .sfx,
+.book-leaf[data-unlettered] .page-caption,
+.book-leaf[data-unlettered] .cover-head,
+.book-leaf[data-unlettered] .cover-lockup,
+.book-leaf[data-unlettered] .cover-flash,
+.book-leaf[data-unlettered] .cover-foot {
+  visibility: hidden;
+}
+
 /* Shading. A curve is only legible if the light changes across it — without
    this the strips read as eight flat cards rather than one bent sheet. */
 .curl-shade {
@@ -327,7 +344,7 @@ main {
   pointer-events: none;
 }
 
-.curl-sheet[data-dir='back'] .curl-page {
+.curl-sheet[data-hinge='right'] .curl-page {
   /* Undo the mirror on the content, or the lettering turns backwards. */
   transform: scaleX(-1);
 }
@@ -345,12 +362,11 @@ main {
   animation-fill-mode: both;
 }
 
-.turn-cast[data-dir='forward'] {
-  /* Forward, the leaf swings left, so the shadow lands on the left page. */
+.turn-cast[data-cast='left'] {
   background: linear-gradient(to right, rgb(0 0 0 / 30%), rgb(0 0 0 / 0%) 46%);
 }
 
-.turn-cast[data-dir='back'] {
+.turn-cast[data-cast='right'] {
   background: linear-gradient(to left, rgb(0 0 0 / 30%), rgb(0 0 0 / 0%) 46%);
 }
 

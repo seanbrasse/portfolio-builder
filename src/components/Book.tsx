@@ -139,6 +139,10 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
   const [turning, setTurning] = useState<{ dir: 'forward' | 'back'; from: number } | null>(
     null,
   );
+  // Whether the pages should letter themselves in once the leaf lands. True on
+  // arrival and after every forward turn; false coming back, because those
+  // pages have been read and the returning leaf already showed them.
+  const [inkOnSettle, setInkOnSettle] = useState(true);
 
   const count = single ? leaves.length : spreads.length;
 
@@ -184,8 +188,10 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
       setIndex((current) => {
         const clamped = Math.max(0, Math.min(next, count - 1));
         if (clamped === current) return current;
+        const forward = clamped > current;
+        setInkOnSettle(forward);
         if (!prefersReducedMotion()) {
-          setTurning({ dir: clamped > current ? 'forward' : 'back', from: current });
+          setTurning({ dir: forward ? 'forward' : 'back', from: current });
         }
         return clamped;
       });
@@ -279,43 +285,80 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
   const current = single ? null : spreads[index];
   const previous = turning && !single ? spreads[turning.from] : null;
 
+  const back = turning?.dir === 'back';
+
   /**
    * What the stage shows while a leaf is mid-swing.
    *
-   * Turning forward, the sheet is the old right page rotating onto the left,
-   * so the left half keeps the page it is about to bury and the right half is
-   * already bare — the new page is revealed by the sheet lifting off it. Back
-   * is the mirror of that.
+   * The book is bound on its left, which on a spread means the spine down the
+   * middle and on a single leaf means the leaf's own left edge. Every turn
+   * pivots on that binding, so a single leaf hinges left going both ways —
+   * mirroring it for a backward turn hinged it on the *right*, which is a
+   * different book.
    *
-   * Bare means bare on purpose. The pages a reader turns to have not been
-   * drawn yet; they ink themselves in once the leaf lands, which is the whole
-   * conceit and also why the sheet's reverse is blank stock rather than a
-   * preview of a page that is about to draw itself.
+   * Forward, the sheet is the page being left behind: it rotates off its
+   * binding and the page underneath is bare, because it has not been drawn
+   * yet, and letters itself in once the leaf lands.
+   *
+   * Backward is not that motion mirrored. The page that moves is the one you
+   * are returning to — it is lying face-down past the binding and swings back
+   * onto the book — so the swing is played in reverse and the sheet's face is
+   * the destination. Everything it uncovers is a page already read, and shows
+   * finished rather than blank: a reader going back is not watching the issue
+   * be written again.
    */
   const leftLeaf = turning
-    ? turning.dir === 'forward'
-      ? (previous?.left ?? null)
-      : null
+    ? back
+      ? (current?.left ?? null)
+      : (previous?.left ?? null)
     : (current?.left ?? null);
   const rightLeaf = turning
-    ? turning.dir === 'forward'
-      ? null
-      : (previous?.right ?? null)
+    ? back
+      ? (previous?.right ?? null)
+      : (current?.right ?? null)
     : (current?.right ?? null);
 
-  // The face of the sheet: the page being turned away from.
+  /**
+   * A page revealed by a forward turn arrives with its panels already ruled
+   * and nothing lettered in them.
+   *
+   * It used to arrive as bare stock, so the reader watched blank paper, then
+   * a grid appear on it, then the copy — three states where the page only has
+   * two. A comic page is printed with its panel borders; what a reader is
+   * waiting on is the lettering, and that is the only thing that should still
+   * be missing when the leaf lands.
+   *
+   * Only forward: turning back uncovers pages that have been read, and those
+   * show finished.
+   */
+  const revealUnlettered = Boolean(turning && !back);
+
+  // The single-leaf view has one page under the sheet rather than two halves.
+  const soloLeaf = turning
+    ? back
+      ? (leaves[turning.from] ?? null)
+      : (leaves[index] ?? null)
+    : (leaves[index] ?? null);
+
+  // The side of the sheet that ends up face-up.
   const sheetLeaf = turning
     ? single
-      ? (leaves[turning.from] ?? null)
-      : turning.dir === 'forward'
-        ? (previous?.right ?? null)
-        : (previous?.left ?? null)
+      ? back
+        ? (leaves[index] ?? null)
+        : (leaves[turning.from] ?? null)
+      : back
+        ? (previous?.left ?? null)
+        : (previous?.right ?? null)
     : null;
+
+  // Its other side — the facing page of the spread the leaf is carrying with
+  // it. Ruled but unlettered going forward, finished coming back.
+  const sheetBackLeaf = turning && !single ? (back ? (current?.right ?? null) : (current?.left ?? null)) : null;
 
   // Remounting is what replays a CSS animation, so the key has to change when
   // the turn ends and the pages are released to draw.
   const inkKey = `${index}-${turning ? 'held' : 'ink'}`;
-  const inking = !turning;
+  const inking = !turning && inkOnSettle;
 
   // The right page continues the left page's count rather than starting over.
   const rightInkOffset = leafPanelCount(current?.left ?? null);
@@ -342,8 +385,9 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
               <div
                 className={`book-leaf${inking ? ' is-inking' : ''}`}
                 key={`s${inkKey}`}
+                data-unlettered={revealUnlettered || undefined}
               >
-                {inking ? <BookLeaf leaf={leaves[index]} /> : null}
+                {soloLeaf ? <BookLeaf leaf={soloLeaf} /> : null}
               </div>
             ) : (
               <>
@@ -362,6 +406,7 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
                 <div
                   className={`book-leaf book-leaf--right${inking ? ' is-inking' : ''}`}
                   key={`r${inkKey}`}
+                  data-unlettered={revealUnlettered || undefined}
                 >
                   {rightLeaf ? (
                     <BookLeaf leaf={rightLeaf} inkOffset={inking ? rightInkOffset : 0} />
@@ -376,13 +421,25 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
                 the page being turned to has not been drawn yet. */}
             {turning ? (
               <CurlSheet
-                dir={turning.dir}
+                // Always the binding: the spine on a spread, the left edge of
+                // a lone leaf. Only a spread's left-hand page hinges right.
+                hinge={!single && back ? 'right' : 'left'}
+                // A returning leaf swings onto the book rather than off it.
+                reverse={single && back}
+                castTo={back ? 'right' : 'left'}
                 durationMs={TURN_MS}
                 pageW={PAGE_W}
                 face={
                   sheetLeaf ? (
                     <div className="book-leaf">
                       <BookLeaf leaf={sheetLeaf} />
+                    </div>
+                  ) : null
+                }
+                backFace={
+                  sheetBackLeaf ? (
+                    <div className="book-leaf" data-unlettered={!back || undefined}>
+                      <BookLeaf leaf={sheetBackLeaf} />
                     </div>
                   ) : null
                 }
