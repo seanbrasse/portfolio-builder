@@ -56,6 +56,17 @@ export type SiteSettings = {
    * believable thing on a portfolio.
    */
   skills: string[];
+  /**
+   * Where the timeline starts. A degree is not a job, so it is not in
+   * `experiences` — it has no impact bullets and no employer, and putting it
+   * there would mean every consumer of that list has to special-case it.
+   */
+  education: {
+    school: string;
+    credential: string;
+    /** ISO yyyy-mm. */
+    startDate: string;
+  };
   location: string;
   contactEmail: string;
   resumeHref: string;

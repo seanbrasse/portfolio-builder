@@ -43,6 +43,13 @@ const settings: Issue['settings'] = {
     'Supabase',
     'Jest',
   ],
+  education: {
+    school: 'University at Buffalo',
+    credential: 'B.S. Computer Science',
+    // The year is Sean's; the month is an assumption — September is when a US
+    // academic year starts. One field to correct if it was a spring intake.
+    startDate: '2017-09',
+  },
   location: 'New York, NY',
   contactEmail: 'seanbrasse@gmail.com',
   // MEDIA-6: stable path so links in old applications never rot.

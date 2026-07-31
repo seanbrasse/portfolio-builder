@@ -47,7 +47,7 @@ export default function Home() {
           <h2 className="section-label" id="work-label">
             Selected work
           </h2>
-          <Work projects={projects} experiences={experiences} />
+          <Work projects={projects} experiences={experiences} education={settings.education} />
         </section>
       </div>
     </>
