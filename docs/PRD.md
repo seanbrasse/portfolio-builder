@@ -58,7 +58,7 @@ The site is content-managed. All copy, images, logos, links, and page layouts ar
 ### Requirements
 
 - **AUTH-1.** Single-user auth. An allowlist of exactly one identity. No sign-up route exists.
-- **AUTH-2.** GitHub OAuth or email magic link. No password to manage, no password reset flow to build.
+- **AUTH-2.** Google OAuth. No password to manage, no password reset flow to build — and, unlike the magic link this originally specified, no email to send: the built-in mail service caps at a handful of messages an hour, which a morning of testing exhausted. An identity provider also returns an address it has already verified, which makes the one-identity allowlist a stronger check rather than a weaker one.
 - **AUTH-3.** All `/admin/*` routes are protected at the middleware layer, not just the client.
 - **AUTH-4.** Database row-level security enforces the same rule at the data layer. Public read on published content, writes restricted to the one user id. Defense in depth, so a leaked API key alone cannot deface the site.
 - **AUTH-5.** Sessions persist for 30 days so Sean is not logging in every visit.

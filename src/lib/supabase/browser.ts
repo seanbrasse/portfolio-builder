@@ -5,8 +5,8 @@ import { createBrowserClient } from '@supabase/ssr';
 import { SUPABASE_KEY, SUPABASE_URL } from './config';
 
 /**
- * The browser's client. Used for exactly two things: asking for a magic link,
- * and uploading a file straight to storage.
+ * The browser's client. Used for exactly two things: starting the Google
+ * sign-in, and uploading a file straight to storage.
  *
  * Uploads do not go through the server because a screenshot is a few megabytes
  * and routing it through a serverless function means holding all of it in

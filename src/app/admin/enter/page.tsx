@@ -27,7 +27,8 @@ export default async function Enter({
     <div className="admin-door">
       <h1>Sign in</h1>
       <p className="admin-note">
-        A one-time link will be sent if this address belongs to the site owner.
+        Only the site owner&rsquo;s account can get in. Anyone else is welcome to
+        sign in and will find nothing here.
       </p>
       <SignIn problem={problem} />
     </div>
