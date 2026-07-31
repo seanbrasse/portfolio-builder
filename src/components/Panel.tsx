@@ -5,8 +5,6 @@ import type { PanelOverrides, Sfx } from '@/content/types';
 type PanelProps = {
   /** Named grid area from the page template. */
   slot: string;
-  /** Reading-order index. Drives the animation stagger and nothing else. */
-  index: number;
   overrides?: PanelOverrides;
   /** Panels that contain a link get the hover lift (MOTION-5). */
   interactive?: boolean;
@@ -27,7 +25,6 @@ type PanelProps = {
  */
 export function Panel({
   slot,
-  index,
   overrides,
   interactive = false,
   empty = false,
@@ -43,7 +40,6 @@ export function Panel({
 
   const style = {
     gridArea: slot,
-    '--i': index,
     ...(overrides?.tilt ? { '--tilt': `${overrides.tilt}deg` } : {}),
   } as CSSProperties;
 

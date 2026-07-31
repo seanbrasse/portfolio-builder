@@ -50,9 +50,8 @@ data source.
 
 **Templates, not a canvas.** Each template declares a `grid-template-areas` map
 and an ordered slot list. Panels are emitted by walking that slot list, so DOM
-order, tab order, and the animation stagger are all the same sequence by
-construction — there is no way to author a page whose visual order and DOM order
-disagree. Adding a template is a deploy, which keeps art direction under version
+order and tab order match the reading order by construction — there is no way
+to author a page whose visual order and DOM order disagree. Adding a template is a deploy, which keeps art direction under version
 control.
 
 **Nothing inside a leaf reacts to the viewport.** A leaf is a fixed 880×1140
@@ -101,25 +100,20 @@ variables against — it imports the same values.
 `pathLength="100"` and an animated `stroke-dashoffset` is the obvious approach
 and it does not survive a real grid: `preserveAspectRatio="none"` scales the
 stroke per-axis, so a wide panel draws a thick slab down each side and a
-hairline across the top. Four scaled rules are crisp at any panel size and
-animate `transform` only, which `stroke-dashoffset` cannot.
+hairline across the top. Four scaled rules are crisp at any panel size.
 
-**The contents draw themselves; the page does not.** The panel grid — borders,
-flats, screens — is simply there. A comic page is laid out before it is
-lettered, and staggering the structure meant a reader watched an empty sheet
-acquire its own layout before anything readable arrived. What fills in is the
-copy, panel by panel in the template's declared reading order, and the right
-page continues the left page's count rather than starting alongside it, so the
-sequence crosses the spine the way a reader does.
+**Pages arrive drawn.** There is no entrance animation: panels, flats and
+lettering appear together, the moment a page is on screen. An earlier version
+lettered the panels in one at a time, in reading order and across the spread,
+so the issue looked like it was being written as you read it. It was a nice
+idea for one page and tiring by the fourth — a reader who has arrived at a page
+wants to read it, not watch it assemble. `MOTION-2`'s ink-in and `MOTION-3`'s
+SFX stamp are therefore not implemented; the resting state of every element was
+always the finished state, so removing the animations was a deletion rather
+than a rewrite.
 
-This **deliberately overruns MOTION-2**, which asks for a six-panel page inside
-500ms. It is the second override of the PRD here, after MODE-8. At the 44ms
-stagger that cap forces, a page did not read as being lettered — it read as
-popping in, which is the opposite of the brief. The stagger is 130ms and an
-eight-panel spread takes about 1.1s. Nothing is gated on it: every panel is
-legible the moment its copy lands, and the reader is still on the left page
-while the right one is being written. Reduced motion collapses the whole
-sequence to one short fade.
+What is left is motion a reader asks for: the page turn, and the hover lift on
+a panel that links somewhere.
 
 **The turning leaf bends.** No CSS transform curves an element — `rotateY`
 pivots a rigid plane — so `CurlSheet` cuts the page into twelve vertical strips
@@ -139,14 +133,12 @@ giving up live text.
 Shading is the other half of the illusion: without it twelve strips read as
 twelve flat cards. Each strip darkens by `1 - |cos θ|` of its accumulated
 angle, so the sheet is darkest edge-on and lit again once it has gone over, and
-a gradient tracks the shadow the raised leaf throws across the spread. The back
-of the sheet is bare stock, because the page being turned to has not been drawn
-yet — it letters itself in once the leaf lands.
+a gradient tracks the shadow the raised leaf throws across the spread. The
+sheet carries the facing page of the spread it is turning to on its reverse,
+which is what a leaf actually is.
 
-Everything animates on entrance and on interaction, then stops — nothing loops.
-The finished state is the CSS default, so a page whose script never runs is
-fully readable, and the ink-in is opacity and transform only, so content is in
-the accessibility tree the whole time it is being drawn.
+Nothing loops, and a page whose script never runs is identical to one whose
+script does — the CSS default *is* the finished page.
 
 **Contrast was measured, not assumed.** `tests/contrast.mjs` loads every route
 in both themes, makes all text transparent, screenshots, and samples the real
@@ -220,7 +212,7 @@ input that could not be derived from a resume.
 6. **Custom domain and cutover.** Still open. Set `NEXT_PUBLIC_SITE_URL` when it
    is decided.
 
-Two requirements are deliberately not implemented as written.
+Three requirements are deliberately not implemented as written.
 
 **MODE-8** asked for `prefers-color-scheme: dark` to select noir on a first
 visit; four-color is the unconditional default instead. Most people browse in
@@ -228,10 +220,11 @@ dark mode, so honouring the OS preference meant the palette the portfolio leads
 with was the one most first-time visitors never saw. An explicit choice still
 wins and still persists.
 
-**MOTION-2**'s 500ms cap is overrun, for the reason given under motion timing
-above: the page is meant to look drawn rather than assembled, and a cap that
-forces a 44ms stagger cannot deliver that. Reduced motion is still honoured in
-full.
+**MOTION-2** (the panel ink-in) and **MOTION-3** (the SFX stamp) are not
+implemented. Both were built, and both were removed once the staged reveal had
+been lived with: a page that assembles itself in front of the reader is a
+first-impression trick that gets in the way on every visit after it. Pages
+render finished. The page turn is the motion the format actually needs.
 
 Availability is set to `selective` in `src/content/issue.ts`, which drives the
 CTA copy. One enum change swaps it.

@@ -11,7 +11,6 @@ import {
   buildSpreads,
   PAGE_H_NARROW,
   leafIndexForSlug,
-  leafPanelCount,
   spreadIndexForSlug,
 } from '@/lib/book';
 
@@ -69,8 +68,8 @@ const NARROW = '(max-width: 899px)';
 
 /**
  * How long a leaf takes to swing through 180°. Held here rather than in CSS
- * because the same number decides when the turn is over and the new pages may
- * start drawing themselves; two copies of it would drift.
+ * because the same number decides when the turn is over and the settled spread
+ * goes back on the stage; two copies of it would drift.
  */
 const TURN_MS = 620;
 
@@ -79,9 +78,9 @@ const TURN_MS = 620;
  * ever consulted here and a stale value would hold a page blank.
  *
  * Reduced motion skips the swinging leaf entirely instead of shortening it.
- * Zeroing the animation in CSS would not be enough: the hold that keeps the
- * new pages bare is a timer, so the leaf would vanish and leave the reader
- * looking at blank stock for half a second — worse than the motion it removed.
+ * Zeroing the animation in CSS would not be enough: the sheet is unmounted by
+ * a timer, so the leaf would vanish and then hold the stage mid-turn for half
+ * a second — worse than the motion it removed.
  */
 function prefersReducedMotion() {
   return (
@@ -139,10 +138,6 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
   const [turning, setTurning] = useState<{ dir: 'forward' | 'back'; from: number } | null>(
     null,
   );
-  // Whether the pages should letter themselves in once the leaf lands. True on
-  // arrival and after every forward turn; false coming back, because those
-  // pages have been read and the returning leaf already showed them.
-  const [inkOnSettle, setInkOnSettle] = useState(true);
 
   const count = single ? leaves.length : spreads.length;
 
@@ -189,7 +184,6 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
         const clamped = Math.max(0, Math.min(next, count - 1));
         if (clamped === current) return current;
         const forward = clamped > current;
-        setInkOnSettle(forward);
         if (!prefersReducedMotion()) {
           setTurning({ dir: forward ? 'forward' : 'back', from: current });
         }
@@ -200,7 +194,7 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
   );
 
   // The turn is a CSS animation; this only clears the flag when it ends, which
-  // is also what releases the new pages to start inking themselves in.
+  // is what puts the settled spread back on the stage.
   useEffect(() => {
     if (!turning) return;
     const timer = window.setTimeout(() => setTurning(null), TURN_MS);
@@ -296,16 +290,14 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
    * mirroring it for a backward turn hinged it on the *right*, which is a
    * different book.
    *
-   * Forward, the sheet is the page being left behind: it rotates off its
-   * binding and the page underneath is bare, because it has not been drawn
-   * yet, and letters itself in once the leaf lands.
+   * Forward, the sheet is the page being left behind; the half it lifts off
+   * already shows the page underneath. Backward is not that motion mirrored:
+   * the page that moves is the one you are returning to, lying face-down past
+   * the binding and swinging back onto the book, so the swing plays in reverse
+   * and the sheet's face is the destination.
    *
-   * Backward is not that motion mirrored. The page that moves is the one you
-   * are returning to — it is lying face-down past the binding and swings back
-   * onto the book — so the swing is played in reverse and the sheet's face is
-   * the destination. Everything it uncovers is a page already read, and shows
-   * finished rather than blank: a reader going back is not watching the issue
-   * be written again.
+   * Every page is drawn whenever it is on screen. Half-drawn pages were a
+   * staged reveal that has since been taken back out.
    */
   const leftLeaf = turning
     ? back
@@ -317,21 +309,6 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
       ? (previous?.right ?? null)
       : (current?.right ?? null)
     : (current?.right ?? null);
-
-  /**
-   * A page revealed by a forward turn arrives with its panels already ruled
-   * and nothing lettered in them.
-   *
-   * It used to arrive as bare stock, so the reader watched blank paper, then
-   * a grid appear on it, then the copy — three states where the page only has
-   * two. A comic page is printed with its panel borders; what a reader is
-   * waiting on is the lettering, and that is the only thing that should still
-   * be missing when the leaf lands.
-   *
-   * Only forward: turning back uncovers pages that have been read, and those
-   * show finished.
-   */
-  const revealUnlettered = Boolean(turning && !back);
 
   // The single-leaf view has one page under the sheet rather than two halves.
   const soloLeaf = turning
@@ -355,13 +332,6 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
   // it. Ruled but unlettered going forward, finished coming back.
   const sheetBackLeaf = turning && !single ? (back ? (current?.right ?? null) : (current?.left ?? null)) : null;
 
-  // Remounting is what replays a CSS animation, so the key has to change when
-  // the turn ends and the pages are released to draw.
-  const inkKey = `${index}-${turning ? 'held' : 'ink'}`;
-  const inking = !turning && inkOnSettle;
-
-  // The right page continues the left page's count rather than starting over.
-  const rightInkOffset = leafPanelCount(current?.left ?? null);
 
   // The rendered width of the open book, which is what the turn arrows sit
   // beside. They belong to the pages, not to the window: pinned to the screen
@@ -383,10 +353,7 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
           >
             {single ? (
               <div
-                className={`book-leaf${inking ? ' is-inking' : ''}`}
-                key={`s${inkKey}`}
-                data-unlettered={revealUnlettered || undefined}
-              >
+                className="book-leaf" key={`s${index}`}>
                 {soloLeaf ? <BookLeaf leaf={soloLeaf} /> : null}
               </div>
             ) : (
@@ -397,20 +364,13 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
                     bare half, and bare stock is a page, not a gap. */}
                 {pagesWide === 2 ? (
                   <div
-                    className={`book-leaf book-leaf--left${inking ? ' is-inking' : ''}`}
-                    key={`l${inkKey}`}
-                  >
+                    className="book-leaf book-leaf--left" key={`l${index}`}>
                     {leftLeaf ? <BookLeaf leaf={leftLeaf} /> : null}
                   </div>
                 ) : null}
                 <div
-                  className={`book-leaf book-leaf--right${inking ? ' is-inking' : ''}`}
-                  key={`r${inkKey}`}
-                  data-unlettered={revealUnlettered || undefined}
-                >
-                  {rightLeaf ? (
-                    <BookLeaf leaf={rightLeaf} inkOffset={inking ? rightInkOffset : 0} />
-                  ) : null}
+                  className="book-leaf book-leaf--right" key={`r${index}`}>
+                  {rightLeaf ? <BookLeaf leaf={rightLeaf} /> : null}
                 </div>
                 {pagesWide === 2 ? <span className="book-spine" aria-hidden="true" /> : null}
               </>
@@ -438,7 +398,7 @@ function BookInner({ pages, initialSlug, single }: BookProps & { single: boolean
                 }
                 backFace={
                   sheetBackLeaf ? (
-                    <div className="book-leaf" data-unlettered={!back || undefined}>
+                    <div className="book-leaf">
                       <BookLeaf leaf={sheetBackLeaf} />
                     </div>
                   ) : null

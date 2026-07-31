@@ -1,7 +1,5 @@
 import type { Page } from '@/content/types';
 
-import { getTemplate } from './templates';
-
 /**
  * The issue as a physical object.
  *
@@ -62,19 +60,6 @@ export function buildSpreads(leaves: Leaf[]): Spread[] {
   }
 
   return spreads;
-}
-
-/**
- * How many panels a leaf draws, which is what the facing page has to wait for.
- *
- * The ink-in runs as one sequence across the whole spread rather than two that
- * start together: a reader reads the left page and then the right one, so the
- * right page's first panel is offset by every panel on the left. The cover
- * contributes nothing — it has its own entrance and no panels.
- */
-export function leafPanelCount(leaf: Leaf | null): number {
-  if (!leaf || leaf.kind === 'cover') return 0;
-  return getTemplate(leaf.page.templateId).slots.length;
 }
 
 /** Which spread a slug lives on, so a deep link opens the book to the right place. */
