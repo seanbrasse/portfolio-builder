@@ -123,6 +123,12 @@ export function validateIssue(content: Issue = fallback): ContentProblem[] {
     }
   };
 
+  // The intro's three fields. Checked as the string that actually renders —
+  // skills as the joined row, because that is what wraps.
+  tooLong('settings tagline', content.settings.tagline, CAPS.tagline);
+  tooLong('settings skills', content.settings.skills.join(', '), CAPS.skills);
+  tooLong('settings social card description', content.settings.ogTagline, CAPS.ogTagline);
+
   for (const experience of content.experiences) {
     tooLong(`experience ${experience.id} summary`, experience.summary, CAPS.experienceSummary);
     if (experience.impactBullets.length > CAPS.impactBulletCount) {

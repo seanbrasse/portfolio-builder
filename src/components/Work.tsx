@@ -675,7 +675,18 @@ function wellHeight(cardWidth: number) {
   return ((cardWidth - BORDER) * 9) / 16;
 }
 
-/** The least whitespace two labels on the line may sit apart. */
+/**
+ * The least whitespace two labels on the line may sit apart, when the
+ * stylesheet has not said.
+ *
+ * Read from `--join-gutter` at measure time rather than fixed here, because the
+ * right answer changes with what a label *is*. Set against a company name it is
+ * the gap between two runs of text and wants to be generous; below the width
+ * where the names are hidden a label is a lone badge, and 20px of clearance
+ * around a 28px square is enough to push two badges 45px apart onto separate
+ * rows for no reason a reader could see. That regression cost a phone-sized
+ * viewport its no-scroll layout, which is how it was found.
+ */
 const GUTTER = 20;
 
 /** The same, for year ticks, which are shorter and can sit closer. */
@@ -919,6 +930,9 @@ function Timeline({
       const width = node.clientWidth;
       if (joins.length === 0 || width === 0) return;
 
+      const gutter =
+        parseFloat(getComputedStyle(node).getPropertyValue('--join-gutter')) || GUTTER;
+
       // The right edge of the last label placed in each row, in pixels.
       const edges: number[] = [];
       // A row has to be at least as tall as the tallest thing standing in it,
@@ -930,7 +944,7 @@ function Timeline({
         const label = join.querySelector<HTMLElement>('.timeline-company');
         const box = label?.getBoundingClientRect();
         const left = (parseFloat(join.style.left) / 100) * width;
-        const right = left + (box?.width ?? 0) + GUTTER;
+        const right = left + (box?.width ?? 0) + gutter;
 
         let row = edges.findIndex((edge) => left >= edge);
         if (row === -1) row = edges.length;

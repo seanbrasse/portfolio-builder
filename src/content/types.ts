@@ -176,4 +176,22 @@ export const CAPS = {
   impactBulletCount: 3,
   projectSummary: 200,
   quote: 180,
+  /**
+   * The line under the name, on a page that does not scroll. It is set large
+   * and it gets one or two lines before it starts taking them from the work
+   * below it, which is the whole subject of the page.
+   */
+  tagline: 120,
+  /**
+   * The skills row, measured as the comma-separated string rather than per
+   * entry — the row wraps as one run, so its total length is what decides how
+   * many lines it costs. About twenty short entries.
+   */
+  skills: 200,
+  /**
+   * The social card description. Not a layout limit: it is roughly where the
+   * platforms themselves stop showing it, so anything past this is written for
+   * nobody.
+   */
+  ogTagline: 200,
 } as const;
