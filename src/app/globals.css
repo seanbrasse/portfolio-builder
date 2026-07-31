@@ -1196,6 +1196,12 @@ a:hover {
 --------------------------------------------------------------------------- */
 
 .dialog {
+  /* A modal dialog is centred by `margin: auto` in the UA stylesheet, against
+     the special layout box the top layer gives it. The CSS reset sets
+     `margin: 0` on every element, which silently wins and drops the dialog into
+     the top-left corner — it looks like the dialog is unpositioned when in fact
+     its positioning was reset away. */
+  margin: auto;
   border: 0;
   padding: 0;
   background: transparent;
