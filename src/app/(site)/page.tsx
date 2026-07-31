@@ -1,6 +1,6 @@
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Work } from '@/components/Work';
-import { getExperiences, getProjects, getSettings } from '@/content';
+import { getEducation, getExperiences, getProjects, getSettings } from '@/content';
 import { personSchema } from '@/lib/schema';
 
 /**
@@ -40,6 +40,7 @@ export default async function Home() {
   // is made here rather than baked into the content file.
   const projects = [...(await getProjects())].sort((a, b) => b.date.localeCompare(a.date));
   const experiences = await getExperiences();
+  const education = await getEducation();
 
   return (
     <>
@@ -77,7 +78,7 @@ export default async function Home() {
           <h2 className="sr-only" id="work-label">
             Selected work
           </h2>
-          <Work projects={projects} experiences={experiences} education={settings.education} />
+          <Work projects={projects} experiences={experiences} education={education} />
         </section>
       </div>
     </>

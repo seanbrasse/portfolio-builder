@@ -1,4 +1,4 @@
-import { getExperiences, getSettings } from '@/content';
+import { getEducation, getExperiences, getSettings } from '@/content';
 
 import { siteUrl } from './site';
 
@@ -12,6 +12,7 @@ import { siteUrl } from './site';
 export async function personSchema() {
   const settings = await getSettings();
   const [current] = await getExperiences();
+  const schools = await getEducation();
 
   return {
     '@context': 'https://schema.org',
@@ -30,10 +31,26 @@ export async function personSchema() {
     worksFor: current
       ? { '@type': 'Organization', name: current.company }
       : undefined,
-    alumniOf: {
-      '@type': 'CollegeOrUniversity',
-      name: 'University at Buffalo, the State University of New York',
-    },
+    /**
+     * From the content, not from this file.
+     *
+     * This was a hardcoded string — and it had already drifted: it read
+     * "University at Buffalo, the State University of New York" while the page
+     * itself said "University at Buffalo". Search engines were being told a
+     * different name than readers were shown, which is the failure mode that
+     * duplicating content into a second place always ends in.
+     *
+     * Always an array, including for one school — `alumniOf` accepts a list,
+     * and branching on the count to emit a bare object for the common case
+     * would be two output shapes for one fact. Omitted entirely when there are
+     * no schools; an empty array would assert attendance at nothing.
+     */
+    alumniOf: schools.length
+      ? schools.map((school) => ({
+          '@type': 'CollegeOrUniversity',
+          name: school.school,
+        }))
+      : undefined,
     knowsAbout: [
       'React',
       'TypeScript',

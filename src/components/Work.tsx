@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
-import type { Asset, Experience, Project, SiteSettings } from '@/content/types';
+import type { Asset, Education, Experience, Project } from '@/content/types';
 import { formatMonth, formatRange, isoRange } from '@/lib/format';
 
 /** Cards per notch of wheel travel. Tuned so a normal flick moves about one. */
@@ -31,7 +31,7 @@ export function Work({
 }: {
   projects: Project[];
   experiences: Experience[];
-  education: SiteSettings['education'];
+  education: Education[];
 }) {
   const count = projects.length;
   const [active, setActive] = useState(0);
@@ -700,15 +700,31 @@ function monthsOf(iso: string) {
 function timelineGeometry(
   experiences: Experience[],
   projects: Project[],
-  education: SiteSettings['education'],
+  education: Education[],
 ) {
-  const min = monthsOf(education.startDate);
+  const schools = [...education].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const ordered = [...experiences].sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+  /**
+   * The line runs from the earliest thing on it to the latest, rather than from
+   * the degree to the last project.
+   *
+   * It used to start at the one education record, which was safe only because
+   * there was exactly one and it necessarily came first. With a list, the first
+   * school is whichever started first — and with an empty list the line has to
+   * start at the first job instead, rather than at `NaN`.
+   */
+  const starts = [
+    ...schools.map((school) => monthsOf(school.startDate)),
+    ...ordered.map((item) => monthsOf(item.startDate)),
+  ];
+  const min = starts.length > 0 ? Math.min(...starts) : 0;
   const max = Math.max(
+    min,
     ...projects.map((project) => monthsOf(project.date)),
     ...experiences.map((item) => monthsOf(item.endDate ?? item.startDate)),
+    ...schools.map((school) => monthsOf(school.endDate ?? school.startDate)),
   );
-
-  const ordered = [...experiences].sort((a, b) => a.startDate.localeCompare(b.startDate));
 
   /**
    * The line is not to scale, on purpose.
@@ -730,8 +746,19 @@ function timelineGeometry(
    * allowed to overprint each other. Bunched years under a faint rule read as
    * "compressed", which is what has happened.
    */
-  const LEAD = 18;
   const careerStart = ordered.length > 0 ? monthsOf(ordered[0].startDate) : min;
+
+  /**
+   * Zero when there is nothing before the first job.
+   *
+   * The lead used to be an unconditional 18%, which was true as long as
+   * education was a single record that always existed and always came first.
+   * Now that schools are rows that can be deleted, an unconditional lead would
+   * hand a fifth of the line to an empty stretch and start the career a fifth
+   * of the way in. The compressed region only earns its width when something
+   * is actually in it.
+   */
+  const LEAD = careerStart > min ? 18 : 0;
   const runway = Math.max(careerStart - min, 1);
   const career = Math.max(max - careerStart, 1);
 
@@ -752,34 +779,60 @@ function timelineGeometry(
      *  pieces so the compressed stretch can be shown as one. */
     lead: LEAD,
     ticks: years,
-    // The degree is a join like any other as far as the line is concerned: a
-    // tick where something started. It is first because it started first.
     /**
-     * Each join carries its own dates now, rather than the line drawing the
-     * companies and a parallel list carrying the ranges. Two lists of the same
-     * four things is two places to change and one place to forget; the badge is
-     * the thing you point at, so the dates belong on it.
+     * Schools and companies, as one list of the same thing.
+     *
+     * A school is a join like any other as far as the line is concerned: a tick
+     * where something started, a name, a line under it, a range, and a mark.
+     * That is why a school can carry a logo now — it was never the badge that
+     * refused to draw one, it was the education record having nowhere to put it.
+     *
+     * Sorted together by start date rather than schools-then-jobs, because
+     * overlapping them is normal: a degree finished after the first job started
+     * should still sit where it started. Ids are prefixed so a school and a
+     * company that happen to share one cannot collide as React keys or in the
+     * open-tooltip state.
+     *
+     * Each join carries its own dates, rather than the line drawing the badges
+     * and a parallel list carrying the ranges. Two lists of the same things is
+     * two places to change and one place to forget; the badge is the thing you
+     * point at, so the dates belong on it.
      */
     joins: [
-      {
-        id: 'education',
-        label: education.school,
-        sub: education.credential,
-        logo: undefined as Asset | undefined,
-        range: `from ${formatMonth(education.startDate)}`,
-        iso: education.startDate,
-        left: at(education.startDate),
-      },
+      ...schools.map((item) => ({
+        id: `school-${item.id}`,
+        label: item.school,
+        sub: item.credential,
+        logo: item.logo as Asset | undefined,
+        /**
+         * A real range once there is one, and the old non-committal phrasing
+         * until then.
+         *
+         * A job with no end date is a job you still have, and 'Present' says
+         * so. A school with no end date is far more often one whose end date
+         * has not been typed in yet — and rendering that as 'Sep 2017 —
+         * Present' tells a reader you are currently enrolled, which is a claim
+         * about someone's life made out of a blank field. 'from Sep 2017' says
+         * only what is known.
+         */
+        range: item.endDate
+          ? formatRange(item.startDate, item.endDate)
+          : `from ${formatMonth(item.startDate)}`,
+        iso: isoRange(item.startDate, item.endDate),
+        left: at(item.startDate),
+        start: item.startDate,
+      })),
       ...ordered.map((item) => ({
-        id: item.id,
+        id: `job-${item.id}`,
         label: item.company,
         sub: item.role,
-        logo: item.logo,
+        logo: item.logo as Asset | undefined,
         range: formatRange(item.startDate, item.endDate),
         iso: isoRange(item.startDate, item.endDate),
         left: at(item.startDate),
+        start: item.startDate,
       })),
-    ],
+    ].sort((a, b) => a.start.localeCompare(b.start)),
     marks: projects.map((project, index) => ({
       index,
       id: project.id,

@@ -56,22 +56,41 @@ export type SiteSettings = {
    * believable thing on a portfolio.
    */
   skills: string[];
-  /**
-   * Where the timeline starts. A degree is not a job, so it is not in
-   * `experiences` — it has no impact bullets and no employer, and putting it
-   * there would mean every consumer of that list has to special-case it.
-   */
-  education: {
-    school: string;
-    credential: string;
-    /** ISO yyyy-mm. */
-    startDate: string;
-  };
   location: string;
   contactEmail: string;
   resumeHref: string;
   links: Link[];
   ogTagline: string;
+};
+
+/**
+ * A school. Where the timeline starts, and usually more than one of them.
+ *
+ * A degree is not a job, so this is not an `Experience` — there is no role, no
+ * impact bullets, and no project points at a school as the employer it was
+ * built at. Folding the two together would make every consumer of that list
+ * special-case half its rows.
+ *
+ * What the two do share is exactly what the timeline asks of them: a name, a
+ * line under it, a date range, and a mark. That shape is why a school can carry
+ * a logo on the same terms a company does, and why the line can order the two
+ * together without knowing which is which.
+ *
+ * This was once three fields on `SiteSettings`, which quietly asserted that
+ * there is one school, that it never ended, and that it has no logo.
+ */
+export type Education = {
+  id: string;
+  school: string;
+  /** The line under the school: 'B.S. Computer Science'. */
+  credential: string;
+  location: string;
+  /** ISO yyyy-mm. */
+  startDate: string;
+  /** ISO yyyy-mm. Null means still enrolled, as it does on a job. */
+  endDate: string | null;
+  logo?: Asset;
+  links: Link[];
 };
 
 export type Experience = {
@@ -144,6 +163,7 @@ export type Metric = {
 
 export type Issue = {
   settings: SiteSettings;
+  education: Education[];
   experiences: Experience[];
   projects: Project[];
   testimonials: Testimonial[];

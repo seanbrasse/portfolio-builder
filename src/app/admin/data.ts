@@ -14,6 +14,21 @@ import { supabaseServer } from '@/lib/supabase/server';
  * to leave out.
  */
 
+export type AdminEducation = {
+  id: string;
+  school: string;
+  credential: string;
+  location: string;
+  start_date: string;
+  end_date: string | null;
+  logo_src: string | null;
+  logo_alt: string;
+  logo_width: number | null;
+  logo_height: number | null;
+  links: { label: string; url: string; type?: string }[];
+  published: boolean;
+};
+
 export type AdminExperience = {
   id: string;
   company: string;
@@ -63,9 +78,9 @@ export type AdminSettings = {
   availability_status: string;
   roles_open_to: string[];
   skills: string[];
-  education_school: string;
-  education_credential: string;
-  education_start_date: string;
+  // The `education_*` columns are still on this table and are deliberately not
+  // listed. 0003 moved schools to their own table; naming them here would put
+  // a second, editable copy back on the settings form.
   location: string;
   contact_email: string;
   resume_href: string;
@@ -77,6 +92,21 @@ export async function adminSettings(): Promise<AdminSettings | null> {
   const supabase = await supabaseServer();
   const { data } = await supabase.from('settings').select('*').eq('id', true).maybeSingle();
   return (data as AdminSettings) ?? null;
+}
+
+export async function adminEducations(): Promise<AdminEducation[]> {
+  const supabase = await supabaseServer();
+  const { data } = await supabase
+    .from('education')
+    .select('*')
+    .order('start_date', { ascending: false });
+  return (data as AdminEducation[]) ?? [];
+}
+
+export async function adminEducation(id: string): Promise<AdminEducation | null> {
+  const supabase = await supabaseServer();
+  const { data } = await supabase.from('education').select('*').eq('id', id).maybeSingle();
+  return (data as AdminEducation) ?? null;
 }
 
 export async function adminExperiences(): Promise<AdminExperience[]> {

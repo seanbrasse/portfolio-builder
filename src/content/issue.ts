@@ -43,13 +43,6 @@ const settings: Issue['settings'] = {
     'Supabase',
     'Jest',
   ],
-  education: {
-    school: 'University at Buffalo',
-    credential: 'B.S. Computer Science',
-    // The year is Sean's; the month is an assumption — September is when a US
-    // academic year starts. One field to correct if it was a spring intake.
-    startDate: '2017-09',
-  },
   location: 'New York, NY',
   contactEmail: 'seanbrasse@gmail.com',
   // MEDIA-6: stable path so links in old applications never rot.
@@ -181,8 +174,40 @@ const metrics: Issue['metrics'] = [
  */
 const testimonials: Issue['testimonials'] = [];
 
+/**
+ * Where the timeline starts.
+ *
+ * A list rather than the single record this used to be on `settings`. One
+ * school is the common case, not the only one, and the old shape could not say
+ * "and then a master's" without a schema change.
+ *
+ * No end date, because the resume gives a school and a degree and not the year
+ * it finished — an inferred graduation date would read as fact on the page.
+ * The timeline prints 'from Sep 2017' rather than a range while it is missing,
+ * which claims only what is known; entering one in the admin turns it into a
+ * range. No location for the same reason: the field exists, the resume does
+ * not fill it, and the timeline does not render it.
+ *
+ * No logo either: a university crest is a trademark like any other mark, so it
+ * belongs to whoever uploads it having checked they may.
+ */
+const education: Issue['education'] = [
+  {
+    id: 'education',
+    school: 'University at Buffalo',
+    credential: 'B.S. Computer Science',
+    location: '',
+    // The year is Sean's; the month is an assumption — September is when a US
+    // academic year starts. One field to correct if it was a spring intake.
+    startDate: '2017-09',
+    endDate: null,
+    links: [],
+  },
+];
+
 export const issue: Issue = {
   settings,
+  education,
   experiences,
   projects,
   testimonials,

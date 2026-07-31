@@ -30,6 +30,7 @@ import { issue as fallback } from './issue';
 import { CAPS } from './types';
 import { hasDatabase } from '@/lib/supabase/config';
 import type {
+  Education,
   Experience,
   Issue,
   Metric,
@@ -84,6 +85,16 @@ export async function getTestimonial(id: string): Promise<Testimonial | undefine
 
 export async function getExperiences(): Promise<Experience[]> {
   return (await getIssue()).experiences;
+}
+
+/**
+ * Oldest first, which is how the timeline reads them and how a reader says
+ * them out loud — you went to one school and then another, not the reverse.
+ * The database is asked in this order rather than sorted here, so the two
+ * cannot drift.
+ */
+export async function getEducation(): Promise<Education[]> {
+  return (await getIssue()).education;
 }
 
 export async function getProjects(): Promise<Project[]> {
@@ -175,4 +186,4 @@ if (typeof window === 'undefined') {
   }
 }
 
-export type { Experience, Issue, Metric, Project, SiteSettings, Testimonial };
+export type { Education, Experience, Issue, Metric, Project, SiteSettings, Testimonial };
