@@ -14,7 +14,7 @@ export const contentType = 'image/png';
  * default palette is what a first-time visitor sees.
  */
 export default function Icon() {
-  const palette = PALETTES.sunset;
+  const palette = PALETTES['four-color'];
 
   return new ImageResponse(
     (

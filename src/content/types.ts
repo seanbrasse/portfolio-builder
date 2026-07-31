@@ -233,58 +233,6 @@ export type PanelContent =
    * waiting for art.
    */
   | { type: 'art'; art: 'skyline' }
-  /* -------------------------------------------------------------------------
-     Artifacts: the work itself, drawn rather than photographed.
-
-     A portfolio wants to show the thing that was built. Most of what is worth
-     showing here cannot be screenshotted — a form builder inside Mailchimp and
-     an onboarding flow inside PayPal are both someone else's proprietary UI,
-     and a screenshot of either is not mine to publish. Reconstructing the
-     artifact instead is not a workaround for that, it is the only lawful
-     option, and it happens to be the better one: a code block stays
-     selectable, a diagram stays themeable, a chart stays correct at any zoom,
-     and every one of them is readable by a screen reader and rendered in plain
-     view. A painted panel is none of those things.
-
-     Nothing here may state a fact that the surrounding copy does not. These
-     are evidence for a claim the panel already makes, not a place to hide one.
-  ------------------------------------------------------------------------- */
-  /**
-   * A fragment of real source. `lines` rather than one string with newlines:
-   * a template literal in the content file carries whatever indentation the
-   * surrounding code happened to have, and reindenting the content file then
-   * silently reindents the page.
-   */
-  | {
-      type: 'code';
-      caption: string;
-      language: string;
-      lines: string[];
-      /** Lines to mark as the changed ones, 1-indexed into `lines`. */
-      highlight?: number[];
-    }
-  /** A pipeline, drawn as labelled stages. */
-  | { type: 'flow'; caption: string; steps: string[] }
-  /**
-   * One measurement, before and against. Deliberately not a general charting
-   * kind: every number on this site is a single before/after, and a chart
-   * component that can draw anything is a component nobody can read the
-   * accessible name of.
-   */
-  | {
-      type: 'chart';
-      caption: string;
-      label: string;
-      from: number;
-      to: number;
-      unit: string;
-    }
-  /** An API surface, as the method/path table it actually is. */
-  | {
-      type: 'endpoints';
-      caption: string;
-      rows: { method: string; path: string }[];
-    }
   /** COMP-4: a slot deliberately left quiet. Renders as a blank inked panel. */
   | { type: 'empty' };
 

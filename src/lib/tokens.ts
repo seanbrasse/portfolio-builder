@@ -9,28 +9,13 @@
  * Adding a theme means adding a key here. It does not mean touching components.
  */
 
-export const THEMES = ['sunset', 'noir'] as const;
+export const THEMES = ['four-color', 'noir'] as const;
 export type Theme = (typeof THEMES)[number];
 
-export const DEFAULT_THEME: Theme = 'sunset';
+export const DEFAULT_THEME: Theme = 'four-color';
 
 export function isTheme(value: unknown): value is Theme {
   return typeof value === 'string' && (THEMES as readonly string[]).includes(value);
-}
-
-/**
- * `sunset` was called `four-color` while the palette actually was one — cream
- * newsprint, one red, one blue, one yellow. It is a painted dusk now, and a
- * theme id that names the wrong thing is worse than a rename. Anyone carrying
- * the old value in localStorage is silently moved across rather than being
- * dropped back to the default, which would read as the toggle forgetting.
- */
-const LEGACY_THEME_IDS: Record<string, Theme> = { 'four-color': 'sunset' };
-
-export function normalizeTheme(value: unknown): Theme | null {
-  if (isTheme(value)) return value;
-  if (typeof value === 'string' && value in LEGACY_THEME_IDS) return LEGACY_THEME_IDS[value];
-  return null;
 }
 
 /**
@@ -77,7 +62,7 @@ export type Palette = {
    * Text on an `accentC` fill — caption boxes, the CTA button, chip hovers.
    * Separate from `onAccent` because yellow and amber are light surfaces in
    * both themes and always need dark text, while `accentA` is dark in
-   * sunset and light in noir. Collapsing the two is how a caption box
+   * four-color and light in noir. Collapsing the two is how a caption box
    * ends up bone-on-amber at 2.2:1.
    */
   onAccentC: string;
@@ -91,7 +76,7 @@ export type Palette = {
   /**
    * The hard offset behind metric numerals. Has to read as a *shadow* against
    * the numeral itself, so it tracks the glyph: a light offset under dark
-   * sunset numerals, a dark one under noir's bone.
+   * four-color numerals, a dark one under noir's bone.
    */
   metricShadow: string;
   /**
@@ -108,57 +93,43 @@ export type Palette = {
 };
 
 /**
- * Sunset: dusk over the East River. Plum and magenta out of the sky, the gold
- * a title gets lettered in, and warm cream for the stock a caption box is
- * printed on.
- *
- * This replaced a literal four-color newsprint palette — cream, one red, one
- * blue, one yellow, neutral black. The structural difference is not the hues,
- * it is that nothing here is neutral: `ink` is a near-black plum rather than a
- * near-black grey, and the halftone screen is violet. A page of warm colors
- * over a neutral black ink reads as a color pass laid on top of a black-and-
- * white page, which is exactly what four-color printing was and exactly the
- * era the design is trying to leave.
+ * Four-color: newsprint palette. Paper cream, one red, one blue, one yellow,
+ * black ink.
  *
  * ACC-3 note: no spot color in this palette carries small text. Measured
  * against the composited panel background — a halftone dot over a flat, not
- * the flat alone — gold is far under AA at any body size and the magenta only
- * clears it as a fill. The accents are therefore used as fills, flags, and
- * shadows, with `ink` doing the lettering. The audit in `tests/contrast.mjs`
- * is what these values are tuned against; do not adjust them without
- * re-running it.
+ * the flat alone — red lands near 3:1 at 14px and yellow far below it. The
+ * accents are therefore used as fills, flags, and shadows, with `ink` doing
+ * the lettering. The audit in `tests/contrast.mjs` is what these values
+ * are tuned against; do not adjust them without re-running it.
  */
-const sunset: Palette = {
-  paper: '#EDE1D2',
-  paperLit: '#FAF3E7',
-  // Plum-black, not neutral. Everything on the page is lettered in this, so it
-  // is the single value doing the most to keep the palette warm.
-  ink: '#1F1726',
+const fourColor: Palette = {
+  paper: '#EFE4CE',
+  paperLit: '#FBF4E3',
+  ink: '#14110F',
   matte: '#FBF7EC',
-  matteShade: '#241534',
-  inkMuted: '#5D5266',
-  // The sky's magenta, pulled dark enough to take cream lettering as a solid
-  // flat. The brighter value straight off the reference is a highlight color;
-  // as a ground it left the inverted type near 3:1.
-  accentA: '#93275F', // magenta — fills, flags, bullet markers
-  accentB: '#2F2A63', // indigo  — the dusk under the sky; display type, links
-  accentC: '#E9A227', // gold    — backgrounds and shadows, never text
-  // Violet rather than blue: the dot is what tints every flat on the page, and
-  // a blue screen dragged the warm grounds toward slate.
-  screen: '#6A3B86',
-  balloon: '#FCF8F0',
-  onAccent: '#FAF3E7',
-  onAccentB: '#FAF3E7',
-  onAccentC: '#1F1726',
-  titleAccent: '#93275F',
-  railBg: '#1A1324',
-  railFg: '#FAF3E7',
-  link: '#93275F',
-  metricShadow: '#E9A227',
-  shadowInk: '#1F1726',
-  focus: '#93275F',
-  duotoneDark: '#1F1726',
-  duotoneLight: '#D4703A',
+  matteShade: '#2A1D2E',
+  inkMuted: '#57514A',
+  // Deepened from a brighter pillarbox red. As a solid flat it has to carry
+  // cream lettering *and* the gold rays crossing behind it, and the brighter
+  // value left no headroom once the rays lightened the ground.
+  accentA: '#C4201A', // red    — fills, flags, bullet markers
+  accentB: '#154A9E', // blue   — display type and links
+  accentC: '#F5C518', // yellow — backgrounds and shadows, never text
+  screen: '#1B57B5',
+  balloon: '#FDF9EF',
+  onAccent: '#FBF4E3',
+  onAccentB: '#FBF4E3',
+  onAccentC: '#14110F',
+  titleAccent: '#154A9E',
+  railBg: '#14110F',
+  railFg: '#FBF4E3',
+  link: '#154A9E',
+  metricShadow: '#F5C518',
+  shadowInk: '#14110F',
+  focus: '#154A9E',
+  duotoneDark: '#14110F',
+  duotoneLight: '#D6291F',
 };
 
 /**
@@ -168,7 +139,7 @@ const sunset: Palette = {
  * Open question #2 in the PRD asked which spot color noir gets, and noted that
  * desaturated red being the obvious answer is itself a reason to look
  * elsewhere. This uses a sodium-vapor amber — streetlight through a window
- * blind. It reads as noir without borrowing sunset's magenta, and it is
+ * blind. It reads as noir without borrowing the four-color red, and it is
  * warm enough to stay legible on the near-black paper at 7.5:1.
  *
  * It was lifted a step once the cover title was measured against the cover's
@@ -213,7 +184,7 @@ const noir: Palette = {
 };
 
 export const PALETTES: Record<Theme, Palette> = {
-  sunset,
+  'four-color': fourColor,
   noir,
 };
 
@@ -256,7 +227,7 @@ function declarations(palette: Palette): string {
  */
 export function themeStylesheet(): string {
   return [
-    `:root{${declarations(PALETTES.sunset)}}`,
+    `:root{${declarations(PALETTES['four-color'])}}`,
     `[data-theme="noir"]{${declarations(PALETTES.noir)}}`,
   ].join('');
 }

@@ -49,7 +49,7 @@ function Duotone({ id, dark, light }: DuotoneProps) {
  * is what makes the treatment reversible rather than destructive.
  */
 export function TreatmentDefs() {
-  const sunset = PALETTES.sunset;
+  const fourColor = PALETTES['four-color'];
   const noir = PALETTES.noir;
 
   return (
@@ -57,8 +57,8 @@ export function TreatmentDefs() {
       <defs>
         <Duotone
           id="treatment-duotone"
-          dark={sunset.duotoneDark}
-          light={sunset.duotoneLight}
+          dark={fourColor.duotoneDark}
+          light={fourColor.duotoneLight}
         />
         <Duotone id="treatment-duotone-noir" dark={noir.duotoneDark} light={noir.duotoneLight} />
       </defs>

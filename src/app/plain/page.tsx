@@ -57,64 +57,6 @@ function PlainPanel({ content }: { content: PanelContent }) {
       );
     }
 
-    /* Artifacts carry over as the plainest thing that keeps their meaning: a
-       code fragment stays a code fragment, a pipeline stays an ordered list, a
-       before/after stays a sentence. The comic view draws these; it does not
-       add to them, which is what makes "everything in comic view is in plain
-       view" hold for this kind too. */
-    case 'code':
-      return (
-        <div className="plain-entry">
-          <h3>{content.caption}</h3>
-          <pre>
-            <code>{content.lines.join('\n')}</code>
-          </pre>
-        </div>
-      );
-
-    case 'flow':
-      return (
-        <div className="plain-entry">
-          <h3>{content.caption}</h3>
-          <ol>
-            {content.steps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
-        </div>
-      );
-
-    case 'chart':
-      return (
-        <div className="plain-entry">
-          <h3>{content.caption}</h3>
-          <p>
-            {content.label}: {content.from}
-            {content.unit} to <strong>
-              {content.to}
-              {content.unit}
-            </strong>
-            .
-          </p>
-        </div>
-      );
-
-    case 'endpoints':
-      return (
-        <div className="plain-entry">
-          <h3>{content.caption}</h3>
-          <ul>
-            {content.rows.map((row) => (
-              <li key={`${row.method} ${row.path}`}>
-                <code>
-                  {row.method} {row.path}
-                </code>
-              </li>
-            ))}
-          </ul>
-        </div>
-      );
-
     case 'experience': {
       const experience = getExperience(content.ref);
       if (!experience) return null;

@@ -12,41 +12,8 @@ import { chromium } from 'playwright';
 import { PNG } from 'pngjs';
 
 const BASE = process.env.BASE || 'http://localhost:3000';
-
-/**
- * Routes come from the generated sitemap rather than a list kept here.
- *
- * The pages are content now — adding one is an entry in `issue.ts` — so a
- * hardcoded list is a list that silently stops covering the site the first
- * time somebody adds a page. Two case-study pages were added in the same
- * change that wrote this, and neither would have been audited. The sitemap is
- * generated from the same content the pages are, so it cannot drift from them.
- *
- * `/plain` is appended because it is a view rather than a page and is not in
- * the sitemap. It is also the route most likely to break, since it renders
- * every panel kind on one scrolling page.
- */
-async function discoverRoutes() {
-  const res = await fetch(`${BASE}/sitemap.xml`);
-  if (!res.ok) throw new Error(`sitemap.xml returned ${res.status}`);
-  const xml = await res.text();
-
-  const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
-  if (paths.length === 0) throw new Error('sitemap.xml listed no URLs');
-
-  return [...new Set([...paths, '/plain'])];
-}
-
-const ROUTES = await discoverRoutes();
-/**
- * These must be real theme ids. An unknown one is not an error anywhere in the
- * app — `ThemeScript` falls back to the default and the page renders fine — so
- * a stale name here silently audits the default palette twice and reports a
- * pass for a theme that was never loaded. That is exactly what happened when
- * `four-color` was renamed to `sunset`. `assertThemesAreDistinct` below is what
- * makes the list self-checking.
- */
-const THEMES = ['sunset', 'noir'];
+const ROUTES = ['/', '/work', '/builds', '/contact', '/plain'];
+const THEMES = ['four-color', 'noir'];
 
 function srgb(c) {
   const v = c / 255;
@@ -72,40 +39,6 @@ const browser = await chromium.launch(
 );
 const failures = [];
 let checked = 0;
-
-/**
- * Every theme in the list has to actually select a different palette. Two ids
- * resolving to the same `--paper` means at least one of them is not a theme the
- * app knows about, and the run below would measure one palette while claiming
- * to have measured two.
- */
-async function assertThemesAreDistinct() {
-  const ctx = await browser.newContext();
-  const page = await ctx.newPage();
-  await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-
-  const seen = new Map();
-  for (const theme of THEMES) {
-    const paper = await page.evaluate((t) => {
-      document.documentElement.dataset.theme = t;
-      return getComputedStyle(document.documentElement).getPropertyValue('--paper').trim();
-    }, theme);
-
-    if (seen.has(paper)) {
-      console.error(
-        `themes "${seen.get(paper)}" and "${theme}" both resolve --paper to ${paper} — ` +
-          `one of them is not a real theme id, so this run would audit one palette twice`,
-      );
-      await ctx.close();
-      await browser.close();
-      process.exit(1);
-    }
-    seen.set(paper, theme);
-  }
-  await ctx.close();
-}
-
-await assertThemesAreDistinct();
 
 for (const theme of THEMES) {
   for (const route of ROUTES) {

@@ -35,12 +35,12 @@ function subscribeToTheme(onChange: () => void) {
 }
 
 function readTheme(): Theme {
-  return document.documentElement.dataset.theme === 'noir' ? 'noir' : 'sunset';
+  return document.documentElement.dataset.theme === 'noir' ? 'noir' : 'four-color';
 }
 
 /** The server cannot know the reader's preference, so it renders the default. */
 function readServerTheme(): Theme {
-  return 'sunset';
+  return 'four-color';
 }
 
 /**
@@ -71,7 +71,7 @@ export function IssueIndex({ pages, plainHref }: IssueIndexProps) {
   };
 
   const toggleTheme = () => {
-    const next: Theme = theme === 'noir' ? 'sunset' : 'noir';
+    const next: Theme = theme === 'noir' ? 'four-color' : 'noir';
     document.documentElement.dataset.theme = next;
     window.dispatchEvent(new Event(THEME_EVENT));
 
