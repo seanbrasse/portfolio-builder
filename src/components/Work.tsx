@@ -993,14 +993,13 @@ function Timeline({
                   onBlur={() => setOpen((current) => (current?.sticky ? current : null))}
                 >
                   <Badge name={join.label} logo={join.logo} />
-                  <span className="timeline-text">
-                    <span className="timeline-name">{join.label}</span>
-                    {/* The role, in the secondary face. Two lines of the same
-                        typeface at the same size read as one wrapped label; the
-                        change of face is what separates the place from the
-                        job. */}
-                    <span className="timeline-role">{join.sub}</span>
-                  </span>
+                  {/* The company, and only the company.
+                      The role used to sit under it permanently, which put four
+                      job titles across a line whose subject is the companies —
+                      and it was already in the tooltip a hover away, so it was
+                      being said twice. One line each keeps the row half as tall
+                      and gives the height back to the cards. */}
+                  <span className="timeline-name">{join.label}</span>
                 </button>
 
                 {/* Flipped past halfway, so a tooltip on a late join opens back

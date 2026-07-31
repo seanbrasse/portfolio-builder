@@ -26,6 +26,13 @@ import { SUPABASE_KEY, SUPABASE_URL } from '@/lib/supabase/config';
  * on a CDN to a function invocation per visitor, to personalise content that is
  * identical for everyone. Public reads are anonymous by definition; the admin
  * has its own client for the requests where identity matters.
+ *
+ * Caching is left to the page, and that is load-bearing in both directions. The
+ * route's `revalidate` governs how long this response is held; the bug being
+ * fixed here was `force-static`, which pinned it forever. Forcing `no-store` to
+ * escape that is the opposite mistake — it was tried, and it turned the page
+ * dynamic, so every visitor paid for a database round trip and the build could
+ * no longer prerender at all.
  */
 function anon() {
   return createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -229,8 +236,27 @@ export async function readIssue(): Promise<Issue | null> {
       supabase.from('testimonials').select('*'),
     ]);
 
-    if (settings.error || !settings.data) return null;
-    if (experiences.error || projects.error || images.error || testimonials.error) return null;
+    /**
+     * Say so, loudly, in the server log.
+     *
+     * The fallback is deliberate — last-known-good copy beats an empty hero —
+     * but a silent one is indistinguishable from success, and a site quietly
+     * serving content from a file while the owner edits a database is the worst
+     * version of this. Whoever is reading the build or function log should be
+     * able to see that it happened and why.
+     */
+    const failed =
+      settings.error ?? experiences.error ?? projects.error ?? images.error ?? testimonials.error;
+
+    if (failed) {
+      console.error('[content] database read failed, falling back to issue.ts:', failed.message);
+      return null;
+    }
+
+    if (!settings.data) {
+      console.error('[content] no settings row, falling back to issue.ts');
+      return null;
+    }
 
     const byProject = new Map<string, Asset[]>();
     for (const row of (images.data ?? []) as ImageRow[]) {
@@ -251,7 +277,11 @@ export async function readIssue(): Promise<Issue | null> {
       // exist would be inventing a requirement.
       metrics: [],
     };
-  } catch {
+  } catch (problem) {
+    console.error(
+      '[content] database unreachable, falling back to issue.ts:',
+      problem instanceof Error ? problem.message : problem,
+    );
     return null;
   }
 }
