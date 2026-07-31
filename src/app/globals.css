@@ -254,6 +254,10 @@ a:hover {
   .screen {
     padding-top: clamp(16px, 3vh, 36px);
   }
+
+  .carousel-stage {
+    --locked: 1;
+  }
 }
 
 .intro h1 {
@@ -566,7 +570,21 @@ a:hover {
   border-radius: var(--radius);
 }
 
+/* The carousel's tunables live here rather than in the component, because all
+   four of them change at a breakpoint and a media query is the only place that
+   can say so. `fit()` and `paint()` read them off this element.
+
+   --spacing        how far apart the cards sit, as a fraction of a card's
+                    width. Under 1 they overlap; at 1 they abut.
+   --card-fraction  how much of the stage's width one card may take.
+   --card-max       the hard ceiling, whatever the arithmetic says.
+   --locked         1 when the one-screen layout is in force. Off it, height is
+                    not a constraint and the card is sized by width alone. */
 .carousel-stage {
+  --spacing: 0.62;
+  --card-fraction: 0.62;
+  --card-max: 700px;
+  --locked: 0;
   position: relative;
   /* Exactly one card tall. The cards are out of flow, so the stage cannot
      shrink-wrap them and the height is measured and written instead. Letting it
@@ -1453,4 +1471,104 @@ a:hover {
   background: var(--accent-a);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-a) 22%, transparent);
   z-index: 2;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+
+   Last in the file on purpose. These override the tunables declared on
+   `.carousel-stage` above, and at equal specificity the later rule wins —
+   sitting these next to the lock query, where they read better, meant the base
+   declarations quietly won and the phone got the desktop's numbers.
+--------------------------------------------------------------------------- */
+
+/* Below the lock. The exact complement of the one-screen query, so there is no
+   band where both apply and none where neither does. Here the page is an
+   ordinary scrolling document: nothing competes for a fixed height, so nothing
+   needs to be bottom-aligned into one. */
+@media (max-width: 899px), (max-height: 759px) {
+  /* Content height, not screen height. Left at 100% the grid keeps trying to
+     fit an intro, a timeline and a card into a viewport that cannot hold all
+     three, and the overflow lands on top of the cards rather than below them. */
+  .screen {
+    height: auto;
+  }
+
+  /* Nothing to push down to. The block starts under the intro and the page
+     scrolls past it. */
+  .work {
+    justify-content: flex-start;
+  }
+
+  .timeline {
+    margin: clamp(10px, 3vw, 20px) 0 8px;
+  }
+
+  /* The cards past the third are laid out and transparent, not absent, so they
+     still push the document's scroll width out — about 300px of empty page to
+     the right at tablet size. The locked layout never showed it because it
+     hides overflow outright.
+
+     `clip` rather than `hidden`: hidden on one axis forces the other to scroll,
+     which would trap the page's own vertical scrolling in a container. */
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
+/* Narrow. A phone: one card at a time rather than three overlapping, and a
+   timeline that keeps its marks and drops its labels — the line is about 350px
+   wide here and "Full-Stack Software Engineer" is half of that on its own. */
+@media (max-width: 640px) {
+  .carousel-stage {
+    /* Cards abut with a sliver of the next showing, instead of stacking on top
+       of each other. At this width an overlap does not read as depth, it reads
+       as three cards printed on top of one another. */
+    --spacing: 1.02;
+    --card-fraction: 0.88;
+  }
+
+  /* Badges only. The names and roles are still in the ordered list beneath the
+     bar — the copy a screen reader was getting all along — so this drops one
+     rendering of the facts, not the facts. */
+  .timeline-text {
+    display: none;
+  }
+
+  /* Room for the ends. The newest project sits at 100% of the line and the
+     cursor is centred on it, so it half-overhangs whatever the line is inset
+     by — at this width the gutter alone left it clipped by the viewport edge. */
+  .timeline {
+    padding-inline: calc(var(--gutter) + 10px);
+  }
+
+  .timeline-year {
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+
+  .timeline-now {
+    font-size: 12px;
+  }
+
+  /* The mark on its own line above the links, rather than wedged beside them
+     and forcing every link to wrap. */
+  .site-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .footer-fine {
+    margin-left: 0;
+  }
+
+  .gallery-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gallery-filters {
+    flex-wrap: wrap;
+  }
 }
