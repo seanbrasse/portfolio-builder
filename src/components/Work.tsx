@@ -1411,6 +1411,20 @@ function useReducedMotion() {
  * loop or autoplay with sound, because a browser will not allow sound without a
  * gesture and a viewer wants to press play rather than have it start silently.
  */
+/**
+ * The last playhead of each card clip, so one that scrolls out of the visible
+ * ring and back resumes instead of starting over.
+ *
+ * A card video unmounts when it leaves the ring — that is the render saving —
+ * and a fresh element would otherwise begin at zero. Recording where it was and
+ * restoring it on the way back is what turns "unmount" into "pause", which is
+ * the difference between resuming and replaying. Module scope so it survives the
+ * unmount; client-only and keyed by clip, so it holds a couple of numbers for
+ * the life of the page. The modal is left out: opening a project to watch it is
+ * a fresh viewing, not a continuation of the muted preview on the card.
+ */
+const clipTime = new Map<string, number>();
+
 function Media({
   shot,
   viewer = false,
@@ -1485,6 +1499,21 @@ function Media({
         loop={!viewer}
         controls={viewer || reduced}
         preload="metadata"
+        /* Record and restore the playhead so a card clip resumes where it was
+           after scrolling out of the ring and back. The modal is exempt — it
+           starts its own viewing. */
+        onTimeUpdate={
+          viewer ? undefined : (event) => clipTime.set(shot.id, event.currentTarget.currentTime)
+        }
+        onLoadedMetadata={
+          viewer
+            ? undefined
+            : (event) => {
+                const el = event.currentTarget;
+                const at = clipTime.get(shot.id);
+                if (at && Number.isFinite(el.duration) && at < el.duration) el.currentTime = at;
+              }
+        }
       />
     );
   }
