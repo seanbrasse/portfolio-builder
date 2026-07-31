@@ -122,7 +122,7 @@ export async function renderOgImage({
             }}
           >
             <div style={{ display: 'flex' }}>{settings.displayName.toUpperCase()}</div>
-            <div style={{ display: 'flex' }}>ISSUE {settings.issueNumber}</div>
+            <div style={{ display: 'flex' }}>{settings.location.toUpperCase()}</div>
           </div>
         </div>
       </div>

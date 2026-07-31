@@ -41,6 +41,13 @@ export type Palette = {
   matteShade: string;
   /** Ink at reduced presence, for rules and secondary text. */
   inkMuted: string;
+  /** A raised surface — cards, the header, chips. */
+  surface: string;
+  /** A recessed one, for an image well or an empty state. */
+  surfaceSunk: string;
+  /** Hairline separators. `ruleStrong` is the one you can actually see. */
+  rule: string;
+  ruleStrong: string;
   /** The three spot colors. In noir these collapse toward one accent. */
   accentA: string;
   accentB: string;
@@ -110,6 +117,10 @@ const fourColor: Palette = {
   matte: '#FBF7EC',
   matteShade: '#2A1D2E',
   inkMuted: '#57514A',
+  surface: '#F7F0E0',
+  surfaceSunk: '#E7DAC3',
+  rule: '#DCCEB4',
+  ruleStrong: '#BFAE90',
   // Deepened from a brighter pillarbox red. As a solid flat it has to carry
   // cream lettering *and* the gold rays crossing behind it, and the brighter
   // value left no headroom once the rays lightened the ground.
@@ -157,7 +168,14 @@ const noir: Palette = {
   // the light should be spent on.
   matte: '#33302B',
   matteShade: '#050506',
-  inkMuted: '#8B867C',
+  // Lifted from the old value. On the comic page this sat over lit panels; on
+  // a plain dark surface it carries most of the secondary copy on the site and
+  // measured under AA at 14px there.
+  inkMuted: '#9A958A',
+  surface: '#1C1C1F',
+  surfaceSunk: '#161618',
+  rule: '#2C2C31',
+  ruleStrong: '#43434A',
   accentA: '#D69A33', // sodium amber — the one spot color
   // Dark enough to take light lettering as a solid flat. A mid steel looked
   // fine as a tint and failed as a ground.
@@ -195,6 +213,10 @@ const CUSTOM_PROPERTY: Record<keyof Palette, string> = {
   matte: '--matte',
   matteShade: '--matte-shade',
   inkMuted: '--ink-muted',
+  surface: '--surface',
+  surfaceSunk: '--surface-sunk',
+  rule: '--rule',
+  ruleStrong: '--rule-strong',
   accentA: '--accent-a',
   accentB: '--accent-b',
   accentC: '--accent-c',

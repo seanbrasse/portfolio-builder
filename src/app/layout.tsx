@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 
-import { IssueIndex } from '@/components/IssueIndex';
+import { SiteHeader } from '@/components/SiteHeader';
 import { ThemeScript } from '@/components/ThemeScript';
-import { TreatmentDefs } from '@/components/TreatmentDefs';
-import { getPages, getSettings } from '@/content';
+import { getSettings } from '@/content';
 import { PALETTES, themeStylesheet } from '@/lib/tokens';
-import { pageHref, siteUrl } from '@/lib/site';
+import { siteUrl } from '@/lib/site';
 
 import './globals.css';
 
@@ -22,7 +21,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
   openGraph: {
     type: 'profile',
-    siteName: `${settings.displayName}, Issue ${settings.issueNumber}`,
+    siteName: settings.displayName,
     title: `${settings.displayName} — Software Engineer`,
     description: settings.ogTagline,
   },
@@ -40,12 +39,6 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const pages = getPages().map((page, index) => ({
-    slug: page.slug,
-    title: page.title,
-    href: pageHref(page.slug, index),
-  }));
-
   return (
     // `data-theme` is written by the inline script below before React sees the
     // document, so the server's markup is intentionally missing it.
@@ -57,17 +50,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeScript />
       </head>
       <body>
-        <a className="skip-link" href="#issue">
+        <a className="skip-link" href="#main">
           Skip to content
         </a>
 
-        <TreatmentDefs />
+        <SiteHeader name={settings.displayName} />
 
-        <main id="issue">{children}</main>
+        <main id="main">{children}</main>
 
-        {/* ACC-9: the plain-text escape hatch is in the rail on every page,
-            not buried in a footer. */}
-        <IssueIndex pages={pages} plainHref="/plain" />
+        <footer className="site-footer">
+          <div className="site-footer-inner">
+            <span>
+              {settings.displayName} · {settings.location}
+            </span>
+            <span>
+              <a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a>
+            </span>
+          </div>
+        </footer>
 
         <Analytics />
       </body>

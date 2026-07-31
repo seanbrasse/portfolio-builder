@@ -1,18 +1,23 @@
 /**
  * ACC-3: measure text contrast in both themes against the *composited*
- * background, not against the token the element nominally sits on. Panels
- * stack a translucent flat and a halftone screen over the paper, so the pixel
- * a reader actually sees is not any single token value.
+ * background, not against the token the element nominally sits on. A card sits
+ * on a surface which sits on the paper, and translucent fills mean the pixel a
+ * reader actually sees is not any single token value.
  *
  * Method: collect every text-bearing element, then make all text transparent
  * and screenshot. Sampling that image at each element's box gives the true
  * background it is drawn over.
+ *
+ * The screenshot is full-page and boxes are in *document* coordinates, because
+ * the site is one long scrolling page. A viewport-sized capture would have
+ * measured the hero and silently skipped everything below the fold, which is
+ * most of the site.
  */
 import { chromium } from 'playwright';
 import { PNG } from 'pngjs';
 
 const BASE = process.env.BASE || 'http://localhost:3000';
-const ROUTES = ['/', '/work', '/builds', '/contact', '/plain'];
+const ROUTES = ['/'];
 const THEMES = ['four-color', 'noir'];
 
 function srgb(c) {
@@ -44,11 +49,8 @@ for (const theme of THEMES) {
   for (const route of ROUTES) {
     const ctx = await browser.newContext({
       viewport: { width: 1280, height: 1000 },
-      // The audit measures the resting state, and the ink-in sequence now
-      // takes well over a second to reach it — a fixed sleep would be a race
-      // that gets re-tuned every time the timing changes. Reduced motion
-      // collapses the entrance to one short fade and lands on the same pixels,
-      // so what is sampled is the finished page by construction.
+      // Nothing on the page animates into place, but reduced motion also
+      // disables smooth scrolling, which keeps the capture deterministic.
       reducedMotion: 'reduce',
     });
     const page = await ctx.newPage();
@@ -72,12 +74,15 @@ for (const theme of THEMES) {
        * pixel and the seen pixel the same thing again.
        */
       const visibleRect = (el) => {
-        let box = el.getBoundingClientRect();
-        box = {
-          left: box.left,
-          top: box.top,
-          right: box.right,
-          bottom: box.bottom,
+        const r = el.getBoundingClientRect();
+        // Document coordinates: the full-page screenshot is the document, not
+        // the viewport, so a viewport-relative box would sample the wrong rows
+        // for anything below the fold.
+        const box = {
+          left: r.left + scrollX,
+          top: r.top + scrollY,
+          right: r.right + scrollX,
+          bottom: r.bottom + scrollY,
         };
         for (let p = el.parentElement; p; p = p.parentElement) {
           const pcs = getComputedStyle(p);
@@ -87,15 +92,15 @@ for (const theme of THEMES) {
             pcs.overflowY !== 'visible';
           if (!clips) continue;
           const pr = p.getBoundingClientRect();
-          box.left = Math.max(box.left, pr.left);
-          box.top = Math.max(box.top, pr.top);
-          box.right = Math.min(box.right, pr.right);
-          box.bottom = Math.min(box.bottom, pr.bottom);
+          box.left = Math.max(box.left, pr.left + scrollX);
+          box.top = Math.max(box.top, pr.top + scrollY);
+          box.right = Math.min(box.right, pr.right + scrollX);
+          box.bottom = Math.min(box.bottom, pr.bottom + scrollY);
         }
         box.left = Math.max(box.left, 0);
         box.top = Math.max(box.top, 0);
-        box.right = Math.min(box.right, innerWidth);
-        box.bottom = Math.min(box.bottom, innerHeight);
+        box.right = Math.min(box.right, document.documentElement.scrollWidth);
+        box.bottom = Math.min(box.bottom, document.documentElement.scrollHeight);
         return box;
       };
 
@@ -105,9 +110,7 @@ for (const theme of THEMES) {
         if (!text) continue;
         const el = node.parentElement;
         if (!el || seen.has(el)) continue;
-        // SFX is aria-hidden decoration with an ink outline; it is not read as
-        // text and the outline is what carries its legibility.
-        if (el.closest('[aria-hidden="true"], .sfx, .sr-only, .skip-link')) continue;
+        if (el.closest('[aria-hidden="true"], .sr-only, .skip-link')) continue;
         const cs = getComputedStyle(el);
         if (cs.visibility === 'hidden' || cs.display === 'none') continue;
         const clipped = visibleRect(el);
@@ -135,6 +138,11 @@ for (const theme of THEMES) {
       return out;
     });
 
+    // The sticky header would otherwise be captured floating over whatever it
+    // happened to be scrolled past, painting its own background across text it
+    // does not actually cover in the reader's view.
+    await page.addStyleTag({ content: '.site-header { position: static !important; }' });
+
     await page.addStyleTag({
       content: `*, *::before, *::after, *::marker {
           color: transparent !important;
@@ -146,7 +154,7 @@ for (const theme of THEMES) {
            list-style none would reflow the page that was just measured. */`,
     });
     await page.waitForTimeout(150);
-    const buf = await page.screenshot({ fullPage: false });
+    const buf = await page.screenshot({ fullPage: true });
     const png = PNG.sync.read(buf);
 
     const pixel = (x, y) => {

@@ -1,79 +1,37 @@
 @import 'tailwindcss';
 
 /* ---------------------------------------------------------------------------
-   Type
-   ---------------------------------------------------------------------------
-   One display face, self-hosted and subset. Swapping in a licensed
-   comic-lettering face means replacing the file below and the OG generator's
-   copy in src/assets, and nothing else — no component names a font family,
-   they all read `--font-display`.
+   Sean Brasse — portfolio
 
-   ACC-5: the display face is used for panel titles, captions, metric values,
-   and SFX. Body copy is never set in it and never in all caps.
+   One scrolling page: who, when, what, how to reach him. The layout is
+   deliberately ordinary, because the content is the thing being shown and a
+   layout that competes with it is a layout that wins an argument nobody
+   wanted to have.
+
+   Color lives in src/lib/tokens.ts and arrives as custom properties. A lint
+   rule fails the build on a hex literal anywhere in src/ outside that file and
+   the OG generator, which is what keeps the dark theme one file's work.
 --------------------------------------------------------------------------- */
 
-@font-face {
-  font-family: 'Display';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  /* Anton, subset to the glyphs this site sets. A condensed poster face: the
-     previous wide grotesque read as horizontally stretched at display sizes,
-     which is the opposite of what a comic headline wants. Small UI labels no
-     longer use this face at all — see `--font-label`. */
-  src: url('/fonts/display.woff2') format('woff2');
-}
-
 :root {
-  --font-display: 'Display', Impact, 'Haettenschweiler', 'Arial Narrow Bold', sans-serif;
-  /* Chips, nav, kickers and plates. A heavy condensed display face is built for
-     headlines and gets muddy at 12px; the body face at 700 is simply easier to
-     read, and small caps do not need the personality. */
-  --font-label: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
-  --font-body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
-  --font-quote: ui-serif, Georgia, 'Times New Roman', serif;
+  --font-body:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
-  /* ---------------------------------------------------------------------
-     Motion (PRD section 9).
+  /* One measure for prose, one for the page. Text that runs the width of a
+     desktop window is text nobody finishes. */
+  --measure: 68ch;
+  --page-max: 1180px;
+  --gutter: clamp(20px, 5vw, 56px);
 
-     Pages carry no entrance animation. They arrive drawn — panels, flats and
-     lettering together — because a staggered reveal put the reader in front of
-     a page that was still assembling itself, and watching an issue write
-     itself is only charming the first time.
+  /* A single spacing scale. Sections are separated by --space-section and
+     nothing else, so the vertical rhythm cannot drift section by section. */
+  --space-section: clamp(64px, 9vw, 120px);
+  --radius: 10px;
 
-     MOTION-2's ink-in and MOTION-3's SFX stamp are therefore not implemented;
-     see the README. What is left is motion a reader asks for: the page turn,
-     and the hover lift on a panel that links somewhere.
-  --------------------------------------------------------------------- */
-  --dur-hover: 140ms;
-  --dur-page: 280ms;
-
-  /* Thin. A 4px slab on every panel and an 11px margin all round is a
-     newsprint convention from a specific decade; a page laid out now runs its
-     panels to the paper edge with a hairline gutter between them. */
-  --border-ink: 3px;
-  --panel-ink: 2px;
-  /* Vertical and horizontal gutters are each one width, and they are not the
-     same width: a row gap has to separate two lines of reading and a column gap
-     only has to separate two columns, so the row gap is the larger.
-
-     Both are measured, not asserted — tests/gaps.mjs samples the painted gap at
-     each end of every adjacent pair on every leaf. Two things have broken it:
-     a slanted band adding its slope to the gap below (see the negative margins
-     further down), and a sub-degree panel tilt, which grew the panel's
-     bounding box and tapers the gutter beside it from 7.5px to 10.4px. */
-  --gutter-col: 9px;
-  --gutter-row: 13px;
-  /* A mounted panel's mat and the shadow it throws. The mat is far wider than
-     the 2px ink of a printed panel because it is doing a different job: an ink
-     rule separates a panel from its neighbour, a mat lifts a panel off the
-     picture behind it. */
-  --mat-width: 7px;
-  --mat-shadow-x: 5px;
-  --mat-shadow-y: 7px;
-  --mat-shadow-blur: 9px;
-  --gutter: var(--gutter-col);
-  --page-max: min(1760px, 95vw);
+  --dur: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
 
   color-scheme: light;
 }
@@ -82,58 +40,70 @@
   color-scheme: dark;
 }
 
-/* ---------------------------------------------------------------------------
-   Base
---------------------------------------------------------------------------- */
-
 * {
   box-sizing: border-box;
 }
 
 html {
-  height: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  height: 100dvh;
-  /* The book is a fixed object and never scrolls; the window does not either.
-     Plain view is a long document, so it scrolls inside <main> instead — see
-     below. Putting the rule here rather than on <html> is what keeps the
-     resume readable. */
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* ACC-7: a focus ring styled as comic ink, so it fits the art direction
-   instead of fighting it. Thick, hard-edged, offset — the same visual
-   grammar as a panel border. */
-:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 3px;
-  border-radius: 1px;
+/* MOTION: everything below is a courtesy, not a mechanism. Nothing on this
+   page requires an animation to reach its resting state. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+p {
+  margin: 0;
 }
 
 a {
-  color: inherit;
+  color: var(--link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
-/* The issue fills the window rather than sitting in the top third of it. */
-main {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  /* The book fills this box exactly and never overflows it. Plain view is
-     taller than the window and scrolls here. */
-  overflow-y: auto;
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 3px;
 }
 
 .skip-link {
@@ -141,12 +111,9 @@ main {
   left: -9999px;
   top: 0;
   z-index: 100;
-  background: var(--accent-c);
-  color: var(--on-accent-c);
+  background: var(--ink);
+  color: var(--paper);
   padding: 10px 16px;
-  font-family: var(--font-display);
-  letter-spacing: 0.06em;
-  border: 3px solid var(--ink);
 }
 
 .skip-link:focus {
@@ -154,1943 +121,569 @@ main {
   top: 8px;
 }
 
-/* ---------------------------------------------------------------------------
-   The page: paper stock with inked panels on it
---------------------------------------------------------------------------- */
+/* Layout ------------------------------------------------------------------ */
 
-/* ---------------------------------------------------------------------------
-   The book
-
-   Each leaf is laid out at a fixed 880x1140 and the whole stage is scaled to
-   fit the window. That is what makes "no scrolling" a property of the layout
-   rather than a rule anyone has to remember: a page cannot overflow a box it
-   was designed inside, and the composition is identical on every screen the
-   way a printed page is.
---------------------------------------------------------------------------- */
-
-.book {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  /* The side padding is the arrow gutter and nothing else. */
-  padding: 10px 60px 8px;
+.shell {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
 }
 
-/* The free area the book has to fit inside, and the thing that gets measured.
-   It carries no padding of its own and the progress line sits outside it, so
-   its box is the real bound rather than one the scale has to be trusted not to
-   overflow — `.book`'s own client box includes the gutter, and scaling against
-   that put the pages underneath the arrows. */
-.book-viewport {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  align-self: stretch;
-  /* Flex, not grid. `transform: scale()` does not shrink the layout box, so
-     the stage is laid out at its full 1140px and is always taller than this
-     container. A grid row auto-sizes to that and starts at the top, leaving
-     `place-items: center` nothing to centre and pushing the pages off the
-     bottom; flex centring overflows in both directions, which is what makes
-     the scaled stage land centred. */
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.section {
+  padding-block: var(--space-section);
+  border-top: 1px solid var(--rule);
 }
 
-.book-stage {
-  position: relative;
-  display: flex;
-  transform-origin: center center;
-  /* The turn is a rotation in depth, so the stage needs a camera. */
-  perspective: 2600px;
+.section:first-of-type {
+  border-top: 0;
 }
 
-.book-leaf {
-  position: relative;
-  width: var(--page-w);
-  height: var(--page-h);
-  flex: 0 0 auto;
-  overflow: hidden;
-  background: var(--paper);
-  border: var(--border-ink) solid var(--ink);
-  /* No margin. Panels run to the paper's edge — a page that frames its grid in
-     a band of blank stock is doing a newsprint thing, and full bleed is most
-     of what separates a page laid out now from one laid out in 1994. */
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 18px 40px rgb(0 0 0 / 22%);
-}
-
-/* Paper is bound at the spine, so the shadow falls toward it. */
-.book-leaf--left:not(:only-child) {
-  border-right-width: calc(var(--border-ink) / 2);
-}
-
-.book-leaf--right:not(:only-child) {
-  border-left-width: calc(var(--border-ink) / 2);
-}
-
-.book-spine {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 26px;
-  transform: translateX(-50%);
-  pointer-events: none;
-  background: linear-gradient(
-    to right,
-    rgb(0 0 0 / 0%) 0%,
-    rgb(0 0 0 / 22%) 42%,
-    rgb(0 0 0 / 28%) 50%,
-    rgb(0 0 0 / 22%) 58%,
-    rgb(0 0 0 / 0%) 100%
-  );
-}
-
-/* The turn.
- *
- * A leaf swinging about the spine with a hard edge, not a curl — the PRD is
- * right that a simulated paper warp reads as a 2011 tablet demo. What makes it
- * read as a *page* rather than a crossfade is that the sheet has two sides and
- * goes all the way over: the page you are leaving is on the front, and the
- * back is the bare stock of the page you are turning to.
- *
- * The duration is set inline from `TURN_MS` in Book.tsx, because the same
- * number decides when the pages are released to ink themselves in. */
-.curl-sheet {
-  position: absolute;
-  top: 0;
-  width: var(--page-w);
-  height: var(--page-h);
-  transform-style: preserve-3d;
-  /* Above both static halves: a turning page occludes whatever it swings over. */
-  z-index: 4;
-  pointer-events: none;
-}
-
-.curl-sheet[data-hinge='left'] {
-  right: 0;
-}
-
-.curl-sheet[data-hinge='right'] {
-  left: 0;
-  /* The mirror image: this leaf pivots on its right edge, so the strips stack
-     from the spine outward in the other direction. */
-  transform: scaleX(-1);
-}
-
-/* One strip. Its rotation is about its inner edge and composes with every
-   strip before it, which is what turns eight flat planes into a curve. */
-.curl-seg {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  transform-origin: left center;
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-
-.curl-window {
-  position: absolute;
-  /* Bled a fraction past the strip's outer edge. A strip is page width over
-     twelve, which does not land on whole pixels, and the rounding left a
-     hairline of background showing down every crease. The sliver is a
-     duplicate of what the next strip draws at its own inner edge, so the bleed
-     costs nothing and the seams close. */
-  inset: 0 -0.7px 0 0;
-  overflow: hidden;
-  backface-visibility: hidden;
-}
-
-.curl-window--back {
-  transform: rotateY(180deg);
-}
-
-/* The page, shifted so this strip's slice of it lands in the window. */
-.curl-page {
-  position: absolute;
-  top: 0;
-  left: var(--shift);
-  width: var(--page-w);
-  height: var(--page-h);
-}
-
-.curl-page--blank {
-  background: var(--paper);
-  border: var(--border-ink) solid var(--ink);
-}
-
-/* Shading. A curve is only legible if the light changes across it — without
-   this the strips read as eight flat cards rather than one bent sheet. */
-.curl-shade {
-  position: absolute;
-  inset: 0;
-  background: var(--shadow-ink);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.curl-sheet[data-hinge='right'] .curl-page {
-  /* Undo the mirror on the content, or the lettering turns backwards. */
-  transform: scaleX(-1);
-}
-
-/* The shadow the lifted leaf throws across the spread. Deepest at the spine,
-   because that is where the paper is closest to the page under it, and it
-   peaks mid-turn when the leaf is standing up. */
-.turn-cast {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  animation-name: cast-fade;
-  animation-timing-function: ease-in-out;
-  animation-fill-mode: both;
-}
-
-.turn-cast[data-cast='left'] {
-  background: linear-gradient(to right, rgb(0 0 0 / 30%), rgb(0 0 0 / 0%) 46%);
-}
-
-.turn-cast[data-cast='right'] {
-  background: linear-gradient(to left, rgb(0 0 0 / 30%), rgb(0 0 0 / 0%) 46%);
-}
-
-@keyframes cast-fade {
-  0%,
-  100% {
-    opacity: 0;
-  }
-
-  46% {
-    opacity: 1;
-  }
-}
-
-.book-turn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 42px;
-  height: 78px;
-  display: grid;
-  place-items: center;
-  font-size: 30px;
-  line-height: 1;
-  color: var(--ink);
-  background: var(--paper-lit);
-  border: 3px solid var(--ink);
-  cursor: pointer;
-  z-index: 5;
-}
-
-/* Anchored to the edges of the open book, not the edges of the screen. The
-   stage is centred in the viewport, so half its rendered width out from the
-   centre is exactly the paper's edge — and `--stage-w` changes with both the
-   fit scale and whether one leaf is showing or two, so the arrows follow the
-   book instead of sitting a hand's width away from it on a wide monitor. */
-.book-turn--back { right: calc(50% + var(--stage-w, 0px) / 2 + 14px); }
-.book-turn--next { left: calc(50% + var(--stage-w, 0px) / 2 + 14px); }
-
-.book-turn:disabled {
-  opacity: 0.28;
-  cursor: default;
-}
-
-.book-turn:not(:disabled):hover {
-  background: var(--accent-c);
-  color: var(--on-accent-c);
-}
-
-.book-progress {
-  flex: 0 0 auto;
-  margin: 0;
-  color: var(--ink);
-  font-family: var(--font-label);
+/* The label above each section. Set small and wide rather than large, so the
+   section's actual content is the biggest thing in it. */
+.section-label {
+  font-size: 12px;
   font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-@media (max-width: 899px) {
-  /* No arrow gutter, because there are no arrows. Width is the only thing
-     limiting how large a page can be drawn on a phone, so 84px of chrome down
-     the sides was costing more than any other single rule here: giving it back
-     is most of the difference between a postcard and a page. */
-  .book {
-    padding: 6px 6px 2px;
-  }
-
-  /* Turning is a swipe, which is how a phone turns anything. Two tap targets
-     hovering over the paper to do what the paper already does is chrome the
-     format can spend elsewhere. `display: none` rather than hiding it: an
-     invisible but focusable button is worse than no button. */
-  .book-turn {
-    display: none;
-  }
-
-  .book-progress {
-    font-size: 10px;
-  }
-}
-
-.comic-page {
-  /* The containing block for the breakout layer, which is placed in page
-     percentages against this box. */
-  position: relative;
-  display: grid;
-  flex: 1 1 auto;
-  min-height: 0;
-  column-gap: var(--gutter-col);
-  row-gap: var(--gutter-row);
-  background: var(--paper);
-}
-
-/* The caption box sits *on* the art rather than above it, which is where a
-   comic has always put it — and with the page full bleed there is no longer a
-   band of blank stock for it to sit in. */
-.page-caption {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  z-index: 4;
-  margin: 0;
-  background: var(--accent-c);
-  color: var(--on-accent-c);
-  border: 2px solid var(--ink);
-  padding: 5px 11px;
-  font-family: var(--font-display);
-  font-size: 15px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-/* ---------------------------------------------------------------------------
-   The cover
-
-   G1 lives here: the one page every visitor sees has to answer who he is, what
-   he does, and whether he is reachable, before anyone turns anything.
---------------------------------------------------------------------------- */
-
-.cover {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--accent-b);
-  border: var(--panel-ink) solid var(--ink);
-  padding: 44px 40px 36px;
-  color: var(--on-accent-b);
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.cover-screen {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image: radial-gradient(var(--on-accent-b) 1.6px, transparent 1.7px);
-  background-size: 9px 9px;
-  opacity: 0.12;
-}
-
-.cover-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  padding-bottom: 14px;
-  border-bottom: 4px solid var(--on-accent-b);
-}
-
-.cover-lockup {
-  margin-top: auto;
-  margin-bottom: auto;
-}
-
-.cover-name {
-  font-family: var(--font-display);
-  font-size: 116px;
-  line-height: 0.9;
-  letter-spacing: -0.015em;
-  margin: 0;
-  color: var(--accent-c);
-  text-shadow: 6px 6px 0 var(--shadow-ink);
-}
-
-.cover-role {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 19px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  margin: 20px 0 0;
+  color: var(--ink-muted);
+  margin-bottom: 28px;
 }
 
-.cover-tagline {
-  font-family: var(--font-body);
-  font-size: 25px;
-  line-height: 1.35;
-  max-width: 22ch;
-  margin: 22px 0 0;
+.prose {
+  max-width: var(--measure);
 }
 
-/* The corner flash a cover puts its shout in. */
-.cover-flash {
-  position: absolute;
-  top: 118px;
-  right: -30px;
-  transform: rotate(10deg);
-  background: var(--accent-a);
-  color: var(--on-accent);
-  border: 4px solid var(--ink);
-  padding: 11px 44px;
-  font-family: var(--font-display);
-  font-size: 22px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+/* Header ------------------------------------------------------------------ */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule);
 }
 
-.cover-foot {
-  border-top: 4px solid var(--on-accent-b);
-  padding-top: 18px;
-}
-
-.cover-blurb {
-  font-family: var(--font-body);
-  font-size: 17px;
-  line-height: 1.5;
-  margin: 0;
-  max-width: 46ch;
-}
-
-.cover-turn {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin: 14px 0 0;
-  color: var(--on-accent-b);
-}
-
-/* ---------------------------------------------------------------------------
-   Panels
-
-   Four stacked layers, drawn in the order a comic page is actually made:
-   border ink, flat fill, halftone screen, lettering.
---------------------------------------------------------------------------- */
-
-.panel {
-  position: relative;
-  isolation: isolate;
-  min-height: 0;
-  /* The ink plate. The border is this showing past the paper plate laid on
-     top, which is the only way an edge can follow a shape that is not a
-     rectangle — a clip-path takes no border. */
-  background: var(--ink);
-  padding: 0;
-  overflow: hidden;
-  clip-path: var(--shape, none);
-  /* A printing skew, not a fan. Under a degree, so the page reads as laid up
-     by hand rather than as a broken grid. */
-  transform: rotate(var(--tilt, 0deg));
-}
-
-.panel-plate {
-  position: absolute;
-  inset: var(--panel-ink);
-  z-index: 0;
-  background: var(--paper-lit);
-  clip-path: var(--shape, none);
-  pointer-events: none;
-}
-
-/* ---------------------------------------------------------------------------
-   Mounted panels
-
-   The other way to frame a panel, and the one that separates a page laid out
-   now from a page laid out in 1994. An inked panel is *printed into* the page:
-   a black rule, flush against its neighbours, sharing a gutter. A mounted panel
-   is *laid on* the page, like a photograph dropped on a painting — a cream mat,
-   a shadow onto whatever is underneath, and no obligation to line up with
-   anything.
-
-   The three parts are one mode, not three options. A mat with no shadow is a
-   thick white border; a shadow with nothing under it falls on paper and reads
-   as a mistake. Mounting is only meaningful over a bleed panel, which is why
-   `.comic-page` turns it on for its own children rather than the panel opting
-   in alone.
-
-   `filter: drop-shadow` rather than `box-shadow`, because these panels are
-   clipped: a box-shadow is cast by the border box and would draw a rectangle
-   around a panel whose visible edge is a polygon. drop-shadow follows the
-   composited silhouette, so it follows the clip.
---------------------------------------------------------------------------- */
-
-.panel[data-frame='mat'] {
-  --panel-ink: var(--mat-width);
-  background: var(--matte);
-  filter: drop-shadow(var(--mat-shadow-x) var(--mat-shadow-y) var(--mat-shadow-blur)
-    color-mix(in srgb, var(--matte-shade) 62%, transparent));
-}
-
-/* A mounted panel is over the art, so it needs its own stacking above the
-   bleed panel — which sits at z-index 0 — without each one needing a `layer`. */
-.comic-page > .panel[data-frame='mat'] {
-  z-index: 2;
-}
-
-/* A panel that *is* the page rather than one laid on it. No mat, no rule: the
-   establishing shot has nothing to be separated from, because there is nothing
-   beside it. */
-.panel[data-frame='none'] {
-  --panel-ink: 0px;
-  background: transparent;
-}
-
-/* ---------------------------------------------------------------------------
-   The mounted rail
-
-   Tilt comes back here, and only here. The reason it was removed is that a
-   rotated panel's bounding box is larger than the panel and the grid lays out
-   the box, so a tilted panel narrows the gutter it shares with its neighbour.
-   These panels share no gutter with anything — they are lying on a picture, and
-   the gaps between them are that picture. Out-of-parallel is the point.
-
-   The angles are per position rather than authored per panel. A page where
-   every mount is hand-angled is a page where adding a panel means re-tuning
-   the ones around it.
---------------------------------------------------------------------------- */
-
-.comic-page[data-template='splash-rail'] > .panel[data-frame='mat'] {
-  /* Mounted panels overlap each other and hang off the paper, which is what
-     stops the rail reading as a column of four equal things. */
-  margin-right: -22px;
-  margin-left: -14px;
-}
-
-.comic-page[data-template='splash-rail'] > .panel[data-frame='mat']:nth-of-type(2) {
-  --tilt: -1.1deg;
-}
-
-.comic-page[data-template='splash-rail'] > .panel[data-frame='mat']:nth-of-type(3) {
-  --tilt: 0.8deg;
-  margin-top: -16px;
-  margin-left: -30px;
-}
-
-.comic-page[data-template='splash-rail'] > .panel[data-frame='mat']:nth-of-type(4) {
-  --tilt: -0.6deg;
-  margin-top: -12px;
-  margin-left: -6px;
-}
-
-.comic-page[data-template='splash-rail'] > .panel[data-frame='mat']:nth-of-type(5) {
-  --tilt: 1.3deg;
-  margin-top: -18px;
-  margin-left: -34px;
-}
-
-/* The splash runs the whole leaf, so its copy has to be told where the rail
-   starts — otherwise the page's lead paragraph sets underneath four mounted
-   panels. This is the one place a template's proportions leak into the type,
-   and it is why the number lives beside the template it belongs to. */
-.comic-page[data-template='splash-rail'] > .panel[data-bleed='page'] .panel-body {
-  padding-right: 46%;
-}
-
-/* The splash is the whole page now, so the lockup stops being a panel's worth
-   of copy and becomes the page's title treatment: the name at display size,
-   the strap under it, and the lead paragraph set to a readable measure rather
-   than to whatever the panel left over. The corner box drops to the bottom of
-   the picture, which is where a cover puts it. */
-.comic-page[data-template='splash-rail'] .hero-layout {
-  flex-wrap: nowrap;
-  flex-direction: column;
+.site-header-inner {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 12px var(--gutter);
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 0;
+  gap: 16px;
 }
 
-.comic-page[data-template='splash-rail'] .hero-lockup {
-  flex: 0 0 auto;
-  justify-content: flex-start;
+.site-mark {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
 }
 
-.comic-page[data-template='splash-rail'] .hero-lockup .panel-title {
-  font-size: 92px;
-  line-height: 0.86;
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.comic-page[data-template='splash-rail'] .hero-lockup .panel-prose {
-  max-width: 40ch;
+.site-nav a {
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 6px;
 }
 
-/* The lead paragraph is prose, not the cover line, so it is set at reading
-   size rather than at the tagline's 19px. */
-.comic-page[data-template='splash-rail'] .hero-body {
-  font-size: 15px;
-  line-height: 1.5;
+.site-nav a:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+/* Below this the nav labels crowd the theme toggle off the line. The sections
+   are still reachable by scrolling, which is the only thing the nav does. */
+@media (max-width: 620px) {
+  .site-nav a {
+    display: none;
+  }
+}
+
+.theme-toggle {
+  font: inherit;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--ink-muted);
+}
+
+.theme-toggle-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent-a);
+}
+
+/* Hero -------------------------------------------------------------------- */
+
+.hero {
+  padding-block: clamp(56px, 11vw, 128px) var(--space-section);
+}
+
+.hero h1 {
+  font-size: clamp(40px, 7.5vw, 76px);
+  letter-spacing: -0.035em;
+}
+
+.hero-role {
+  font-size: clamp(17px, 2.2vw, 21px);
+  color: var(--ink-muted);
   margin-top: 14px;
 }
 
-.comic-page[data-template='splash-rail'] .cover-box {
-  flex: 0 0 auto;
-  align-self: flex-start;
-}
-
-/* A graded sky, which is the other half of not looking like 1994.
- *
- * Every other flat in this system is one value laid down at one strength,
- * because that is what spot-color printing could do. A splash is the one place
- * that is worth breaking: the reference for this layout is a painted sunset,
- * and a painted ground is the difference between a picture and a colored
- * rectangle.
- *
- * It grades downward, away from the copy. The lead paragraph and the name sit
- * in the top half, so the saturated end is kept below them and the type keeps
- * the near-paper value it was measured against — a gradient behind body copy
- * means the contrast ratio is different at the top of the paragraph than at the
- * bottom, and the audit samples the composited pixel behind each glyph.
- */
-.comic-page[data-template='splash-rail'] > .panel[data-bleed='page'] .panel-fill {
-  opacity: 1;
-  background: linear-gradient(
-    to bottom,
-    var(--paper-lit) 0%,
-    var(--paper-lit) 38%,
-    color-mix(in srgb, var(--accent-c) 26%, var(--paper-lit)) 62%,
-    color-mix(in srgb, var(--accent-a) 34%, var(--paper-lit)) 86%,
-    color-mix(in srgb, var(--accent-b) 30%, var(--paper-lit)) 100%
-  );
-}
-
-/* The skyline is the picture on a splash, not a watermark behind a panel, so
-   it is drawn at strength and sized to the page rather than to a hero band. */
-.comic-page[data-template='splash-rail'] .skyline {
-  opacity: 0.42;
-  width: 116%;
-  left: -8%;
-  right: auto;
-}
-
-/* ---------------------------------------------------------------------------
-   Panel shapes
-
-   A comic page is not a grid of rectangles: edges cant, panels lean, gutters
-   run diagonally. Each shape is a polygon on the panel box, and both plates
-   take the same one, so the ink edge follows whatever the outline does.
-
-   Percentages resolve against each plate's own box, so the inner polygon comes
-   out very slightly narrower than a true parallel offset would be. At a 4px
-   ink weight on a 400px panel that error is under a tenth of a pixel, and
-   computing exact edge normals in CSS would cost far more than it buys.
---------------------------------------------------------------------------- */
-
-.panel[data-shape='canted'] {
-  --cut: 38px;
-  --shape: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
-}
-
-/* Leaning panels. The gutter between two of these is a diagonal, which is what
-   makes a page read as laid out rather than tabulated. */
-.panel[data-shape='lean-r'] {
-  --lean: 34px;
-  --shape: polygon(var(--lean) 0, 100% 0, calc(100% - var(--lean)) 100%, 0 100%);
-}
-
-.panel[data-shape='lean-l'] {
-  --lean: 34px;
-  --shape: polygon(0 0, calc(100% - var(--lean)) 0, 100% 100%, var(--lean) 100%);
-}
-
-/* Slanted bands.
- *
- * Both edges slope the same way, which is the whole trick: the band is a
- * parallelogram, so its vertical extent is identical at every x and it loses
- * no height to the slant. Give a run of bands the same shape and every gutter
- * between them is a parallel diagonal, which is what a modern page does with a
- * stack of horizontals.
- *
- * The first attempt sloped one edge only, and before that both edges in
- * opposite directions. Opposite edges taper the band and clip its last line at
- * both ends; a single edge costs half as much and still costs. Parallel edges
- * cost nothing, so the slant can be bold enough to actually read.
- */
-.panel[data-shape='band-up'] {
-  --slope: 14px;
-  --shape: polygon(0 var(--slope), 100% 0, 100% calc(100% - var(--slope)), 0 100%);
-}
-
-.panel[data-shape='band-down'] {
-  --slope: 14px;
-  --shape: polygon(0 0, 100% var(--slope), 100% 100%, 0 calc(100% - var(--slope)));
-}
-
-/* A slanted band is grown by the slant it is about to cut off.
- *
- * Without this the gutter between two stacked bands is `row-gap + slope` while
- * the gutter beside them is `column-gap` — the slant silently widens every
- * horizontal gap on the page and the gutters stop being one width. Growing the
- * box by half a slant at each end and then cutting the same amount back off
- * with the polygon lands the painted edges exactly on the grid row, so the
- * visible gutter is the gap and nothing else, at both ends of the band.
- */
-.panel[data-shape='band-up'],
-.panel[data-shape='band-down'] {
-  margin-top: calc(var(--slope) / -2);
-  margin-bottom: calc(var(--slope) / -2);
-}
-
-/* ...but only where there is a gutter to cancel.
- *
- * The page edge is not a gutter, so the outermost bands keep their half slant
- * and are pulled off the paper by it. That is invisible at the bottom and not
- * at the top: it lifts the first band's copy into the caption box, which is
- * absolutely positioned on the leaf and does not move with it. The four
- * failures that caught were the meta line reading on caption yellow.
- *
- * Zeroing the outer margins is the fix that costs no copy height. Padding the
- * first band down by the same amount would also clear the caption, and would
- * take the clearance out of the band that carries the most bullets on the page.
- */
-.comic-page > .panel:first-of-type {
-  margin-top: 0;
-}
-
-.comic-page > .panel:last-of-type {
-  margin-bottom: 0;
-}
-
-/* The full slant at each end, not half of it.
- *
- * A parallel band keeps a constant vertical *extent*, which is why it can be
- * slanted harder than a tapering one — but a full-width line of copy does not
- * live in the extent, it lives in the largest axis-aligned rectangle that fits
- * inside the parallelogram, and that rectangle is bounded by the top edge at
- * its lowest (the left end) and the bottom edge at its highest (the right).
- * Both are a full slant in. Half of it is the average and sliced the last
- * bullet on the widest band. */
-.panel[data-shape='band-up'] .panel-body,
-.panel[data-shape='band-down'] .panel-body {
-  padding-top: calc(14px + var(--slope));
-  padding-bottom: calc(14px + var(--slope));
-}
-
-.panel-fill,
-.panel-screen {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-/* ACC-3: the worst-case pixel behind a glyph is a halftone dot sitting on a
-   flat, not the flat itself. These weights are set from that measurement — see
-   the contrast audit in tests/. */
-.panel-fill {
-  opacity: 0.16;
-}
-
-.panel[data-accent='a'] .panel-fill {
-  background: var(--accent-a);
-}
-
-.panel[data-accent='b'] .panel-fill {
-  background: var(--accent-b);
-}
-
-.panel[data-accent='c'] .panel-fill {
-  background: var(--accent-c);
-  opacity: 0.24;
-}
-
-/* The halftone. Never above 0.3 — past that it stops reading as a printing
-   artifact and starts reading as a texture overlay. */
-.panel-screen {
-  /* Finer and fainter than it was. The dots stay — they are the paper's
-     texture and worth keeping — but at a 6px pitch they read as Ben-Day, which
-     dates the page to the decade this is trying not to look like. At 3.5px
-     they read as print grain. */
-  background-image: radial-gradient(var(--screen) 0.8px, transparent 0.9px);
-  background-size: 3.5px 3.5px;
-  opacity: 0.16;
-  /* Concentrated at the edges and cleared through the middle. A flat screen
-     across the whole panel puts a dot behind every glyph, which is legible by
-     the numbers and still tiring to read. A screen that fades inward is also
-     closer to how a flat was actually laid down. */
-  -webkit-mask-image: radial-gradient(ellipse 78% 74% at 50% 50%, transparent 0 34%, black 88%);
-  mask-image: radial-gradient(ellipse 78% 74% at 50% 50%, transparent 0 34%, black 88%);
-}
-
-.panel-body {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 16px 18px;
-  min-height: 0;
-}
-
-/* MOTION-5: hover lifts the hard drop shadow 2px. No blur, no scale, no glow. */
-@media (hover: hover) {
-  .panel[data-interactive='true'] {
-    transition:
-      transform var(--dur-hover) ease-out,
-      box-shadow var(--dur-hover) ease-out;
-  }
-
-  .panel[data-interactive='true']:hover,
-  .panel[data-interactive='true']:focus-within {
-    transform: rotate(var(--tilt, 0deg)) translate(-2px, -2px);
-    box-shadow: 6px 6px 0 var(--ink);
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   Panel lettering
---------------------------------------------------------------------------- */
-
-.panel-kicker {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--ink);
-  opacity: 0.75;
-  margin: 0 0 6px;
-}
-
-.panel-title {
-  font-family: var(--font-display);
-  font-size: 34px;
-  line-height: 1.05;
-  letter-spacing: -0.01em;
-  margin: 0 0 4px;
-  color: var(--ink);
-}
-
-.panel-title--accent {
-  color: var(--title-accent);
-}
-
-/* Set in ink rather than an accent. At 14px no spot color in either palette
-   clears 4.5:1 against a halftone dot, and the PRD is explicit that
-   accessibility is the non-negotiable side of that trade. The display face and
-   the letterspacing carry the emphasis instead. */
-.panel-subtitle {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink);
-  margin: 0 0 8px;
-}
-
-.panel-prose {
-  font-family: var(--font-body);
-  font-size: 14.5px;
-  line-height: 1.5;
-  margin: 0;
-  color: var(--ink);
-  max-width: 60ch;
-}
-
-.panel-bullets {
-  list-style: none;
-  margin: 9px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 5px;
-}
-
-.panel-bullets li {
-  position: relative;
-  padding-left: 18px;
-  font-size: 13.5px;
-  line-height: 1.42;
-}
-
-.panel-bullets li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.55em;
-  width: 9px;
-  height: 9px;
-  background: var(--accent-a);
-  border: 2px solid var(--ink);
-}
-
-.panel-foot {
-  margin-top: auto;
-  padding-top: 10px;
-}
-
-/* An experience band: the copy, and the thing that shipped beside it.
-   Falls back to a single column when there is no media, so a band without a
-   screenshot is not a half-empty two-column layout. */
-.experience-layout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 26px;
-  width: 100%;
-  height: 100%;
-}
-
-.experience-copy {
-  flex: 1 1 28rem;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.experience-media {
-  flex: 1 1 22rem;
-  min-width: 0;
-  display: flex;
-}
-
-.experience-media .panel-image-frame {
-  width: 100%;
-  min-height: 200px;
-}
-
-/* The skyline sits behind the whole hero panel, bleeding off the bottom edge
-   the way a background plate would. Ink at low strength: present enough to set
-   the place, quiet enough that the lockup still reads as the subject. */
-.skyline {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  /* Auto, not a percentage: the viewBox aspect ratio sizes the box, so `meet`
-     has nothing left to crop and a spire can never be sliced off the top. */
-  height: auto;
-  /* Negative rather than 0. At 0 this is a positioned element and would paint
-     above the in-flow lockup beside it — the same trap the ray layer fell into
-     over the metric label. */
-  z-index: -1;
-  color: var(--ink);
-  opacity: 0.2;
-  pointer-events: none;
-}
-
-.skyline path {
-  fill: none;
-  stroke: currentColor;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
-.skyline-profile {
-  stroke-width: 4;
-}
-
-.skyline-detail {
-  stroke-width: 2.5;
-}
-
-/* Hero: the name lockup, plus the corner box a comic cover carries its issue
-   number in. Without a second column a full-width hero is mostly dead paper,
-   which reads as an unfinished layout rather than a quiet one. */
-.hero-layout {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  width: 100%;
-  height: 100%;
-}
-
-.hero-lockup {
-  position: relative;
-  z-index: 1;
-  flex: 1 1 22rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-/* The cover line is the one piece of prose that gets to be large. At the
-   body size it left the widest panel on the site mostly empty. */
-.hero-lockup .panel-prose {
-  font-size: 19px;
+.hero-tagline {
+  font-size: clamp(19px, 2.6vw, 24px);
   line-height: 1.45;
-  max-width: 34ch;
-  margin-top: 6px;
+  margin-top: 28px;
+  max-width: 26ch;
 }
 
-.hero-lockup .panel-title {
-  font-size: 54px;
+.hero-body {
+  margin-top: 20px;
+  color: var(--ink-muted);
+  max-width: var(--measure);
 }
 
-.cover-box {
-  position: relative;
-  z-index: 1;
-  flex: 0 1 17rem;
-  border: 4px solid var(--ink);
-  background: var(--paper);
-  padding: 14px 16px;
-}
-
-.cover-box-label {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink);
-  opacity: 0.75;
-  margin: 0 0 1px;
-}
-
-.cover-box-value {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 16px;
-  line-height: 1.2;
-  margin: 0 0 12px;
-  color: var(--ink);
-}
-
-.tech-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.tech-list li {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  border: 2px solid var(--ink);
-  padding: 2px 7px;
-  background: var(--paper);
-}
-
-.impact-flag {
-  display: inline-block;
-  background: var(--accent-a);
-  color: var(--on-accent);
-  border: 2px solid var(--ink);
-  padding: 4px 9px;
-  font-family: var(--font-display);
-  font-size: 13px;
-  letter-spacing: 0.05em;
-  margin-bottom: 10px;
-}
-
-.panel-links {
+.hero-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 36px;
 }
 
-.panel-link {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-decoration: none;
-  border-bottom: 3px solid var(--accent-a);
-  padding-bottom: 1px;
-}
-
-.panel-link:hover {
-  border-bottom-color: var(--ink);
-}
-
-/* Metric panels: the one number, set as large as the panel allows. Radial
-   speed lines behind it, which is the one place the art direction gets to be
-   loud without spending the page's single SFX. */
-.metric-panel .panel-body {
+.button {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  text-align: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
-/* Ink numerals with a hard accent shadow, rather than accent numerals with an
-   ink outline. Both are honest comic lettering; only one of them passes AA on
-   its own, since an outline is not something WCAG gives credit for. */
-.metric-value {
-  font-family: var(--font-display);
-  font-size: 62px;
-  line-height: 0.98;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-  text-shadow: 3px 3px 0 var(--metric-shadow);
-  margin: 0;
-}
-
-.metric-label {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  margin: 8px 0 0;
-  color: var(--ink);
-}
-
-.speed-lines {
-  position: absolute;
-  inset: 0;
-  /* Negative, and the sign matters. At z-index 0 this is a positioned element,
-     so it paints above the in-flow lettering beside it — including the ink
-     plate behind the metric label, which meant the rays landed on top of the
-     very thing meant to protect that label. Negative puts the layer behind
-     in-flow content while still above `.panel-body`'s own transparent
-     background, so it stays over the panel's flat and under every glyph. */
-  z-index: -1;
-  opacity: 0.28;
-  pointer-events: none;
-  /* Opt-in. Three bursting panels in a row is three focal points, which is
-     none — the reference page spends this once. */
-  display: none;
-}
-
-.panel[data-rays='true'] .speed-lines {
-  display: block;
-}
-
-/* ---------------------------------------------------------------------------
-   Solid flats
-
-   A page of tinted washes reads as beige. These are the loud panels: the flat
-   at full strength with the lettering inverted on top.
-
-   Counter-intuitively this is the *easier* case for contrast. Dark type over a
-   pale wash plus a halftone dot was the combination that failed the audit;
-   light type on a saturated flat clears AA with room to spare, which is why
-   comics have always lettered this way.
---------------------------------------------------------------------------- */
-
-.panel[data-fill='solid'] .panel-fill {
-  opacity: 1;
-}
-
-/* No halftone on a solid flat. The reference page does the same, and the
-   reason is contrast rather than taste: whichever way the dots are tinted they
-   drag the ground toward one of the two type colors, and the worst-case pixel
-   behind a glyph is what the audit measures. Rays carry the texture instead. */
-.panel[data-fill='solid'] .panel-screen {
-  display: none;
-}
-
-.panel[data-fill='solid'][data-accent='a'] .panel-title,
-.panel[data-fill='solid'][data-accent='a'] .panel-subtitle,
-.panel[data-fill='solid'][data-accent='a'] .panel-kicker,
-.panel[data-fill='solid'][data-accent='a'] .panel-prose,
-.panel[data-fill='solid'][data-accent='a'] .metric-value,
-.panel[data-fill='solid'][data-accent='a'] .panel-bullets li {
+.button[data-variant='primary'] {
+  background: var(--accent-a);
   color: var(--on-accent);
 }
 
-.panel[data-fill='solid'][data-accent='b'] .panel-title,
-.panel[data-fill='solid'][data-accent='b'] .panel-subtitle,
-.panel[data-fill='solid'][data-accent='b'] .panel-kicker,
-.panel[data-fill='solid'][data-accent='b'] .panel-prose,
-.panel[data-fill='solid'][data-accent='b'] .metric-value,
-.panel[data-fill='solid'][data-accent='b'] .panel-bullets li {
-  color: var(--on-accent-b);
+.button[data-variant='primary']:hover {
+  background: color-mix(in srgb, var(--accent-a) 85%, var(--ink));
 }
 
-.panel[data-fill='solid'][data-accent='c'] .panel-title,
-.panel[data-fill='solid'][data-accent='c'] .panel-subtitle,
-.panel[data-fill='solid'][data-accent='c'] .panel-kicker,
-.panel[data-fill='solid'][data-accent='c'] .panel-prose,
-.panel[data-fill='solid'][data-accent='c'] .metric-value,
-.panel[data-fill='solid'][data-accent='c'] .panel-bullets li {
-  color: var(--on-accent-c);
-}
-
-.panel[data-fill='solid'] .tech-list li,
-.panel[data-fill='solid'] .cover-box {
-  background: var(--paper-lit);
+.button[data-variant='ghost'] {
+  border-color: var(--rule-strong);
   color: var(--ink);
+  background: transparent;
 }
 
-/* The hard offset is dropped on a solid ground. It has to contrast with the
-   numeral, the numeral flips per accent and per theme, and there is no one
-   value that works for all six combinations — 82px of inverted display type
-   carries the panel without it. */
-.panel[data-fill='solid'] .metric-value {
-  text-shadow: none;
+.button[data-variant='ghost']:hover {
+  background: var(--surface);
 }
 
-/* Radiating rays instead of a flat ground, as on the reference page. The
-   rays burst behind the numeral and fade out above the label. That is the
-   right composition anyway — the label wants clear ground — and it is also
-   what makes the contrast work, since rays crossing behind 15px lettering
-   lighten the worst-case pixel under it. */
-/* Rays radiate *around* the lettering, not through it.
-   Two earlier attempts failed for the same underlying reason: a ray crossing a
-   glyph sets that glyph's worst-case background, so any opacity high enough to
-   read as gold rather than olive also pushed the numeral under 3:1. Clearing an
-   ellipse in the middle removes the overlap instead of trading against it,
-   which lets the rays go nearly opaque — and a starburst breaking out from
-   behind the number is the composition the reference page uses anyway. */
-.panel[data-fill='solid'] .speed-lines {
-  opacity: 0.9;
-  -webkit-mask-image: radial-gradient(
-    ellipse 62% 56% at 50% 50%,
-    transparent 0 50%,
-    black 62%
-  );
-  mask-image: radial-gradient(ellipse 62% 56% at 50% 50%, transparent 0 50%, black 62%);
+/* The availability line. A fact a recruiter is scanning for, so it is a
+   labelled statement rather than a badge with a color and no words. */
+.availability {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  color: var(--ink-muted);
+  margin-bottom: 24px;
 }
 
-/* The label gets its own plate rather than sitting on the flat. It is
-   deliberately absent from the per-accent color rules above — the plate owns
-   both its background and its lettering, and those rules are more specific, so
-   listing it there would win and paint ink on ink. */
-/* (Continued.) The reason for the plate:
-   Chasing this with ray opacity and a mask gradient was the wrong fix: the
-   label's ground then depends on the accent, the ray color, and exactly where
-   the text lands, and it went back under AA the moment any of the three moved.
-   Ink-on-plate is one rule that holds for every accent in both themes, and it
-   reads as the caption box under a panel, which is where a comic would put
-   it anyway. */
-.panel[data-fill='solid'] .metric-label {
-  align-self: center;
-  background: var(--ink);
-  color: var(--paper-lit);
-  border: 2px solid var(--ink);
-  padding: 3px 10px;
-  margin-top: 8px;
-  /* The plate extends past its own box. Rays run right up to the lettering,
-     and a plate that stops exactly at the text leaves the outer edge of each
-     glyph sitting on gold. */
-  box-shadow: 0 0 0 7px var(--ink);
+.availability-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-b);
+  flex: none;
 }
 
-.metric-label-text {
-  display: block;
-}
+/* Timeline ---------------------------------------------------------------- */
 
-.speed-lines polygon {
-  fill: var(--ink);
-}
-
-.panel[data-fill='solid'] .speed-lines polygon {
-  fill: var(--accent-c);
-}
-
-.panel[data-fill='solid'][data-accent='c'] .speed-lines polygon {
-  fill: var(--ink);
-}
-
-/* Speech balloons. The tail is a rotated square rather than an SVG path so it
-   inherits the border and fill without a second set of tokens. */
-.balloon {
+/* A list with a rule down the left and a marker per role. It is a `ol` because
+   the order is the meaning: this is a sequence in time, and a screen reader
+   should say so without needing the rule to be described. */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   position: relative;
-  background: var(--balloon);
-  border: 4px solid var(--ink);
-  border-radius: 22px;
-  padding: 18px 20px;
-  font-family: var(--font-quote);
-  font-size: 16.5px;
-  line-height: 1.5;
 }
 
-.balloon::after {
+.timeline::before {
   content: '';
   position: absolute;
-  left: 34px;
-  bottom: -13px;
-  width: 20px;
-  height: 20px;
-  background: var(--balloon);
-  border-right: 4px solid var(--ink);
-  border-bottom: 4px solid var(--ink);
-  transform: rotate(45deg) skew(8deg, 8deg);
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--rule);
 }
 
-.balloon-quote {
-  display: block;
-  margin: 0;
+.timeline-item {
+  position: relative;
+  padding-left: 40px;
+  padding-bottom: 44px;
 }
 
-/* A balloon carrying narration rather than a quote. Same shape language, set
-   in the body face, and the tail points down-left into the panel instead of at
-   an off-panel speaker. */
-.balloon--blurb {
-  font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 1.55;
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 3px solid var(--rule-strong);
+}
+
+/* The current role. Filled rather than hollow, and it says "Present" in the
+   dates as well — the fill is a second signal, never the only one. */
+.timeline-item[data-current='true']::before {
+  border-color: var(--accent-a);
+  background: var(--accent-a);
+}
+
+.timeline-dates {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+  letter-spacing: 0.02em;
+}
+
+.timeline-role {
+  font-size: clamp(20px, 2.6vw, 25px);
   margin-top: 4px;
 }
 
-.balloon--blurb::after {
-  left: 28px;
-  bottom: -12px;
-  width: 18px;
-  height: 18px;
+.timeline-company {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
 }
 
-.balloon-attribution {
-  margin: 20px 0 0 12px;
-  font-size: 13.5px;
-  font-style: normal;
+.timeline-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.timeline-location {
+  font-weight: 400;
   color: var(--ink-muted);
 }
 
-/* CTA panel. The one saturated fill in the issue. */
-.cta-panel .panel-fill {
-  opacity: 1;
+.timeline-summary {
+  margin-top: 12px;
+  color: var(--ink-muted);
+  max-width: var(--measure);
 }
 
-.cta-panel .panel-body {
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+.timeline-bullets {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  max-width: var(--measure);
 }
 
-.cta-panel .panel-title,
-.cta-panel .panel-prose,
-.cta-panel .panel-kicker {
-  color: var(--on-accent);
-}
-
-/* The one action on the site, shaped as a burst rather than a button.
-   `clip-path` cannot take a border, so the ink edge is a second clipped layer
-   underneath scaled up very slightly — the same trick the canted corner uses,
-   applied to a 32-point path. */
-.cta-button {
-  --burst: polygon(
-    50% 0%, 56% 11%, 67% 4%, 68% 17%, 81% 14%, 76% 26%, 90% 29%, 82% 38%,
-    100% 50%, 82% 62%, 90% 71%, 76% 74%, 81% 86%, 68% 83%, 67% 96%, 56% 89%,
-    50% 100%, 44% 89%, 33% 96%, 32% 83%, 19% 86%, 24% 74%, 10% 71%, 18% 62%,
-    0% 50%, 18% 38%, 10% 29%, 24% 26%, 19% 14%, 32% 17%, 33% 4%, 44% 11%
-  );
+.timeline-bullets li {
   position: relative;
-  display: inline-grid;
-  place-items: center;
-  min-width: 15rem;
-  min-height: 8.5rem;
-  padding: 12px 26px;
-  font-family: var(--font-display);
-  font-size: 20px;
-  letter-spacing: 0.03em;
-  text-decoration: none;
-  color: var(--on-accent-c);
-  background: transparent;
-  transition: transform var(--dur-hover) ease-out;
+  padding-left: 20px;
+  font-size: 15px;
 }
 
-.cta-button::before,
-.cta-button::after {
+.timeline-bullets li::before {
   content: '';
   position: absolute;
-  inset: 0;
-  clip-path: var(--burst);
-  z-index: -1;
-}
-
-.cta-button::before {
-  background: var(--ink);
-  transform: scale(1.05);
-}
-
-.cta-button::after {
-  background: var(--accent-c);
-}
-
-.cta-button-label {
-  position: relative;
-  z-index: 1;
-  display: block;
-  padding: 2px 6px;
-}
-
-.cta-button:hover {
-  transform: scale(1.04) rotate(-1.5deg);
-}
-
-.cta-contact {
-  margin-top: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  justify-content: center;
-  list-style: none;
-  padding: 0;
-}
-
-.cta-contact a {
-  color: var(--on-accent);
-}
-
-/* An empty slot is a quiet panel, not a hole (COMP-4). */
-.panel[data-empty='true'] .panel-body {
-  min-height: 180px;
-}
-
-/* ---------------------------------------------------------------------------
-   SFX (MOTION-3, ACC-6)
-
-   One per page. `aria-hidden` at render — a screen reader announcing "SHIP
-   IT!" is noise, and the information is always carried by the panel itself.
---------------------------------------------------------------------------- */
-
-.sfx {
-  position: absolute;
-  right: 2.5%;
-  top: 8%;
-  z-index: 3;
-  font-family: var(--font-display);
-  font-size: 42px;
-  color: var(--accent-c);
-  -webkit-text-stroke: 3px var(--ink);
-  paint-order: stroke fill;
-  transform: rotate(var(--sfx-rotate, -11deg));
-  transform-origin: center;
-  pointer-events: none;
-  user-select: none;
-}
-
-/* ---------------------------------------------------------------------------
-   Reduced motion (MOTION-6)
-
-   Pages carry no entrance animation at all now, so what is left to suppress is
-   the page turn and the interaction motion.
---------------------------------------------------------------------------- */
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  /* Belt and braces. Book.tsx does not render a turning leaf under this
-     setting at all, so this only matters if that check ever regresses. */
-  .curl-sheet,
-  .turn-cast {
-    animation: none !important;
-    display: none;
-  }
-
-  .panel[data-interactive='true'] {
-    transition: none;
-  }
-
-  .panel[data-interactive='true']:hover,
-  .panel[data-interactive='true']:focus-within {
-    transform: rotate(var(--tilt, 0deg));
-  }
-
-  .cta-button {
-    transition: none;
-  }
-
-  .cta-button:hover {
-    transform: none;
-  }
-
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none !important;
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   Page transitions (MOTION-1)
-
-   A quick paper slide with a slight vertical offset. No 3D page curl.
-   Unsupported browsers get an instant cut, which is the correct degradation.
---------------------------------------------------------------------------- */
-
-::view-transition-old(page) {
-  animation: page-out var(--dur-page) ease-out both;
-}
-
-::view-transition-new(page) {
-  animation: page-in var(--dur-page) ease-out both;
-}
-
-@keyframes page-out {
-  to {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes page-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   Guided view (COMP-6, COMP-7)
-
-   Below 768px the grid stops being a grid. Panels become one-per-screen in
-   the template's declared mobile order, advanced by swipe via native scroll
-   snapping — no JavaScript is involved in the scrolling itself, only in
-   reporting position to the progress indicator.
---------------------------------------------------------------------------- */
-
-/* Nothing inside a leaf may react to the viewport.
- *
- * A leaf is a fixed 880×1140 canvas that gets scaled; its width has no
- * relationship to the window's. This block used to turn `.comic-page` into a
- * horizontal scroll-snap carousel on phones — the guided view from before the
- * book existed — which on a fixed canvas laid the panels out in an 880px-wide
- * row and pushed everything after the first one off the edge of the paper. A
- * phone showed one panel and a page of blank newsprint.
- *
- * The book already answers "this is a small screen" by turning to one leaf at
- * a time, so the page composition does not need a second answer. What is left
- * here only touches chrome that genuinely lives in the viewport.
- */
-@media (max-width: 767px) {
-  .issue-shell {
-    padding: 12px 0 8px;
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   Issue index rail (MODE-4, ACC-8, ACC-9)
---------------------------------------------------------------------------- */
-
-.issue-index {
-  width: 100%;
-  max-width: var(--page-max);
-  margin: 14px auto 0;
-  padding: 0 16px;
-  flex: 0 0 auto;
-}
-
-.issue-index-inner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  background: var(--rail-bg);
-  border: var(--border-ink) solid var(--rail-bg);
-  padding: 10px 12px;
-}
-
-.issue-index-label {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--accent-c);
-  margin-right: 4px;
-}
-
-.index-link {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  text-decoration: none;
-  padding: 6px 14px;
-  border: 2px solid var(--rail-fg);
-  background: var(--paper-lit);
-  color: var(--ink);
-}
-
-.index-link[data-current='true'] {
+  left: 2px;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
   background: var(--accent-a);
-  color: var(--on-accent);
 }
 
-.index-link:hover {
-  background: var(--accent-c);
-  color: var(--on-accent-c);
-}
+/* Projects ---------------------------------------------------------------- */
 
-.index-spacer {
-  flex: 1 1 auto;
-}
-
-.mode-controls {
+.projects-head {
   display: flex;
-  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.mode-button {
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.07em;
+/* The rail.
+ *
+ * Native horizontal scrolling with snap points, not a JS carousel. The browser
+ * already does keyboard scrolling, touch momentum, scrollbar dragging and
+ * reduced-motion correctly; a carousel is a reimplementation of all four that
+ * also hides every card past the first from anyone who does not interact.
+ *
+ * The expand control below it exists because a rail is still serial access:
+ * it turns the same cards into a grid, so nothing is more than one click from
+ * being visible at once.
+ */
+.project-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(280px, 360px);
+  gap: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 16px;
+  /* The rail bleeds to the window edge so a partly-visible next card signals
+     that it scrolls, then pads itself back to the page measure. */
+  margin-inline: calc(var(--gutter) * -1);
+  padding-inline: var(--gutter);
+  scrollbar-width: thin;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.project-card {
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.project-card:hover {
+  border-color: var(--rule-strong);
+  transform: translateY(-2px);
+}
+
+.project-shot {
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  object-fit: cover;
+  background: var(--surface-sunk);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* No screenshot yet. A labelled placeholder rather than a broken frame or a
+   grey box — the card still says what the project is, and the empty state is
+   honest about being an empty state. */
+.project-shot-empty {
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  background: var(--surface-sunk);
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-size: 12px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  padding: 6px 12px;
-  border: 2px solid var(--rail-fg);
-  background: transparent;
-  color: var(--rail-fg);
-  cursor: pointer;
-  text-decoration: none;
 }
 
-.mode-button:hover {
-  background: var(--rail-fg);
-  color: var(--rail-bg);
+.project-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
 }
 
-/* The rail on a phone.
- *
- * Wrapped onto three rows it was taking a third of the screen to do a job the
- * page should have that space for. It is one row now that scrolls sideways if
- * it has to — a strip of tabs, which is what a phone expects — and the height
- * it gives back goes to the paper.
- *
- * The "Issue index" label goes: the row is self-evidently an index, and on a
- * 390px screen a heading for it costs a whole page tab. Nothing is removed
- * from the rail itself, so every destination is still one tap away. */
-@media (max-width: 899px) {
-  .issue-index {
-    margin-top: 6px;
-    padding: 0 6px;
-  }
-
-  .issue-index-inner {
-    /* Wraps rather than scrolls sideways. A scrolling strip is compact, but it
-       pushed the theme switch and the plain-text link off the edge with
-       nothing to say they were there — smaller is the goal, hidden is not. At
-       this size the five page tabs make one row and the two mode buttons make
-       a second, which is about half the height of the three rows this used to
-       wrap into and still shows everything. */
-    gap: 6px;
-    padding: 6px 8px;
-    border-width: 3px;
-  }
-
-  /* The row is self-evidently an index, and on a 390px screen a heading for it
-     costs a whole page tab. */
-  .issue-index-label,
-  .index-spacer {
-    display: none;
-  }
-
-  .index-link,
-  .mode-button {
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    padding: 6px 9px;
-    border-width: 2px;
-  }
-
-  .mode-controls {
-    gap: 6px;
-  }
+.project-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
 }
 
-/* ---------------------------------------------------------------------------
-   Plain view (MODE-1..4)
+.project-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 3px;
+}
 
-   Not a class toggle over the comic markup — its own route, its own template,
-   the same data. Single column, system stack, no chrome.
---------------------------------------------------------------------------- */
+.project-title {
+  font-size: 19px;
+}
 
-.plain {
-  max-width: 42rem;
-  margin: 0 auto;
-  padding: 48px 20px 80px;
-  font-family: var(--font-body);
+.project-summary {
+  font-size: 14.5px;
+  color: var(--ink-muted);
+}
+
+.project-impact {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 11px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--accent-a) 12%, transparent);
   color: var(--ink);
 }
 
-.plain h1 {
-  font-size: 30px;
-  line-height: 1.2;
-  margin: 0 0 6px;
-  font-weight: 650;
-}
-
-.plain h2 {
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin: 40px 0 14px;
-  padding-bottom: 6px;
-  border-bottom: 2px solid var(--ink);
-  font-weight: 650;
-}
-
-.plain h3 {
-  font-size: 17px;
-  margin: 24px 0 2px;
-  font-weight: 650;
-}
-
-.plain p {
-  margin: 0 0 12px;
-}
-
-.plain-lede {
-  font-size: 17px;
-}
-
-.plain-meta {
-  color: var(--ink-muted);
-  font-size: 14.5px;
-  margin: 0 0 8px;
-}
-
-.plain ul {
-  margin: 8px 0 0;
-  padding-left: 20px;
-  /* Tailwind's preflight resets list-style; plain view is the one place that
-     wants real markers. */
-  list-style: disc;
-}
-
-.plain li {
-  margin-bottom: 5px;
-}
-
-.plain a {
-  color: var(--link);
-}
-
-.plain-links {
+.tech-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 6px;
   list-style: none;
+  margin: 0;
   padding: 0;
-  margin: 10px 0 0;
+  margin-top: auto;
 }
 
-.plain-back {
-  display: inline-block;
-  margin-bottom: 28px;
+/* Ink, not `--ink-muted`. At 11.5px on the card surface the muted token
+   measured 4.24 in light and 3.84 in dark — under AA, and by a margin small
+   enough to read as fine by eye. The chip's quietness comes from its size and
+   its outline, not from taking value out of the text. */
+.tech-row li {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  color: var(--ink);
+}
+
+.project-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   font-size: 14px;
 }
 
-/* MODE-3: prints to a clean PDF. Chrome and navigation go away, links reveal
-   their targets, entries do not break across pages. */
-@media print {
-  @page {
-    margin: 18mm 16mm;
-  }
-
-  html,
-  body {
-    background: white;
-    color: black;
-  }
-
-  .issue-index,
-  .plain-back,
-  .guided-progress,
-  .skip-link {
-    display: none !important;
-  }
-
-  .plain {
-    max-width: none;
-    padding: 0;
-    font-size: 11pt;
-  }
-
-  .plain h2 {
-    margin-top: 20pt;
-  }
-
-  .plain-entry {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .plain a::after {
-    content: ' (' attr(href) ')';
-    font-size: 9pt;
-    word-break: break-all;
-  }
-
-  .plain a[href^='mailto']::after,
-  .plain a[href^='/']::after {
-    content: '';
-  }
+.rail-toggle {
+  margin-top: 20px;
 }
 
-/* ---------------------------------------------------------------------------
-   Image treatment (MEDIA-5, MODE-6)
+/* Metrics ----------------------------------------------------------------- */
 
-   Duotone is applied at render through an SVG filter, never baked into the
-   file, so switching themes is instant and plain view can drop it entirely.
---------------------------------------------------------------------------- */
-
-.panel-image-frame {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 140px;
-  overflow: hidden;
-  border: 3px solid var(--ink);
-}
-
-.panel-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.panel-image[data-treatment='duotone'] {
-  filter: url(#treatment-duotone);
-}
-
-[data-theme='noir'] .panel-image[data-treatment='duotone'] {
-  filter: url(#treatment-duotone-noir);
-}
-
-.panel-image[data-treatment='grayscale'] {
-  filter: grayscale(1) contrast(1.12);
-}
-
-.treatment-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
-
-/* ---------------------------------------------------------------------------
-   Breakouts
-
-   Art that crosses panel borders. A panel clips its own contents — that is
-   what makes it a panel — so anything that breaks the frame has to sit above
-   the grid entirely and be placed in page coordinates instead.
-
-   The fixed canvas is what makes that safe: a percentage of an 880x1140 leaf
-   is the same slice of the composition at every scale factor, so a piece aimed
-   at a particular gutter stays on that gutter.
---------------------------------------------------------------------------- */
-
-.breakout-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-
-.breakout {
-  position: absolute;
-  color: var(--ink);
-}
-
-.breakout[data-accent='a'] { color: var(--accent-a); }
-.breakout[data-accent='b'] { color: var(--accent-b); }
-.breakout[data-accent='c'] { color: var(--accent-c); }
-
-.breakout svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-/* Inked like everything else on the page. A flat shape with no edge reads as a
-   sticker dropped on the paper rather than as art that was drawn there. */
-.breakout[data-kind='speed-streak'] polygon,
-.breakout[data-kind='burst-star'] polygon {
-  fill: currentColor;
-  stroke: var(--ink);
-  stroke-width: 3;
-  stroke-linejoin: round;
-  paint-order: fill stroke;
-}
-
-.breakout[data-kind='speed-streak'] polygon {
-  stroke-width: 1.5;
-}
-
-/* The skyline crossing a gutter is drawn, not filled — same line language as
-   the establishing shot it is lifted from. */
-.breakout[data-kind='skyline-band'] .skyline {
-  position: static;
-  opacity: 1;
-}
-
-/* A panel that *is* the page, with the others layered over part of it.
- *
- * Not a column in a two-track grid — the splash covers every cell, and the
- * panels beside it sit on top of its right-hand side. The difference shows in
- * the gutters: they are the splash's own art showing between the panels laid
- * on it, rather than blank paper.
- */
-.comic-page > .panel {
-  z-index: 1;
-}
-
-/* The span itself is set inline in Panel.tsx — the slot's `grid-area` is an
-   inline style and would beat any rule here. */
-.comic-page > .panel[data-bleed='page'] {
-  z-index: 0;
-}
-
-/* The caption sits on the first panel, so that panel's copy starts under it.
-   Slots are emitted in reading order, so the first panel is always the one the
-   caption lands on. An art panel is exempt — a drawing is what a caption box is
-   meant to sit on.
-
-   This clears the caption by about two canvas px, and there is nowhere to take
-   more from: every band's copy already runs to its padding edge. It is a fixed
-   geometry rather than a near miss — the caption is at a fixed offset in a
-   fixed-size box — but it is a coupling between two rules that do not mention
-   each other. tests/contrast.mjs is what guards it: if the caption box ever
-   grows, /work fails with the meta line reading on caption yellow, which is
-   exactly how this was found. It also beats the band's own slope clearance,
-   which is fine only because 52px is the larger of the two. */
-.comic-page > .panel:first-of-type .panel-body {
-  padding-top: 52px;
-}
-
-.comic-page > .panel:first-of-type:has(.art-panel-inner) .panel-body {
-  padding-top: 0;
-}
-
-/* An establishing-shot panel: the drawing is the panel, so it runs to the
-   inked edge rather than sitting inside the body's padding. */
-.art-panel-inner {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
-}
-
-.art-panel-inner .skyline {
-  position: static;
-  /* Sized for a panel that is the whole page: a little wider than the paper so
-     the drawing runs off both edges rather than sitting inside them, and
-     aligned to the foot, which is where a horizon goes. */
-  width: 128%;
-  margin-left: -14%;
-  opacity: 0.55;
-}
-
-.panel:has(.art-panel-inner) .panel-body {
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+  margin-top: 40px;
+  list-style: none;
   padding: 0;
+}
+
+.metric {
+  padding: 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.metric-value {
+  font-size: clamp(30px, 4.5vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--accent-a);
+}
+
+.metric-label {
+  font-size: 14px;
+  color: var(--ink-muted);
+  margin-top: 8px;
+}
+
+/* Contact ----------------------------------------------------------------- */
+
+.contact-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.site-footer {
+  border-top: 1px solid var(--rule);
+  padding-block: 32px;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+.site-footer-inner {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+/* Print ------------------------------------------------------------------- */
+
+@media print {
+  .site-header,
+  .site-footer,
+  .hero-actions,
+  .rail-toggle {
+    display: none;
+  }
+
+  /* The rail is the one thing that cannot survive print — a horizontal scroll
+     container prints as its first card. Unroll it. */
+  .project-rail {
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    overflow: visible;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+
+  body {
+    background: none;
+  }
+
+  .section {
+    padding-block: 24px;
+    break-inside: avoid;
+  }
 }

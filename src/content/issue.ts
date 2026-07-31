@@ -27,7 +27,6 @@ import type { Issue } from './types';
 const settings: Issue['settings'] = {
   displayName: 'Sean Brasse',
   tagline: 'Frontend engineer who ships the feature nobody wants to own.',
-  issueNumber: '#1',
   // Employed and not urgently looking, but open to the right conversation.
   availabilityStatus: 'selective',
   rolesOpenTo: ['Senior Frontend', 'Full Stack'],
@@ -154,146 +153,8 @@ const metrics: Issue['metrics'] = [
  */
 const testimonials: Issue['testimonials'] = [];
 
-const pages: Issue['pages'] = [
-  {
-    id: 'page-origin',
-    slug: 'origin',
-    title: 'Origin',
-    caption: 'MEANWHILE, IN NEW YORK...',
-    templateId: 'splash-rail',
-    status: 'published',
-    panels: [
-      // The establishing shot is the page. Name, role and the opening paragraph
-      // sit *in* the picture rather than in a panel above it, which is the
-      // arrangement the whole template exists for.
-      {
-        slot: 'splash',
-        content: {
-          type: 'hero',
-          body: 'Computer science at Buffalo, then a first job modernizing a ten-year-old aerospace defense simulator. Then merchant onboarding at PayPal, then Mailchimp. Every move traded scale of hardware for scale of people — from simulated aircraft to a hundred thousand small businesses touching the same form builder.',
-        },
-        overrides: { accent: 'b', bleed: 'page', frame: 'none' },
-      },
-      // Four beats mounted down the right, in reading order: what he is doing
-      // now, then the three numbers.
-      {
-        slot: 'rail-a',
-        content: {
-          type: 'text',
-          heading: 'Currently',
-          body: 'Software Engineer II at Intuit Mailchimp in New York, on the Forms and SMS platform. Most of what I ship crosses a React microfrontend, a legacy Dojo app, and a PHP monolith before it reaches a customer.',
-        },
-        overrides: { accent: 'c', frame: 'mat' },
-      },
-      {
-        slot: 'rail-b',
-        content: { type: 'metric', ref: 'qbo-merchants' },
-        overrides: { accent: 'b', fill: 'solid', rays: true, frame: 'mat' },
-      },
-      {
-        slot: 'rail-c',
-        content: { type: 'metric', ref: 'arr-unlocked' },
-        overrides: { accent: 'a', fill: 'solid', frame: 'mat' },
-      },
-      {
-        slot: 'rail-d',
-        content: { type: 'metric', ref: 'optin-lift' },
-        overrides: { accent: 'c', fill: 'solid', frame: 'mat' },
-      },
-    ],
-  },
-  {
-    id: 'page-work',
-    slug: 'work',
-    title: 'Work',
-    caption: 'FOUR YEARS EARLIER...',
-    templateId: 'stack-4',
-    status: 'published',
-    ogTagline: 'Mailchimp, PayPal, and a ten-year-old defense simulator.',
-    sfx: { text: 'SHIP IT!', slot: 'a', rotate: -11 },
-    // Crosses the gutter between the first two bands.
-    breakouts: [{ kind: 'speed-streak', x: 62, y: 25, w: 34, h: 6, rotate: -3, accent: 'a', opacity: 0.42 }],
-    panels: [
-      // One slant, repeated. Every gutter down this page is the same diagonal.
-      { slot: 'a', content: { type: 'experience', ref: 'mailchimp' }, overrides: { accent: 'a', shape: 'band-up' } },
-      { slot: 'b', content: { type: 'experience', ref: 'paypal' }, overrides: { accent: 'b', shape: 'band-up' } },
-      { slot: 'c', content: { type: 'experience', ref: 'avarint' }, overrides: { accent: 'c', shape: 'band-up' } },
-      // Professional side projects belong with the professional work, not
-      // filed under nights-and-weekends.
-      {
-        slot: 'd',
-        content: { type: 'project', ref: 'knowledge-engine' },
-        overrides: { accent: 'b', fill: 'solid', shape: 'band-up' },
-      },
-    ],
-  },
-  {
-    id: 'page-builds',
-    slug: 'builds',
-    title: 'Builds',
-    caption: 'NIGHTS AND WEEKENDS...',
-    templateId: 'splash-side',
-    status: 'published',
-    ogTagline: 'Three things built to find out whether they could be.',
-    panels: [
-      // The establishing shot is the whole page; the three bands sit on its
-      // right-hand side, so the gutters between them show the art underneath.
-      {
-        slot: 'splash',
-        content: { type: 'art', art: 'skyline' },
-        overrides: { accent: 'b', bleed: 'page' },
-      },
-      {
-        slot: 'a',
-        content: { type: 'project', ref: 'pass-the-interview' },
-        overrides: { accent: 'a', shape: 'band-up' },
-      },
-      { slot: 'b', content: { type: 'project', ref: 'cadence' }, overrides: { accent: 'b', shape: 'band-up' } },
-      { slot: 'c', content: { type: 'project', ref: 'life-os' }, overrides: { accent: 'c', shape: 'band-up' } },
-    ],
-    // Straddles the gutter between the splash and the stack beside it.
-    // No breakout on this page. The stack beside the splash is three text
-    // panels with no slack in them, so anything crossing that gutter lands on
-    // copy — the audit caught a burst sitting on Cadence's tech chips at two
-    // different positions. The crossing element here should be the figure,
-    // which can be drawn to fit the gap rather than dropped into it.
-  },
-  {
-    id: 'page-contact',
-    slug: 'contact',
-    title: 'Contact',
-    caption: 'TO BE CONTINUED...',
-    templateId: 'hero-2',
-    status: 'published',
-    ogTagline: 'Open to senior frontend and full-stack work in New York.',
-    panels: [
-      { slot: 'hero', content: { type: 'cta' }, overrides: { accent: 'a', fill: 'solid' } },
-      {
-        slot: 'a',
-        content: {
-          type: 'text',
-          heading: "What I'm after",
-          body: 'Senior frontend or full-stack work where I own a surface end to end: the technical design, the implementation, and the rollout. The problems I like best are the ones where the constraint is legal, cross-team, or ten years old.',
-        },
-        overrides: { accent: 'b' },
-      },
-      {
-        slot: 'b',
-        content: {
-          type: 'text',
-          heading: 'How I work',
-          blurb: 'balloon',
-          body: 'I tend to write the test suite nobody assigned. At Mailchimp that meant scoping the end-to-end coverage gap across the Forms platform, authoring the first Playwright suite, and mentoring a contract engineer through delivery — 0% to 85%. Shipping is the part after the feature works.',
-        },
-        overrides: { accent: 'c', shape: 'canted' },
-      },
-    ],
-  },
-];
-
 export const issue: Issue = {
   settings,
-  pages,
   experiences,
   projects,
   testimonials,
