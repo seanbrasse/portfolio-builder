@@ -43,14 +43,14 @@
      Opacity and blend are per theme because one photograph cannot serve both:
      a mid-grey asphalt laid over near-black needs to be lightened and held
      back, and the same map over an off-white ground needs to be multiplied. */
-  /* Poly Haven's clean_asphalt, CC0, diffuse map only. Resized to 512 and
-     re-encoded: it is tiled at --texture-size regardless, so the 1024 source
-     was detail the browser threw away, and 684KB became 2.8KB. `image-set`
-     gives WebP to anything that takes it and JPEG to anything that does not. */
-  --texture: image-set(
-    url('/textures/asphalt.webp') type('image/webp'),
-    url('/textures/asphalt.jpg') type('image/jpeg')
-  );
+  /* Off. The asphalt is still in public/textures and this is the one line that
+     turns it back on:
+       --texture: image-set(url('/textures/asphalt.webp') type('image/webp'),
+                            url('/textures/asphalt.jpg')  type('image/jpeg'));
+     It shifted the ground's colour rather than only its surface — most visibly
+     in the light theme, where multiplying a mid-grey photograph over off-white
+     took the whole page toward beige. */
+  --texture: none;
   --texture-blend: soft-light;
   --texture-opacity: 0.5;
   --texture-size: 520px;
@@ -62,15 +62,9 @@
 
 [data-theme='light'] {
   color-scheme: light;
-  /* Its own file, not just its own blend. The untreated map is a mid-grey
-     photograph; multiplied against an off-white ground it lands the whole page
-     near 50% grey and took body copy to 1.6:1. The light variant has the same
-     grain with its range compressed into the top of the scale, so multiplying
-     modulates the surface instead of darkening it. */
-  --texture: image-set(
-    url('/textures/asphalt-light.webp') type('image/webp'),
-    url('/textures/asphalt-light.jpg') type('image/jpeg')
-  );
+  /* Off, as above. The light variant is public/textures/asphalt-light.*, and it
+     needs `--texture-blend: multiply` alongside it. */
+  --texture: none;
   --texture-blend: multiply;
 }
 
@@ -105,15 +99,10 @@ body {
        because these are a single file each; add a WebP alternate here if the
        JPEG turns out to cost more than it is worth. */
     var(--texture),
-    radial-gradient(
-      120% 90% at 22% 12%,
-      color-mix(in srgb, var(--ink) 3%, transparent),
-      transparent 60%
-    ),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03' numOctaves='5' seed='3' result='t'/%3E%3CfeDisplacementMap in='t' in2='t' scale='22'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23f)' opacity='0.08'/%3E%3C/svg%3E"),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='3' seed='11'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)' opacity='0.07'/%3E%3C/svg%3E");
-  background-size: var(--texture-size), auto, 300px 300px, 120px 120px;
-  background-blend-mode: var(--texture-blend), normal, normal, normal;
+  background-size: var(--texture-size), 300px 300px, 120px 120px;
+  background-blend-mode: var(--texture-blend), normal, normal;
   background-attachment: fixed;
   font-family: var(--font-body);
   font-size: 16px;
