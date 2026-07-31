@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import type { Result } from './actions';
@@ -98,8 +98,10 @@ export function Upload({
   const [picked, setPicked] = useState<Measured | null>(null);
   const [alt, setAlt] = useState('');
   const [error, setError] = useState('');
+  const [dragging, setDragging] = useState(false);
   const [pending, start] = useTransition();
   const input = useRef<HTMLInputElement>(null);
+  const zone = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
   async function choose(file: File | undefined) {
@@ -111,6 +113,34 @@ export function Upload({
       setError(problem instanceof Error ? problem.message : 'That file could not be read.');
     }
   }
+
+  /**
+   * Paste an image straight in. The clipboard carries files as `items`, so a
+   * screenshot copied with the OS shortcut or an image copied from a browser
+   * arrives here without ever touching the file picker.
+   *
+   * Bound while the zone holds focus rather than to the whole window: there can
+   * be more than one uploader on a page — a project's screenshots and, in
+   * future, other media — and a paste should land in the one the editor is
+   * actually working in, not in whichever mounted first.
+   */
+  useEffect(() => {
+    const node = zone.current;
+    if (!node) return;
+
+    const onPaste = (event: ClipboardEvent) => {
+      const file = [...(event.clipboardData?.items ?? [])]
+        .find((item) => item.kind === 'file')
+        ?.getAsFile();
+      if (file) {
+        event.preventDefault();
+        void choose(file);
+      }
+    };
+
+    node.addEventListener('paste', onPaste);
+    return () => node.removeEventListener('paste', onPaste);
+  }, []);
 
   /**
    * The description that will be saved: what was typed, or the hint if nothing
@@ -165,15 +195,40 @@ export function Upload({
 
   return (
     <div className="admin-upload">
-      <label className="field">
-        <span className="field-label">{label}</span>
-        <input
-          ref={input}
-          type="file"
-          accept={accept}
-          onChange={(event) => choose(event.target.files?.[0])}
-        />
-      </label>
+      <span className="field-label">{label}</span>
+
+      {/* One target for all three ways in. Clicking or pressing it opens the
+          file picker through the hidden input; a file dragged onto it drops in;
+          a paste while it has focus lands too. It is a real button so the
+          keyboard and a screen reader treat it as the control it looks like. */}
+      <button
+        type="button"
+        ref={zone}
+        className="dropzone"
+        data-dragging={dragging || undefined}
+        onClick={() => input.current?.click()}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          void choose(event.dataTransfer.files?.[0]);
+        }}
+      >
+        <span className="dropzone-lead">Drop a file, paste, or click to choose</span>
+        <span className="dropzone-sub">Image or video</span>
+      </button>
+
+      <input
+        ref={input}
+        type="file"
+        accept={accept}
+        hidden
+        onChange={(event) => choose(event.target.files?.[0])}
+      />
 
       {picked ? (
         <>
