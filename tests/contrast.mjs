@@ -17,7 +17,12 @@ import { chromium } from 'playwright';
 import { PNG } from 'pngjs';
 
 const BASE = process.env.BASE || 'http://localhost:3000';
-const ROUTES = ['/'];
+/**
+ * `/admin/enter` is the only admin route a signed-out visitor can reach — the
+ * rest redirect — so it is the only one this can measure. It shares the admin
+ * stylesheet, which makes the door a partial check on all of it.
+ */
+const ROUTES = ['/', '/admin/enter'];
 const THEMES = ['dark', 'light'];
 
 function srgb(c) {

@@ -9,9 +9,9 @@ import { siteUrl } from './site';
  * vocabulary to a resume — `JobPosting` describes an opening, not a job held,
  * so using it here would be schema abuse that Search Console flags.
  */
-export function personSchema() {
-  const settings = getSettings();
-  const [current] = getExperiences();
+export async function personSchema() {
+  const settings = await getSettings();
+  const [current] = await getExperiences();
 
   return {
     '@context': 'https://schema.org',
