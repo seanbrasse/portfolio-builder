@@ -93,9 +93,9 @@ export async function saveSettings(form: FormData): Promise<Result> {
       availability_status: text(form, 'availability_status'),
       roles_open_to: commas(form.get('roles_open_to')),
       skills: commas(form.get('skills')),
-      education_school: text(form, 'education_school'),
-      education_credential: text(form, 'education_credential'),
-      education_start_date: text(form, 'education_start_date'),
+      // Education is its own table as of 0003 and is edited on its own pages.
+      // The `education_*` columns still exist; writing them from here would
+      // maintain a copy nothing reads.
       location: text(form, 'location'),
       contact_email: text(form, 'contact_email'),
       resume_href: text(form, 'resume_href'),
@@ -144,23 +144,30 @@ export async function saveExperience(form: FormData): Promise<Result> {
   return { ok: true };
 }
 
+export type Mark = { src: string; alt: string; width: number; height: number } | null;
+
 /**
- * The company's mark, saved once and read everywhere.
+ * Write a mark onto a row.
  *
- * This is the whole of "logos are consistent across companies": the logo is a
- * column on the employer, not a field on each project. The timeline badge and
- * every project card built at that company read the same row, so there is no
- * second place to update and no way for them to disagree.
+ * Not exported, and the table is a parameter of this helper rather than of any
+ * action: the two wrappers below each bind it to a literal, so a table name is
+ * never something a caller can supply. A server action's arguments arrive over
+ * the wire.
+ *
+ * Schools and companies share this because they store a logo identically — four
+ * columns with the same names and meanings. That is also why `toLogo` in the
+ * read layer takes the columns rather than a row type.
  */
-export async function saveLogo(
+async function writeMark(
+  table: 'experiences' | 'education',
   id: string,
-  logo: { src: string; alt: string; width: number; height: number } | null,
+  logo: Mark,
 ): Promise<Result> {
   if (!(await isAdmin())) return DENIED;
   const supabase = await supabaseServer();
 
   const { error } = await supabase
-    .from('experiences')
+    .from(table)
     .update({
       logo_src: logo?.src ?? null,
       logo_alt: logo?.alt ?? '',
@@ -172,6 +179,72 @@ export async function saveLogo(
   if (error) return { ok: false, error: error.message };
   republish();
   return { ok: true };
+}
+
+/**
+ * The company's mark, saved once and read everywhere.
+ *
+ * This is the whole of "logos are consistent across companies": the logo is a
+ * column on the employer, not a field on each project. The timeline badge and
+ * every project card built at that company read the same row, so there is no
+ * second place to update and no way for them to disagree.
+ */
+export async function saveLogo(id: string, logo: Mark): Promise<Result> {
+  return writeMark('experiences', id, logo);
+}
+
+/**
+ * The school's mark. Nothing but the timeline reads it — no project is built at
+ * a university — so unlike a company logo this one has exactly one surface.
+ */
+export async function saveEducationLogo(id: string, logo: Mark): Promise<Result> {
+  return writeMark('education', id, logo);
+}
+
+/* -------------------------------------------------------------------------
+   Education — the front of the timeline
+------------------------------------------------------------------------- */
+
+function educationFields(form: FormData) {
+  return {
+    school: text(form, 'school'),
+    credential: text(form, 'credential'),
+    location: text(form, 'location'),
+    start_date: text(form, 'start_date'),
+    end_date: month(form, 'end_date'),
+    links: links(form),
+    published: form.get('published') === 'on',
+  };
+}
+
+export async function saveEducation(form: FormData): Promise<Result> {
+  if (!(await isAdmin())) return DENIED;
+  const supabase = await supabaseServer();
+
+  const id = text(form, 'id');
+  if (!id) return { ok: false, error: 'An id is required.' };
+
+  /**
+   * The logo columns are absent from the payload on purpose, and that is safe:
+   * a single-object upsert updates only the keys it names, so a mark uploaded
+   * on the same page survives a save of the fields around it.
+   */
+  const { error } = await supabase.from('education').upsert({ id, ...educationFields(form) });
+
+  if (error) return { ok: false, error: error.message };
+  republish();
+  return { ok: true };
+}
+
+export async function deleteEducation(id: string): Promise<Result> {
+  if (!(await isAdmin())) return DENIED;
+  const supabase = await supabaseServer();
+
+  const { error } = await supabase.from('education').delete().eq('id', id);
+  if (error) return { ok: false, error: error.message };
+
+  republish();
+  redirect('/admin');
 }
 
 /**

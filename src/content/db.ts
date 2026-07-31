@@ -15,7 +15,16 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-import type { Asset, Experience, Issue, Link, Project, SiteSettings, Testimonial } from './types';
+import type {
+  Asset,
+  Education,
+  Experience,
+  Issue,
+  Link,
+  Project,
+  SiteSettings,
+  Testimonial,
+} from './types';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/lib/supabase/config';
 
 /**
@@ -46,14 +55,30 @@ type SettingsRow = {
   availability_status: SiteSettings['availabilityStatus'];
   roles_open_to: string[];
   skills: string[];
-  education_school: string;
-  education_credential: string;
-  education_start_date: string;
+  // `education_school`, `education_credential` and `education_start_date` are
+  // still columns on this table and are deliberately absent here. 0003 moved
+  // education to its own table and left the originals behind so that the
+  // deployment reading them could retire on its own schedule; naming them here
+  // would be the second source of truth that move existed to remove.
   location: string;
   contact_email: string;
   resume_href: string;
   links: Link[];
   og_tagline: string;
+};
+
+type EducationRow = {
+  id: string;
+  school: string;
+  credential: string;
+  location: string;
+  start_date: string;
+  end_date: string | null;
+  logo_src: string | null;
+  logo_alt: string;
+  logo_width: number | null;
+  logo_height: number | null;
+  links: Link[];
 };
 
 type ExperienceRow = {
@@ -117,11 +142,6 @@ function toSettings(row: SettingsRow): SiteSettings {
     availabilityStatus: row.availability_status,
     rolesOpenTo: row.roles_open_to,
     skills: row.skills,
-    education: {
-      school: row.education_school,
-      credential: row.education_credential,
-      startDate: row.education_start_date,
-    },
     location: row.location,
     contactEmail: row.contact_email,
     resumeHref: row.resume_href,
@@ -131,14 +151,24 @@ function toSettings(row: SettingsRow): SiteSettings {
 }
 
 /**
- * The company's mark, if one has been uploaded.
+ * The mark on a row, if one has been uploaded.
  *
  * Returned as an `Asset` so that a logo and a screenshot are the same kind of
  * thing to everything downstream. Undefined when there is no file, which is
  * what makes the badge fall back to a monogram rather than render a broken
  * image — the absence has to survive the mapping.
+ *
+ * Takes the four columns rather than a row type, because schools and companies
+ * carry an identical set of them and the mapping does not care which it is
+ * looking at. That is the whole reason a school can have a logo at all.
  */
-function toLogo(row: ExperienceRow): Asset | undefined {
+function toLogo(row: {
+  id: string;
+  logo_src: string | null;
+  logo_alt: string;
+  logo_width: number | null;
+  logo_height: number | null;
+}): Asset | undefined {
   if (!row.logo_src) return undefined;
   return {
     id: `${row.id}-logo`,
@@ -147,6 +177,19 @@ function toLogo(row: ExperienceRow): Asset | undefined {
     width: row.logo_width ?? 0,
     height: row.logo_height ?? 0,
     kind: 'logo',
+  };
+}
+
+function toEducation(row: EducationRow): Education {
+  return {
+    id: row.id,
+    school: row.school,
+    credential: row.credential,
+    location: row.location,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    logo: toLogo(row),
+    links: row.links ?? [],
   };
 }
 
@@ -228,8 +271,13 @@ export async function readIssue(): Promise<Issue | null> {
   try {
     const supabase = anon();
 
-    const [settings, experiences, projects, images, testimonials] = await Promise.all([
+    const [settings, education, experiences, projects, images, testimonials] = await Promise.all([
       supabase.from('settings').select('*').eq('id', true).maybeSingle(),
+      // Oldest first, which is the order the timeline reads them in. Companies
+      // come back newest first because the admin list and the structured data
+      // both want the current one at the top; schools have no equivalent
+      // "current" to surface.
+      supabase.from('education').select('*').order('start_date', { ascending: true }),
       supabase.from('experiences').select('*').order('start_date', { ascending: false }),
       supabase.from('projects').select('*').order('date', { ascending: false }),
       supabase.from('project_images').select('*').order('sort_order', { ascending: true }),
@@ -246,7 +294,12 @@ export async function readIssue(): Promise<Issue | null> {
      * able to see that it happened and why.
      */
     const failed =
-      settings.error ?? experiences.error ?? projects.error ?? images.error ?? testimonials.error;
+      settings.error ??
+      education.error ??
+      experiences.error ??
+      projects.error ??
+      images.error ??
+      testimonials.error;
 
     if (failed) {
       console.error('[content] database read failed, falling back to issue.ts:', failed.message);
@@ -267,6 +320,7 @@ export async function readIssue(): Promise<Issue | null> {
 
     return {
       settings: toSettings(settings.data as SettingsRow),
+      education: ((education.data ?? []) as EducationRow[]).map(toEducation),
       experiences: ((experiences.data ?? []) as ExperienceRow[]).map(toExperience),
       projects: ((projects.data ?? []) as ProjectRow[]).map((row) =>
         toProject(row, byProject.get(row.id) ?? []),

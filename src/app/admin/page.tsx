@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 import { saveSettings } from './actions';
-import { adminExperiences, adminProjects, adminSettings } from './data';
+import { adminEducations, adminExperiences, adminProjects, adminSettings } from './data';
 import { Form } from './Form';
 import { LinkRows } from './LinkRows';
 import { CAPS } from '@/content/types';
@@ -15,8 +15,9 @@ import { CAPS } from '@/content/types';
  * which is the thing this exists to stop.
  */
 export default async function AdminHome() {
-  const [settings, experiences, projects] = await Promise.all([
+  const [settings, education, experiences, projects] = await Promise.all([
     adminSettings(),
+    adminEducations(),
     adminExperiences(),
     adminProjects(),
   ]);
@@ -62,32 +63,6 @@ export default async function AdminHome() {
             <input name="skills" defaultValue={settings.skills.join(', ')} />
           </label>
 
-          <h3 className="admin-subhead">Education</h3>
-          <p className="admin-note">Where the timeline starts.</p>
-
-          <div className="admin-grid">
-            <label className="field">
-              <span className="field-label">School</span>
-              <input name="education_school" defaultValue={settings.education_school} />
-            </label>
-
-            <label className="field">
-              <span className="field-label">Credential</span>
-              <input name="education_credential" defaultValue={settings.education_credential} />
-            </label>
-
-            <label className="field">
-              <span className="field-label">Started — YYYY-MM</span>
-              <input
-                name="education_start_date"
-                defaultValue={settings.education_start_date}
-                pattern="\d{4}-\d{2}"
-                title="Four-digit year, a hyphen, two-digit month — for example 2023-04."
-                placeholder="2017-09"
-              />
-            </label>
-          </div>
-
           <h3 className="admin-subhead">Footer and metadata</h3>
 
           <div className="admin-grid">
@@ -123,6 +98,49 @@ export default async function AdminHome() {
 
           <LinkRows links={settings.links} />
         </Form>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      <section className="admin-section">
+        <div className="admin-section-head">
+          <h2>Education</h2>
+          <Link href="/admin/education/new" className="admin-button">
+            Add school
+          </Link>
+        </div>
+        <p className="admin-note">
+          The front of the timeline. Each school is a join on the line with its
+          own badge, exactly like a company — add as many as you have. The
+          stretch before your first job is compressed on purpose, so the years
+          with the work in them get the room; with no schools at all the line
+          simply starts at the first job.
+        </p>
+
+        <ul className="admin-list">
+          {education.map((item) => (
+            <li key={item.id}>
+              <Link href={`/admin/education/${item.id}`} className="admin-row">
+                <span className="admin-row-mark">
+                  {item.logo_src ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={item.logo_src} alt="" width={22} height={22} />
+                  ) : (
+                    <span className="admin-row-mono">no logo</span>
+                  )}
+                </span>
+                <span className="admin-row-main">
+                  <strong>{item.school}</strong>
+                  <span className="admin-note">
+                    {item.credential || 'no credential'} · {item.start_date} →{' '}
+                    {item.end_date ?? 'present'}
+                  </span>
+                </span>
+                {!item.published ? <span className="admin-flag">Draft</span> : null}
+              </Link>
+            </li>
+          ))}
+          {education.length === 0 ? <li className="admin-note">Nothing yet.</li> : null}
+        </ul>
       </section>
 
       {/* ------------------------------------------------------------------ */}
