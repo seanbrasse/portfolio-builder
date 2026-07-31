@@ -14,9 +14,24 @@ import { personSchema } from '@/lib/schema';
  * The carousel is the page's subject, and the timeline above it marks where the
  * card currently in the middle sits in the career.
  *
- * TECH-1: statically generated. A visitor's page load touches no data source.
+ * TECH-1: still statically served — a visitor's page load touches no data
+ * source — but regenerated rather than frozen.
+ *
+ * This was `dynamic = 'force-static'`, which does more than it sounds like: it
+ * forces every `fetch` in the route into the data cache with no expiry, and the
+ * Supabase client is built on `fetch`. The database's answer was therefore
+ * cached at build time forever. Saving in the admin purged the rendered page,
+ * which re-rendered, read the frozen response, and produced exactly what it had
+ * before — so edits appeared to save and never appear. Logos were the first
+ * content that existed only in the database, which is why they were the first
+ * thing visibly missing.
+ *
+ * `revalidate` keeps the page static and makes it regenerable. On-demand
+ * purging from the admin still makes a save immediate; this is the backstop for
+ * when it does not, so the worst case is five minutes stale rather than stale
+ * until the next deploy.
  */
-export const dynamic = 'force-static';
+export const revalidate = 300;
 
 export default async function Home() {
   const settings = await getSettings();

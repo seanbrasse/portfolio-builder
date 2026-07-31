@@ -56,9 +56,13 @@ as $$
 $$;
 
 revoke all on function public.is_admin() from public;
--- Signed-in only. The middleware asks this after establishing a user, so anon
--- never has a reason to call it and the answer for anon is always false.
-grant execute on function public.is_admin() to authenticated;
+-- Both roles, and anon is not an oversight. The read policies below are
+-- `published or public.is_admin()`, so an anonymous visitor calls this on every
+-- public read; `or` is no promise that the right-hand side is skipped. It leaks
+-- nothing — anon carries no email claim, so the answer is a flat false, which
+-- is exactly what those policies want from a stranger. This line said
+-- `authenticated` alone until 0002, and denied every public read.
+grant execute on function public.is_admin() to authenticated, anon;
 
 /**
  * The longest string in an array.
