@@ -83,11 +83,14 @@ export function Work({
 
     // Signed distance from the middle, wrapped, so the first card sits beside
     // the last rather than against an empty edge.
-    // No wrapping. Position is progress from the first project to the last,
-    // because that is what the timeline cursor is reporting — a line that
-    // jumps back to the start when the carousel loops is not a progress
-    // indicator, it is a clock.
-    const offsets = Array.from(cards, (_, index) => index - position.current);
+    // Wrapped, so the carousel is a cycle: the newest card sits beside the
+    // oldest and there is no end to run into in either direction.
+    const offsets = Array.from(cards, (_, index) => {
+      let offset = (index - position.current) % count;
+      if (offset > count / 2) offset -= count;
+      if (offset < -count / 2) offset += count;
+      return offset;
+    });
 
     /**
      * Depth is a rank, not a threshold on distance.
@@ -109,7 +112,11 @@ export function Work({
       const distance = Math.abs(offset);
       const scale = Math.max(1 - distance * 0.13, 0.7);
 
-      card.style.transform = `translateX(calc(-50% + ${offset * SPACING * 100}%)) scale(${scale})`;
+      // Both axes. The card hangs from `top: 50%`, so the Y half-offset is what
+      // centres it — writing only the X translate here left the card centred
+      // horizontally and dropped a half-height below the middle.
+      card.style.transform =
+        `translate(calc(-50% + ${offset * SPACING * 100}%), -50%) scale(${scale})`;
       card.style.zIndex = String(Math.round(100 - distance * 10));
 
       /**
@@ -153,6 +160,58 @@ export function Work({
     }
   }, [count, geometry]);
 
+  /**
+   * The card's width is a function of the height available to it.
+   *
+   * A full-width 16:9 well means the image is exactly `width * 9/16` tall, so
+   * asking how wide the card should be and asking how much room there is are
+   * the same question — and CSS cannot answer it, because a percentage width
+   * cannot be derived from a parent's height. Measuring the stage is the only
+   * honest way round, and a ResizeObserver does it without polling.
+   *
+   * The body's height is read from the DOM rather than assumed, so changing the
+   * card's copy or padding cannot silently push the image out of the frame.
+   */
+  useEffect(() => {
+    const node = stage.current;
+    if (!node) return;
+
+    const body = node.querySelector<HTMLElement>('.project-body');
+
+    /**
+     * Converges rather than computing once.
+     *
+     * The body's height depends on the card's width — a narrower card wraps the
+     * summary onto another line — and the width depends on the body's height.
+     * A single pass measures the body at whatever width the card happened to
+     * have and lands wrong, which is what left the card taller than the stage.
+     *
+     * So the body is observed too, and each pass re-measures. The 2px deadband
+     * is what stops that becoming a loop: once a change is smaller than a
+     * couple of pixels nothing is written, no resize fires, and it settles.
+     */
+    const fit = () => {
+      const chrome = body ? body.offsetHeight : 96;
+      // A little back, so a rounding error cannot put the card over the edge.
+      const available = node.clientHeight - chrome - 4;
+      const byHeight = Math.max(available, 80) * (16 / 9);
+      const byWidth = Math.min(node.clientWidth * 0.42, 560);
+      const next = Math.round(Math.min(byHeight, byWidth));
+
+      const current = parseFloat(node.style.getPropertyValue('--card-w')) || 0;
+      if (Math.abs(next - current) < 2) return;
+
+      node.style.setProperty('--card-w', `${next}px`);
+      paint();
+    };
+
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(node);
+    if (body) observer.observe(body);
+    return () => observer.disconnect();
+  }, [paint]);
+
   useEffect(paint, [paint]);
 
   /**
@@ -189,22 +248,26 @@ export function Work({
       position.current += gap * Math.min(delta * EASE, 1);
       paint();
 
-      const rounded = Math.round(position.current);
+      const rounded = ((Math.round(position.current) % count) + count) % count;
       setActive((current) => (current === rounded ? current : rounded));
 
       frame.current = requestAnimationFrame(step);
     };
 
     frame.current = requestAnimationFrame(step);
-  }, [paint]);
+  }, [paint, count]);
 
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
-  /** Move the carousel to a position, clamped to the projects that exist. */
+  /**
+   * Move the carousel. The target is not clamped — it runs off either end and
+   * the paint wraps it, which is what makes the cycle endless in both
+   * directions rather than stopping at the oldest project.
+   */
   const seek = useCallback(
     (to: number) => {
-      target.current = Math.max(0, Math.min(to, count - 1));
-      setActive(Math.round(target.current));
+      target.current = to;
+      setActive(((Math.round(to) % count) + count) % count);
       run();
     },
     [count, run],
