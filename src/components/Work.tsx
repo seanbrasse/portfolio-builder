@@ -79,7 +79,11 @@ export function Work({
       card.style.transform = `translateX(calc(-50% + ${offset * SPACING * 100}%)) scale(${scale})`;
       card.style.opacity = String(opacity);
       card.style.zIndex = String(Math.round(100 - distance * 10));
-      card.dataset.centre = distance < 0.5 ? 'true' : undefined;
+      // `toggleAttribute`, not `dataset.centre = undefined`. Assigning
+      // undefined to a dataset property stringifies it, so the attribute is
+      // present with the value "undefined" and still matches `[data-centre]` —
+      // every card was getting the centre card's shadow.
+      card.toggleAttribute('data-centre', distance < 0.5);
     });
   }, [count]);
 
