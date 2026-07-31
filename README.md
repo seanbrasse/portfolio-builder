@@ -84,10 +84,25 @@ immediately.
 
 **Panels are not rectangles, and art crosses their borders.** `shape` takes
 `canted` (one corner cut), `lean-l`/`lean-r` (a parallelogram, for a tall
-panel), and `slope-t`/`slope-b` (a single tilted edge). Pair `slope-b` on one
-band with `slope-t` on the next and the gutter between them runs diagonally,
-which is most of what makes a page read as laid out rather than tabulated.
-Templates use uneven tracks for the same reason — no `repeat()` anywhere.
+panel), and `band-up`/`band-down` (a slanted wide band). Templates use uneven
+tracks for the same reason — no `repeat()` anywhere.
+
+A slanted band slopes **both** edges the same way, so the band is a
+parallelogram and its vertical extent is identical at every x. That is what
+makes a run of them layout-predictable — a tapering band shrinks toward one end
+— and every gutter between them is a parallel diagonal.
+
+It does not make the slant free. A full-width line of copy does not live in the
+band's extent, it lives in the largest axis-aligned rectangle inside the
+parallelogram, and that is bounded by the top edge at its lowest and the bottom
+edge at its highest — a full slant in at each. Padding of half the slant is the
+average, not the worst case, and sliced the last bullet on the widest band.
+
+**The page is full bleed.** Panels run to the paper's edge and the caption box
+sits on the first panel rather than in a band of blank stock above it. That,
+thin gutters and a 2px panel ink are most of what separates a page laid out now
+from one laid out in 1994 — as is the halftone pitch, which is 3.5px rather
+than 6px so the dots read as print grain instead of Ben-Day.
 
 The border is the panel's own background showing past a slightly smaller plate
 laid on top, not four rules along the edges. The rules existed so the ink could
@@ -100,11 +115,6 @@ layer, placed in page percentages. The fixed canvas is what makes that safe: a
 percentage of an 880×1140 leaf is the same slice of the composition at every
 scale factor, so art aimed at a gutter stays on that gutter. Everything in it
 is `aria-hidden` decoration and may never be the only place a fact appears.
-
-A slope costs a band the height of its clearance, and the page has no spare
-height — the first version paid for two slopes out of the neighbouring band and
-the audit caught it immediately, as a clipped bullet reporting foreground
-exactly equal to background.
 
 **Flats come in two weights.** A panel is `tint` or `solid`. Tint is a wash
 over the paper, for panels carrying body copy; solid lays the flat down at full

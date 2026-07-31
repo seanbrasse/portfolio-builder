@@ -217,9 +217,10 @@ const pages: Issue['pages'] = [
     // Crosses the gutter between the first two bands.
     breakouts: [{ kind: 'speed-streak', x: 62, y: 25, w: 34, h: 6, rotate: -3, accent: 'a', opacity: 0.42 }],
     panels: [
-      { slot: 'a', content: { type: 'experience', ref: 'mailchimp' }, overrides: { accent: 'a', tilt: -0.35 } },
-      { slot: 'b', content: { type: 'experience', ref: 'paypal' }, overrides: { accent: 'b', shape: 'slope-b' } },
-      { slot: 'c', content: { type: 'experience', ref: 'avarint' }, overrides: { accent: 'c', shape: 'slope-t', tilt: 0.35 } },
+      // One slant, repeated. Every gutter down this page is the same diagonal.
+      { slot: 'a', content: { type: 'experience', ref: 'mailchimp' }, overrides: { accent: 'a', shape: 'band-up' } },
+      { slot: 'b', content: { type: 'experience', ref: 'paypal' }, overrides: { accent: 'b', shape: 'band-up' } },
+      { slot: 'c', content: { type: 'experience', ref: 'avarint' }, overrides: { accent: 'c', shape: 'band-up' } },
       // Professional side projects belong with the professional work, not
       // filed under nights-and-weekends.
       {
@@ -238,16 +239,23 @@ const pages: Issue['pages'] = [
     status: 'published',
     ogTagline: 'Three things built to find out whether they could be.',
     panels: [
+      // The establishing shot. A rectangle, not a lean: in the reference the
+      // splash is the plain frame and the panels beside it carry the geometry.
+      { slot: 'splash', content: { type: 'art', art: 'skyline' }, overrides: { accent: 'b' } },
       {
-        slot: 'splash',
+        slot: 'a',
         content: { type: 'project', ref: 'pass-the-interview' },
-        overrides: { accent: 'a', shape: 'lean-r' },
+        overrides: { accent: 'a', shape: 'band-up' },
       },
-      { slot: 'a', content: { type: 'project', ref: 'cadence' }, overrides: { accent: 'b' } },
-      { slot: 'b', content: { type: 'project', ref: 'life-os' }, overrides: { accent: 'c', tilt: 0.4 } },
+      { slot: 'b', content: { type: 'project', ref: 'cadence' }, overrides: { accent: 'b', shape: 'band-up' } },
+      { slot: 'c', content: { type: 'project', ref: 'life-os' }, overrides: { accent: 'c', shape: 'band-up' } },
     ],
     // Straddles the gutter between the splash and the stack beside it.
-    breakouts: [{ kind: 'burst-star', x: 38, y: 30, w: 20, rotate: -8, accent: 'c', opacity: 0.9 }],
+    // No breakout on this page. The stack beside the splash is three text
+    // panels with no slack in them, so anything crossing that gutter lands on
+    // copy — the audit caught a burst sitting on Cadence's tech chips at two
+    // different positions. The crossing element here should be the figure,
+    // which can be drawn to fit the gap rather than dropped into it.
   },
   {
     id: 'page-contact',

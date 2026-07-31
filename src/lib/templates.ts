@@ -61,25 +61,29 @@ export const TEMPLATES = {
     name: 'Four bands',
     areas: ['a', 'b', 'c', 'd'],
     columns: 'minmax(0, 1fr)',
-    // A slope costs a band the height of its clearance, so the two sloped
-    // bands are given it back — but not out of the first band, which carries
-    // three bullets and lost its last one when it paid for them.
-    rows: '1.1fr 1.12fr 1.02fr 0.82fr',
+    // Every band on this page is slanted, and a slanted band owes a full slant
+    // of clearance at each end; the first also carries the caption box. The
+    // tracks are in proportion to what each band actually holds — three
+    // bullets, three bullets, two, and a project — rather than being traded
+    // between them, which is what clipped one band each time it was tried.
+    rows: '1.16fr 1.06fr 1.0fr 0.92fr',
     slots: ['a', 'b', 'c', 'd'],
   },
   /**
-   * A tall panel down one side with the rest stacked beside it — the shape a
-   * comic reaches for when one image has to carry the page. The splash is the
-   * narrower track on purpose: a tall panel reads as large from its height, and
-   * giving it the wider column as well leaves the stack too cramped to letter.
+   * A tall panel down one side with three stacked beside it.
+   *
+   * The splash carries an image rather than copy — that is what it is for, and
+   * it is the natural home for a figure once one exists. It takes the narrower
+   * track on purpose: a tall panel reads as large from its height, and giving
+   * it the wider column as well leaves the stack too cramped to letter.
    */
   'splash-side': {
     id: 'splash-side',
-    name: 'Splash and stack',
-    areas: ['splash a', 'splash b'],
-    columns: '0.92fr 1.22fr',
-    rows: '1.08fr 0.94fr',
-    slots: ['splash', 'a', 'b'],
+    name: 'Splash and three',
+    areas: ['splash a', 'splash b', 'splash c'],
+    columns: '0.88fr 1.26fr',
+    rows: '1.04fr 1.0fr 0.96fr',
+    slots: ['splash', 'a', 'b', 'c'],
   },
   'splash-4': {
     id: 'splash-4',
