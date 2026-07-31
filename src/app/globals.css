@@ -2285,6 +2285,53 @@ a:hover {
   max-width: 420px;
 }
 
+/* One visible target for drop, paste and click. A dashed well reads as "put
+   something here" the way a bare file input never did, and it is a real button
+   so it focuses and activates from the keyboard. */
+.dropzone {
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  width: 100%;
+  padding: 22px 16px;
+  font: inherit;
+  text-align: center;
+  color: var(--ink-muted);
+  background: var(--surface-sunk);
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.dropzone:hover,
+.dropzone:focus-visible {
+  border-color: var(--ink-muted);
+  color: var(--ink);
+}
+
+/* While a file is over it. Ember, because this is the moment the drop will
+   land — the same colour the site uses for the live, current thing. */
+.dropzone[data-dragging] {
+  border-color: var(--accent-a);
+  border-style: solid;
+  background: color-mix(in srgb, var(--accent-a) 8%, var(--surface-sunk));
+  color: var(--ink);
+}
+
+.dropzone-lead {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dropzone-sub {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
 .admin-preview,
 .admin-shots img {
   max-width: 100%;
