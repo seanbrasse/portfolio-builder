@@ -1149,11 +1149,11 @@ a:hover {
      decides — see the narrow-viewport block, where the names come off. */
   --join-gutter: 20px;
   /* Only the value before hydration: the stacking effect measures the tallest
-     label and overwrites this. Set to what that measurement comes to — a 28px
-     badge plus the button's 5px of padding, plus the effect's own 4px — so the
-     first painted frame and the measured one are the same height and the line
-     does not jump. */
-  --row-h: 37px;
+     label and overwrites this. Set to what that measurement comes to — a 40px
+     badge, the 5px gap under it, the name's own line, the button's 5px of
+     padding and the effect's own 4px — so the first painted frame and the
+     measured one are the same height and the line does not jump. */
+  --row-h: 68px;
   --stack: calc(var(--rows, 1) * var(--row-h));
   position: relative;
   height: calc(var(--stack) + 26px);
@@ -1244,10 +1244,21 @@ a:hover {
 /* A button, reset to look like the label it replaced. Pointing at a company is
    how you get its dates, so the thing you point at has to be a control — and a
    control that looks like a decoration is one nobody tries. */
+/* Mark over name, not beside it.
+   Two things come out of stacking them. The mark can be large without the
+   label becoming a long horizontal run — set beside the text, a 40px badge
+   adds 40px of width to every label, and width is what makes joins collide.
+   Set above it, the label is only as wide as its widest line, which is the
+   name it already was. So the badges doubled and the collisions went down.
+   Left-aligned rather than centred, because the tick and the leader are drawn
+   at the join's left edge; centring would put the mark half a label away from
+   the date it marks. */
 .timeline-company {
+  --badge: 40px;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
   white-space: nowrap;
   padding: 0 0 5px;
   margin: 0;
@@ -1364,6 +1375,13 @@ a:hover {
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1;
+}
+
+/* The drawn mark has to grow with the box it is drawn in, or a school with no
+   crest reads as an empty square beside companies that have one. */
+.timeline-company .badge-mono {
+  font-size: 15px;
+  border-radius: 9px;
 }
 
 /* Smaller inside a line of text.
@@ -1700,13 +1718,26 @@ a:hover {
     display: none;
   }
 
-  /* Half the clearance, because a label here is one 28px square rather than a
-     run of text. At the full 20px, four badges spread across a phone collide
-     on paper while sitting visibly apart on screen — and the row that buys
-     them costs about fifty pixels, which is the difference between this page
+  /* Half the clearance, because a label here is one square rather than a run
+     of text. At the full 20px, four badges spread across a phone collide on
+     paper while sitting visibly apart on screen — and the row that buys them
+     costs about fifty pixels, which is the difference between this page
      fitting a short phone and scrolling. */
   .timeline-track {
-    --join-gutter: 10px;
+    --join-gutter: 8px;
+  }
+
+  /* Sized against the viewport, not picked.
+     With the names hidden the badge *is* the label, so its width sets the
+     pitch — and the gap between the closest pair of joins is a percentage of
+     a track that is itself a percentage of the screen. A fixed size cannot be
+     right at both 320px and 640px: 32px fits one row on a 390 and spills onto
+     two on a 360, which costs ~40px and is the difference between this page
+     fitting a short phone and scrolling. Tying it to `vw` makes the badge as
+     large as the space between the joins allows, at every width, instead of
+     as large as the narrowest phone can bear. */
+  .timeline-company {
+    --badge: clamp(26px, 8vw, 34px);
   }
 
   .timeline-detail-company {
