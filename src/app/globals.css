@@ -20,6 +20,11 @@
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  /* A second voice for the line under a name — a role under a company, a
+     degree under a school. A serif against the body's grotesque, because two
+     lines in the same face at the same size read as one wrapped label however
+     they are weighted. No network: this is whatever serif the system has. */
+  --font-secondary: ui-serif, Georgia, 'Times New Roman', serif;
 
   /* One measure for prose, one for the page. Text that runs the width of a
      desktop window is text nobody finishes. */
@@ -263,20 +268,20 @@ a:hover {
 .intro-role {
   font-size: clamp(14px, 1.6vw, 17px);
   color: var(--ink-muted);
-  margin-top: 12px;
+  margin-top: 14px;
   letter-spacing: 0.01em;
 }
 
 .intro-tagline {
   font-size: clamp(15px, 1.5vw, 17px);
-  line-height: 1.4;
-  margin-top: 10px;
+  line-height: 1.5;
+  margin-top: 16px;
   max-width: 30ch;
 }
 
 .intro-skills-label {
-  margin-top: clamp(12px, 2vh, 20px);
-  margin-bottom: 10px;
+  margin-top: clamp(20px, 3.4vh, 34px);
+  margin-bottom: 14px;
 }
 
 .skills {
@@ -332,7 +337,7 @@ a:hover {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ink-muted);
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .prose {
@@ -658,7 +663,9 @@ a:hover {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 16px;
+  /* Tight. The cards belong with the controls beneath them, not floating
+     halfway between those and the line above. */
+  gap: 6px;
   /* Swiping should move the carousel, not scroll the page underneath it. */
   touch-action: pan-y;
 }
@@ -1172,7 +1179,7 @@ a:hover {
    inside the column. */
 .timeline {
   flex: none;
-  margin: 4px 0 18px;
+  margin: clamp(14px, 2.6vh, 30px) 0 10px;
   width: 100vw;
   margin-left: calc(50% - 50vw);
   padding-inline: var(--gutter);
@@ -1224,6 +1231,19 @@ a:hover {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.timeline-role {
+  font-family: var(--font-secondary);
+  font-size: 11px;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-muted);
 }
 
 /* A project. Ember when it is the card nearest the middle, which is what ties
