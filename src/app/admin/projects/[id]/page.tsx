@@ -113,7 +113,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
           <span className="field-label">Summary — max {CAPS.projectSummary}</span>
           <textarea
             name="summary"
-            rows={3}
+            rows={5}
             maxLength={CAPS.projectSummary}
             defaultValue={item?.summary ?? ''}
           />
@@ -131,10 +131,22 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
 
         <LinkRows links={item?.links ?? []} />
 
-        <label className="admin-check">
-          <input type="checkbox" name="published" defaultChecked={item?.published ?? true} />
-          <span>Published — unchecked keeps it out of the carousel</span>
-        </label>
+        {/* Publishing is an edit-time choice, not a create-time one. A new
+            project saves as a draft and lands on this same page in edit mode,
+            where its images can be added and this checkbox appears — so the
+            create form shows the promise instead of a control that would be
+            overridden anyway. */}
+        {creating ? (
+          <p className="admin-note">
+            Saves as a draft. Add screenshots on the next screen, then publish
+            when it&rsquo;s ready.
+          </p>
+        ) : (
+          <label className="admin-check">
+            <input type="checkbox" name="published" defaultChecked={item!.published} />
+            <span>Published — unchecked keeps it out of the carousel</span>
+          </label>
+        )}
       </Form>
 
       {!creating ? (

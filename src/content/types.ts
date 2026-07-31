@@ -183,7 +183,12 @@ export const CAPS = {
   experienceSummary: 200,
   impactBullet: 120,
   impactBulletCount: 3,
-  projectSummary: 200,
+  /**
+   * The card clamps this to two lines, so a long summary is not a layout risk
+   * there — it is the modal that shows the whole thing, and 500 is room for a
+   * real paragraph about the project rather than a single sentence.
+   */
+  projectSummary: 500,
   quote: 180,
   /**
    * The line under the name, on a page that does not scroll. It is set large

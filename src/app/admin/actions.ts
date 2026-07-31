@@ -283,6 +283,14 @@ export async function saveProject(form: FormData): Promise<Result> {
     return { ok: false, error: 'A professional project has to name the company it was built at.' };
   }
 
+  /**
+   * Is this the first save, or an edit of a row that already exists? The answer
+   * changes two things below, so it is asked once here. The admin's client sees
+   * drafts, so a row that exists is found whether or not it is published.
+   */
+  const existing = await supabase.from('projects').select('id').eq('id', id).maybeSingle();
+  const creating = !existing.data;
+
   const { error } = await supabase.from('projects').upsert({
     id,
     title: text(form, 'title'),
@@ -295,11 +303,27 @@ export async function saveProject(form: FormData): Promise<Result> {
     tech: commas(form.get('tech')),
     links: links(form),
     date: text(form, 'date'),
-    published: form.get('published') === 'on',
+    /**
+     * A brand-new project is always a draft, no matter what the form said.
+     * A project cannot be finished at the instant it is named — it has no
+     * screenshots yet, because those can only be added once the row exists to
+     * attach them to. Publishing is a deliberate later step, so creation does
+     * not offer it; an edit of an existing row respects the checkbox.
+     */
+    published: creating ? false : form.get('published') === 'on',
   });
 
   if (error) return { ok: false, error: error.message };
   republish();
+
+  /**
+   * After the first save, go to the row's own edit page. That page is where
+   * images and the rest live — the create form cannot show them because there
+   * is no row to hang an image on yet — so landing there is what makes "add a
+   * project, then add its screenshots" one continuous flow rather than a save
+   * that appears to dead-end.
+   */
+  if (creating) redirect(`/admin/projects/${id}`);
   return { ok: true };
 }
 
