@@ -1190,12 +1190,93 @@ a:hover {
   background: var(--ink);
 }
 
+/* The joins are a list now. It carries the sequence for a screen reader; the
+   positioning is unchanged, because the items place themselves against the
+   track and this element has no box of its own. */
+.timeline-joins {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* A button, reset to look like the label it replaced. Pointing at a company is
+   how you get its dates, so the thing you point at has to be a control — and a
+   control that looks like a decoration is one nobody tries. */
 .timeline-company {
   display: flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  padding-bottom: 5px;
+  padding: 0 0 5px;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The dates, on hover or focus or tap.
+ *
+ * Anchored above the label rather than below it: below is where the rule, the
+ * years and the project marks are, and a tooltip landing on them covers the
+ * line it is describing. */
+.timeline-detail {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  white-space: nowrap;
+  padding: 7px 10px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--matte-shade) 30%, transparent);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ink-muted);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 120ms var(--ease),
+    visibility 120ms var(--ease);
+}
+
+.timeline-detail[data-open] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Opens leftward past halfway across the line. */
+.timeline-detail[data-flip] {
+  left: auto;
+  right: 0;
+}
+
+.timeline-detail time {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.timeline-detail-role {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* The company is already set beside the badge at this width — repeating it in
+   the tooltip would be the same word twice, six pixels apart. It comes back
+   below 640px, where the label is hidden and the badge is all there is. */
+.timeline-detail-company {
+  display: none;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .timeline-text {
@@ -1557,11 +1638,15 @@ a:hover {
     --card-fraction: 0.88;
   }
 
-  /* Badges only. The names and roles are still in the ordered list beneath the
-     bar — the copy a screen reader was getting all along — so this drops one
-     rendering of the facts, not the facts. */
+  /* Badges only. Tapping one still gives the company, the role and the dates,
+     and the button's label carries all three for a screen reader either way —
+     so this drops one rendering of the facts, not the facts. */
   .timeline-text {
     display: none;
+  }
+
+  .timeline-detail-company {
+    display: block;
   }
 
   .timeline-year {

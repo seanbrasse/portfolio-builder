@@ -660,12 +660,20 @@ function timelineGeometry(
     ticks: years,
     // The degree is a join like any other as far as the line is concerned: a
     // tick where something started. It is first because it started first.
+    /**
+     * Each join carries its own dates now, rather than the line drawing the
+     * companies and a parallel list carrying the ranges. Two lists of the same
+     * four things is two places to change and one place to forget; the badge is
+     * the thing you point at, so the dates belong on it.
+     */
     joins: [
       {
         id: 'education',
         label: education.school,
         sub: education.credential,
         logo: undefined as Asset | undefined,
+        range: `from ${formatMonth(education.startDate)}`,
+        iso: education.startDate,
         left: at(education.startDate),
       },
       ...ordered.map((item) => ({
@@ -673,21 +681,9 @@ function timelineGeometry(
         label: item.company,
         sub: item.role,
         logo: item.logo,
-        left: at(item.startDate),
-      })),
-    ],
-    spans: [
-      {
-        id: 'education',
-        label: `${education.credential}, ${education.school}`,
-        range: `from ${formatMonth(education.startDate)}`,
-        iso: education.startDate,
-      },
-      ...ordered.map((item) => ({
-        id: item.id,
-        label: item.company,
         range: formatRange(item.startDate, item.endDate),
         iso: isoRange(item.startDate, item.endDate),
+        left: at(item.startDate),
       })),
     ],
     marks: projects.map((project, index) => ({
@@ -718,6 +714,36 @@ function Timeline({
   onPick: (index: number) => void;
 }) {
   const track = useRef<HTMLDivElement>(null);
+
+  /**
+   * Which badge is showing its dates.
+   *
+   * `sticky` is the difference between a hover and a tap. A pointer that moves
+   * away should take the tooltip with it; a tap has no "away" to move to, so
+   * clicking pins it until something else is clicked. One state rather than
+   * two, because a hover and a tap cannot both be showing at once.
+   */
+  const [open, setOpen] = useState<{ id: string; sticky: boolean } | null>(null);
+
+  // A pinned tooltip closes the way a menu does — on anything else, or on
+  // Escape. Without this a tap on a phone leaves it up with no way back.
+  useEffect(() => {
+    if (!open?.sticky) return;
+
+    const away = (event: PointerEvent) => {
+      if (!(event.target as Element | null)?.closest?.('.timeline-join')) setOpen(null);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(null);
+    };
+
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [open]);
 
   /**
    * Which row each label sits in.
@@ -804,57 +830,122 @@ function Timeline({
 
   return (
     <div className="timeline">
-      {/* Decoration. The same facts follow as a dated list, because a position
-          on a line is not information anyone can hear. */}
-      <div className="timeline-track" ref={track} aria-hidden="true">
+      {/* The rule, the years and the marks are decoration — a position on a
+          line is not information anyone can hear, and each is hidden
+          individually. The joins are not: they are buttons now, and a
+          focusable control inside an `aria-hidden` subtree is unreachable by
+          keyboard while still being in the tab order. */}
+      <div className="timeline-track" ref={track}>
         {/* Two pieces, because the scale changes between them. The lighter one
             covers the years before the first job, which are compressed. */}
         <span
+          aria-hidden="true"
           className="timeline-rule timeline-rule-lead"
           style={{ left: 0, width: `${geometry.lead}%` }}
         />
         <span
+          aria-hidden="true"
           className="timeline-rule"
           style={{ left: `${geometry.lead}%`, width: `${100 - geometry.lead}%` }}
         />
 
         {geometry.ticks.map((tick) => (
-          <span key={tick.year} className="timeline-year" style={{ left: `${tick.left}%` }}>
+          <span
+            key={tick.year}
+            aria-hidden="true"
+            className="timeline-year"
+            style={{ left: `${tick.left}%` }}
+          >
             {tick.year}
           </span>
         ))}
 
-        {geometry.joins.map((join) => (
-          <span key={join.id} className="timeline-join" style={{ left: `${join.left}%` }}>
-            <span className="timeline-company">
-              <Badge name={join.label} logo={join.logo} />
-              <span className="timeline-text">
-                <span className="timeline-name">{join.label}</span>
-                {/* The role, in the secondary face. Two lines of the same
-                    typeface at the same size read as one wrapped label; the
-                    change of face is what separates the place from the job. */}
-                <span className="timeline-role">{join.sub}</span>
-              </span>
-            </span>
-          </span>
-        ))}
+        {/* An ordered list, because the order is the meaning — this is a
+            sequence in time, and it should say so without the rule needing to
+            be described. */}
+        <ol className="timeline-joins">
+          {geometry.joins.map((join) => {
+            const showing = open?.id === join.id;
+
+            return (
+              <li key={join.id} className="timeline-join" style={{ left: `${join.left}%` }}>
+                <button
+                  type="button"
+                  className="timeline-company"
+                  /* The whole fact, in one string. The name and role are hidden
+                     by CSS on a narrow screen and the dates are never rendered
+                     as text, so nothing here can be assembled from what happens
+                     to be on screen. */
+                  aria-label={`${join.label} — ${join.sub}, ${join.range}`}
+                  onPointerEnter={(event) => {
+                    // Mouse only. A touch fires this on tap and would show the
+                    // tooltip and then immediately pin it.
+                    if (event.pointerType !== 'mouse') return;
+                    setOpen((current) => (current?.sticky ? current : { id: join.id, sticky: false }));
+                  }}
+                  onPointerLeave={() => setOpen((current) => (current?.sticky ? current : null))}
+                  onClick={() =>
+                    setOpen((current) =>
+                      current?.id === join.id && current.sticky
+                        ? null
+                        : { id: join.id, sticky: true },
+                    )
+                  }
+                  onFocus={() =>
+                    setOpen((current) =>
+                      current?.id === join.id ? current : { id: join.id, sticky: false },
+                    )
+                  }
+                  onBlur={() => setOpen((current) => (current?.sticky ? current : null))}
+                >
+                  <Badge name={join.label} logo={join.logo} />
+                  <span className="timeline-text">
+                    <span className="timeline-name">{join.label}</span>
+                    {/* The role, in the secondary face. Two lines of the same
+                        typeface at the same size read as one wrapped label; the
+                        change of face is what separates the place from the
+                        job. */}
+                    <span className="timeline-role">{join.sub}</span>
+                  </span>
+                </button>
+
+                {/* Flipped past halfway, so a tooltip on a late join opens back
+                    across the line it belongs to rather than off the edge of a
+                    phone — where the page clips overflow and it would simply
+                    not be there. */}
+                <span
+                  className="timeline-detail"
+                  data-open={showing || undefined}
+                  data-flip={join.left > 50 || undefined}
+                  aria-hidden="true"
+                >
+                  <span className="timeline-detail-company">{join.label}</span>
+                  <span className="timeline-detail-role">{join.sub}</span>
+                  <time dateTime={join.iso}>{join.range}</time>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
 
         {geometry.marks.map((mark) => (
-          <span key={mark.id} className="timeline-mark" style={{ left: `${mark.left}%` }} />
+          <span
+            key={mark.id}
+            aria-hidden="true"
+            className="timeline-mark"
+            style={{ left: `${mark.left}%` }}
+          />
         ))}
 
         {/* Rides the carousel's continuous position, so it slides between two
             projects rather than snapping to whichever is nearest. Placed from
             the animation frame, which is why it is a ref. */}
-        <span ref={cursorRef} className="timeline-cursor" />
+        <span ref={cursorRef} aria-hidden="true" className="timeline-cursor" />
       </div>
 
+      {/* Only the projects. The companies used to be listed here too, and are
+          now the buttons above — one set of facts, one place to change them. */}
       <ol className="sr-only">
-        {geometry.spans.map((span) => (
-          <li key={span.id}>
-            {span.label}, <time dateTime={span.iso}>{span.range}</time>
-          </li>
-        ))}
         {geometry.marks.map((mark) => (
           <li key={mark.id}>
             <button type="button" onClick={() => onPick(mark.index)}>
