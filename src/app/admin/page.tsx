@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { saveSettings } from './actions';
 import { adminEducations, adminExperiences, adminProjects, adminSettings } from './data';
 import { Form } from './Form';
+import { Grow } from './Grow';
 import { LinkRows } from './LinkRows';
 import { CAPS } from '@/content/types';
 
@@ -53,15 +54,21 @@ export default async function AdminHome() {
             </label>
           </div>
 
-          <label className="field">
-            <span className="field-label">Tagline</span>
-            <input name="tagline" defaultValue={settings.tagline} />
-          </label>
+          <Grow
+            name="tagline"
+            label="Tagline"
+            max={CAPS.tagline}
+            defaultValue={settings.tagline}
+            hint="The line under your name. It is set large on a page that does not scroll, so every line it takes comes off the work below it."
+          />
 
-          <label className="field">
-            <span className="field-label">Skills — comma separated</span>
-            <input name="skills" defaultValue={settings.skills.join(', ')} />
-          </label>
+          <Grow
+            name="skills"
+            label="Skills — comma separated"
+            max={CAPS.skills}
+            defaultValue={settings.skills.join(', ')}
+            hint="Counted as the whole line, because the row wraps as one run."
+          />
 
           <h3 className="admin-subhead">Footer and metadata</h3>
 
@@ -91,10 +98,13 @@ export default async function AdminHome() {
             </label>
           </div>
 
-          <label className="field">
-            <span className="field-label">Social card description</span>
-            <textarea name="og_tagline" rows={2} defaultValue={settings.og_tagline} />
-          </label>
+          <Grow
+            name="og_tagline"
+            label="Social card description"
+            max={CAPS.ogTagline}
+            defaultValue={settings.og_tagline}
+            hint="Shown when the site is pasted into a chat or a post. Most platforms stop displaying it around here."
+          />
 
           <LinkRows links={settings.links} />
         </Form>

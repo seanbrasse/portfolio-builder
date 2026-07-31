@@ -1143,10 +1143,20 @@ a:hover {
    is positioned off `--stack` so that adding a row pushes the rule down instead
    of overrunning the block above it. */
 .timeline-track {
-  --row-h: 26px;
+  /* The least whitespace two joins may sit apart before one is pushed onto a
+     row of its own. Lives here rather than in the component because the answer
+     depends on what a label is at this width, which is a thing the stylesheet
+     decides — see the narrow-viewport block, where the names come off. */
+  --join-gutter: 20px;
+  /* Only the value before hydration: the stacking effect measures the tallest
+     label and overwrites this. Set to what that measurement comes to — a 28px
+     badge plus the button's 5px of padding, plus the effect's own 4px — so the
+     first painted frame and the measured one are the same height and the line
+     does not jump. */
+  --row-h: 37px;
   --stack: calc(var(--rows, 1) * var(--row-h));
   position: relative;
-  height: calc(var(--stack) + 24px);
+  height: calc(var(--stack) + 26px);
   max-width: var(--page-max);
   margin: 0 auto;
 }
@@ -1173,9 +1183,9 @@ a:hover {
 
 .timeline-year {
   position: absolute;
-  top: calc(var(--stack) + 10px);
+  top: calc(var(--stack) + 11px);
   transform: translateX(-50%);
-  font-size: 10px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.1em;
   color: var(--ink-muted);
@@ -1237,7 +1247,7 @@ a:hover {
 .timeline-company {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   white-space: nowrap;
   padding: 0 0 5px;
   margin: 0;
@@ -1268,7 +1278,7 @@ a:hover {
   border-radius: 8px;
   background: var(--surface);
   box-shadow: 0 6px 20px color-mix(in srgb, var(--matte-shade) 30%, transparent);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.35;
   color: var(--ink-muted);
   opacity: 0;
@@ -1300,7 +1310,7 @@ a:hover {
 .timeline-detail-role {
   font-family: var(--font-secondary);
   font-style: italic;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink);
 }
 
@@ -1311,15 +1321,19 @@ a:hover {
   display: none;
   color: var(--ink);
   font-weight: 700;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
+/* Letter-spacing comes down as the size goes up. Tracking that opens up 10px
+   uppercase into something readable makes 12px uppercase merely wide, and
+   width is the scarce axis here — every extra pixel of label is another chance
+   of a collision that pushes a row onto the stack. */
 .timeline-name {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--ink);
   line-height: 1.1;
@@ -1334,9 +1348,9 @@ a:hover {
  * Nothing is fetched from a brand's servers and nothing is approximated. */
 .badge {
   flex: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
+  width: var(--badge, 28px);
+  height: var(--badge, 28px);
+  border-radius: 7px;
   object-fit: contain;
 }
 
@@ -1346,10 +1360,21 @@ a:hover {
   background: var(--surface);
   border: 1px solid var(--rule-strong);
   color: var(--ink);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1;
+}
+
+/* Smaller inside a line of text.
+   The timeline size is the default because there the badge is the subject —
+   it is what you point at, and at 20px an uploaded logo was too small to read
+   as one. On a card the same mark is a footnote to a title and should not
+   outweigh it, so it stays close to the type it sits beside. */
+.project-context .badge,
+.gallery-item-meta .badge {
+  --badge: 18px;
+  border-radius: 5px;
 }
 
 /* A project. Ember when it is the card nearest the middle, which is what ties
@@ -1675,12 +1700,21 @@ a:hover {
     display: none;
   }
 
+  /* Half the clearance, because a label here is one 28px square rather than a
+     run of text. At the full 20px, four badges spread across a phone collide
+     on paper while sitting visibly apart on screen — and the row that buys
+     them costs about fifty pixels, which is the difference between this page
+     fitting a short phone and scrolling. */
+  .timeline-track {
+    --join-gutter: 10px;
+  }
+
   .timeline-detail-company {
     display: block;
   }
 
   .timeline-year {
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.04em;
   }
 
@@ -1982,6 +2016,43 @@ a:hover {
 .admin textarea {
   resize: vertical;
   line-height: 1.5;
+}
+
+/* Sized by script, so neither handle nor scrollbar should appear: dragging it
+   would be undone by the next keystroke, and an inner scrollbar is the thing
+   growing to fit exists to avoid. */
+.admin textarea.field-grow {
+  resize: none;
+  overflow-y: hidden;
+}
+
+/* Rides the field's own label rather than sitting under the box, where it
+   would be one more line in a form that is already long — and where, on a
+   field that changes height as you type, it would move while you read it. */
+.field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.field-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.field-count[data-state='near'] {
+  color: var(--ink);
+}
+
+/* Full is a state, not an error — the text is valid, there is simply no more
+   room. Ember says "this is the edge" in the same voice the rest of the site
+   uses for the current thing. */
+.field-count[data-state='full'] {
+  color: var(--accent-a);
 }
 
 /* A field the id lives in after it has been used as a foreign key. Editable
