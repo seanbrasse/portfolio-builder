@@ -2071,6 +2071,22 @@ main {
   padding-top: 0;
 }
 
+/* When the first panel is a page-bleed one it is *underneath* the others, so
+   the caption does not land on it — it lands on whichever panel holds the
+   leaf's top-left cell, which is the next one. `:first-of-type` keys on DOM
+   position and cannot see that, so on `case-study` the caption box sat
+   directly on the `problem` panel's heading: bone on solid amber at 1.92:1 in
+   noir, which is what the audit caught.
+
+   Scoped to this template rather than written as a general
+   `[data-bleed='page'] + .panel` rule, because it is only true when the next
+   panel is in the top-left. On `splash-rail` the panel after the bleed is the
+   top of the *right-hand* rail, nowhere near the caption, and 52px of padding
+   there would be a hole in the wrong panel. */
+.comic-page[data-template='case-study'] > .panel[data-bleed='page'] + .panel .panel-body {
+  padding-top: 52px;
+}
+
 /* An establishing-shot panel: the drawing is the panel, so it runs to the
    inked edge rather than sitting inside the body's padding. */
 .art-panel-inner {
@@ -2093,4 +2109,238 @@ main {
 
 .panel:has(.art-panel-inner) .panel-body {
   padding: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Artifact panels
+
+   The work itself, drawn rather than photographed. See the note on
+   `PanelContent` for why: most of what is worth showing belongs to a former
+   employer, and a reconstruction is both the lawful option and the accessible
+   one — a code block stays selectable, a diagram stays themeable, a chart
+   stays correct at any zoom.
+
+   All four share one look: a recessed plate inside the panel, so an artifact
+   reads as a thing pasted into the page rather than as more lettering. They
+   set in the UI face rather than the display one, because a code fragment set
+   in a comic face is a joke that costs legibility.
+--------------------------------------------------------------------------- */
+
+.artifact {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Fills the panel rather than sitting at the top of it. An artifact is the
+     subject of its panel — the beat the whole page is building toward — and a
+     chart occupying the top quarter of a tall frame reads as a caption that
+     ran out of things to say. */
+  flex: 1 1 auto;
+  gap: 8px;
+}
+
+.panel-title--small {
+  font-size: 21px;
+  margin-bottom: 2px;
+}
+
+.artifact-lang {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  opacity: 0.75;
+  margin: 0;
+}
+
+/* Ink, not `--ink-muted`. At 12px over the artifact plate the muted token
+   measured 4.4:1 in noir — under AA, and by little enough that it read as fine
+   by eye. Size and placement carry the hierarchy instead of value. */
+.artifact-note {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink);
+  opacity: 0.82;
+  margin: 2px 0 0;
+}
+
+/* The recessed plate the artifacts share. Ink at low strength rather than a
+   second flat: a flat would compete with the panel's own accent, and every
+   artifact sits inside a panel that already has one. */
+.code-block,
+.flow-steps,
+.endpoint-list,
+.chart-pair {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: 2px;
+  margin: 0;
+  /* The plate takes the panel's leftover height and centres its contents in
+     it, so a short artifact sits in the middle of its frame instead of
+     clinging to the top edge. */
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Code ------------------------------------------------------------------- */
+
+.code-block {
+  /* A fragment sits at the top of its plate — code reads from the first line,
+     and centring it vertically would move the line numbers a reader is
+     tracking against. */
+  align-self: stretch;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11.5px;
+  line-height: 1.55;
+  padding: 9px 11px;
+  /* A fragment is chosen to fit. If one ever does not, it scrolls inside its
+     own plate rather than pushing the panel's other copy out of the frame. */
+  overflow: auto;
+  min-height: 0;
+}
+
+.code-block code {
+  display: block;
+  white-space: pre;
+}
+
+.code-line {
+  display: block;
+}
+
+/* The changed lines. A left bar plus a tint, not color alone — ACC requires
+   that anything color communicates is also communicated some other way. */
+.code-line[data-marked] {
+  background: color-mix(in srgb, var(--accent-c) 30%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent-a);
+  padding-left: 5px;
+  margin-left: -5px;
+}
+
+/* Flow ------------------------------------------------------------------- */
+
+.flow-steps {
+  list-style: none;
+  padding: 12px 13px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  gap: 9px 4px;
+}
+
+.flow-step {
+  /* A stage name is a label, not prose. Wrapping "MERGED PRS" onto two lines
+     inside its own box makes two stages out of one. */
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  background: var(--paper-lit);
+  border: 1.5px solid var(--ink);
+  color: var(--ink);
+}
+
+/* The arrow between stages. Generated content on a list item, so the order is
+   carried by the list itself and a screen reader is never asked to interpret a
+   chevron. Not on the last one — a pipeline ends. */
+.flow-step:not(:last-child)::after {
+  content: '→';
+  margin-left: 8px;
+  margin-right: -2px;
+  color: var(--accent-a);
+}
+
+/* Chart ------------------------------------------------------------------ */
+
+.chart-pair {
+  padding: 14px 13px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+}
+
+.chart-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 4.2rem 1fr;
+  align-items: baseline;
+  gap: 0 8px;
+}
+
+/* Same reason as `.artifact-note`: at 10px on the plate, muted came in at 4.21
+   in sunset and 3.71 in noir. A label this small has no headroom to spend on
+   being quiet. */
+.chart-row dt {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  grid-row: 1;
+}
+
+.chart-row dd {
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1;
+  margin: 0;
+  color: var(--ink);
+  grid-row: 1;
+}
+
+/* Sized from the same numbers the text is, and `aria-hidden`, so the figure is
+   never only a width. */
+.chart-bar {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  height: 14px;
+  margin-top: 5px;
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.chart-row[data-after='true'] .chart-bar {
+  background: var(--accent-a);
+}
+
+/* Endpoints -------------------------------------------------------------- */
+
+.endpoint-list {
+  list-style: none;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.endpoint-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.endpoint-method {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  padding: 2px 5px;
+  min-width: 3.4rem;
+  text-align: center;
+  background: var(--ink);
+  color: var(--paper-lit);
+}
+
+/* A destructive verb is the one worth spotting in a list. Still ink-on-accent
+   rather than accent-on-ink: the label is 9.5px and no spot color in either
+   palette carries text that small. */
+.endpoint-method[data-method='delete'] {
+  background: var(--accent-a);
+  color: var(--on-accent);
+}
+
+.endpoint-path {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11.5px;
+  color: var(--ink);
 }

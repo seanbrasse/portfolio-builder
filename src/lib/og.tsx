@@ -25,7 +25,7 @@ async function displayFont(): Promise<ArrayBuffer> {
  *
  * Recruiters share links and the preview is the first impression, so this is
  * the one surface that has to work with no CSS, no JavaScript, and no theme
- * switch. It reads colors from the four-color palette directly because Satori
+ * switch. It reads colors from the sunset palette directly because Satori
  * has no cascade to resolve custom properties against — the values still come
  * from `tokens.ts`, so there is no second source of truth.
  */
@@ -39,7 +39,7 @@ export async function renderOgImage({
   subtitle: string;
 }) {
   const settings = getSettings();
-  const palette = PALETTES['four-color'];
+  const palette = PALETTES.sunset;
   const font = await displayFont();
 
   return new ImageResponse(
