@@ -64,6 +64,7 @@ export function Work({
   const target = useRef(0);
   const stage = useRef<HTMLDivElement>(null);
   const cursor = useRef<HTMLSpanElement>(null);
+  const root = useRef<HTMLDivElement>(null);
   const frame = useRef(0);
   const settle = useRef(0);
   /**
@@ -500,6 +501,50 @@ export function Work({
     event.preventDefault();
   };
 
+  /**
+   * Left and Right turn the carousel from anywhere on the page, not only when
+   * it has focus.
+   *
+   * The container is focusable and `onKeyDown` handles the keys once it is
+   * tabbed to — but a pointer click is deliberately kept from focusing it (see
+   * the pointer-down handler), so a reader who never tabbed in would press an
+   * arrow and nothing would happen. This document-level listener closes that
+   * gap: the arrows do what a reader plainly expects them to.
+   *
+   * It stands aside where the keys already mean something else — while a dialog
+   * is open (the modal gallery moves between images with the same arrows), while
+   * a form control or editable element holds focus, and while the container
+   * itself is focused, where `onKeyDown` already runs and reacting again would
+   * turn it twice. Only the horizontal keys are taken; Up and Down are left to
+   * scroll the page on the layouts that scroll.
+   */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (detail || gallery) return;
+
+      const active = document.activeElement as HTMLElement | null;
+      if (
+        active &&
+        (root.current?.contains(active) ||
+          active.isContentEditable ||
+          active.tagName === 'INPUT' ||
+          active.tagName === 'TEXTAREA' ||
+          active.tagName === 'SELECT')
+      ) {
+        return;
+      }
+
+      if (event.key === 'ArrowRight') go(1);
+      else if (event.key === 'ArrowLeft') go(-1);
+      else return;
+      event.preventDefault();
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [detail, gallery, go]);
+
   // Drag scrubs rather than stepping. The carousel is the reader's to move
   // now, so a half-drag should leave it half-way rather than snapping back.
   const onPointerMove = (event: React.PointerEvent) => {
@@ -527,6 +572,7 @@ export function Work({
       />
 
       <div
+        ref={root}
         className="carousel"
         role="group"
         aria-roledescription="carousel"
