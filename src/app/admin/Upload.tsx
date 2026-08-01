@@ -80,7 +80,7 @@ export function Upload({
   onSave,
   label,
   altHint,
-  accept = 'image/png,image/jpeg,image/webp,image/avif,image/svg+xml,video/mp4,video/webm',
+  accept = 'image/png,image/jpeg,image/webp,image/avif,image/svg+xml,video/mp4,video/webm,video/quicktime',
 }: {
   folder: string;
   onSave: (image: {
