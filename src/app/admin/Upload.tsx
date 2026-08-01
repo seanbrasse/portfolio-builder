@@ -6,6 +6,21 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import type { Result } from './actions';
 
+/**
+ * The largest file the storage bucket will take. Kept in step by hand with the
+ * `media` bucket's `file_size_limit` in Supabase — the browser has no way to
+ * read that config, so the number lives here too and is stated to the editor
+ * up front rather than after a rejected upload. If the bucket limit changes,
+ * change this with it.
+ */
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+/** A size in the units a person reads — "8.4 MB", "63 MB". */
+function formatBytes(bytes: number) {
+  const mb = bytes / (1024 * 1024);
+  return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`;
+}
+
 /** What the browser can tell us about a file without decoding it twice. */
 type Measured = {
   file: File;
@@ -107,6 +122,16 @@ export function Upload({
   async function choose(file: File | undefined) {
     if (!file) return;
     setError('');
+    // Caught here, before anything is measured or uploaded, so the limit is
+    // stated the moment the file is chosen rather than after the bytes have
+    // been sent and bounced.
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(
+        `That file is ${formatBytes(file.size)} — the most that can be uploaded is ` +
+          `${formatBytes(MAX_UPLOAD_BYTES)}. A shorter clip or a lower-resolution export will fit.`,
+      );
+      return;
+    }
     try {
       setPicked(await measure(file));
     } catch (problem) {
@@ -164,7 +189,14 @@ export function Upload({
         .upload(key, picked.file, { cacheControl: '31536000', upsert: false });
 
       if (upload.error) {
-        setError(upload.error.message);
+        // The bucket's own size rejection reads "The object exceeded the
+        // maximum allowed size" and never names the size. Restate it with the
+        // number when that is what came back; pass anything else through as-is.
+        setError(
+          /maximum allowed size|payload too large|exceeded/i.test(upload.error.message)
+            ? `That file is larger than the ${formatBytes(MAX_UPLOAD_BYTES)} upload limit.`
+            : upload.error.message,
+        );
         return;
       }
 
