@@ -1738,7 +1738,10 @@ function ProjectDetail({ project, employer }: { project: Project; employer?: Exp
           <p className="project-links">
             {project.links.map((link) => (
               <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer">
-                {link.label} ↗
+                {link.label}{' '}
+                <span className="link-arrow" aria-hidden="true">
+                  ↗
+                </span>
               </a>
             ))}
           </p>
