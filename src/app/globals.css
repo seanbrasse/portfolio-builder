@@ -1833,7 +1833,18 @@ a:hover {
        of each other. At this width an overlap does not read as depth, it reads
        as three cards printed on top of one another. */
     --spacing: 1.02;
-    --card-fraction: 0.88;
+    /* Smaller than it can be, on purpose. At 0.88 the card ran nearly edge to
+       edge and the whole column felt pressed against the bezel; pulling it back
+       to 0.78 leaves a margin either side, so the card reads as an object on the
+       page rather than the page itself. */
+    --card-fraction: 0.78;
+  }
+
+  /* More air between the line, the card and the controls than the 6px the
+     desktop stack uses. On a phone the three are the whole screen, and a little
+     space between them is what keeps the view from feeling tight. */
+  .carousel {
+    gap: 12px;
   }
 
   /* Badges only. Tapping one still gives the company, the role and the dates,
