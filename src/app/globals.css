@@ -1935,11 +1935,11 @@ a:hover {
        of each other. At this width an overlap does not read as depth, it reads
        as three cards printed on top of one another. */
     --spacing: 1.02;
-    /* Larger here than the 0.78 it sat at, at the reader's request: the card is
-       the subject of this page, and on a phone a bigger poster earns the width.
-       A margin still remains either side, so it reads as an object on the page
-       rather than the page itself. */
-    --card-fraction: 0.9;
+    /* Wider still, at the reader's request: the card is the subject of this
+       page, and on a phone a bigger poster earns the width. A thin margin
+       remains either side, so it reads as an object on the page rather than the
+       page itself, and the neighbours still show a sliver past its edges. */
+    --card-fraction: 0.98;
   }
 
   /* More air between the line, the card and the controls than the 6px the
@@ -2213,6 +2213,14 @@ a:hover {
     /* Dropped lower on the page: a wider top margin sets the cards down from the
        timeline and gives the whole band room to breathe. */
     margin-block: clamp(22px, 4.5vh, 40px) clamp(8px, 2vh, 16px);
+  }
+
+  /* The dots and "All projects" dropped further below the card, at the reader's
+     request, into the space between it and the footer — so the row reads as its
+     own line rather than sitting right under the card. Gated with the rest of
+     the roomier spacing: on a short phone the height goes to the card instead. */
+  .carousel-controls {
+    margin-top: clamp(18px, 4vh, 36px);
   }
 }
 
