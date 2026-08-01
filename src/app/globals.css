@@ -2429,6 +2429,25 @@ a:hover {
   max-width: 420px;
 }
 
+/* The queue of files waiting to be uploaded. Each is its own small block —
+   preview, dimensions, its alt field and a way out — separated enough to read
+   as a stack of distinct things rather than one run-on form. */
+.admin-staged {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 20px;
+}
+
+.admin-staged-item {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
 /* One visible target for drop, paste and click. A dashed well reads as "put
    something here" the way a bare file input never did, and it is a real button
    so it focuses and activates from the keyboard. */
