@@ -2175,6 +2175,46 @@ a:hover {
   }
 }
 
+/* A bigger carousel on the one-screen desktop layout.
+ *
+ * The card is sized to fit one screen without scrolling, so on a shorter
+ * desktop viewport (a 13" laptop at ~857px tall) it is height-bound and shrinks
+ * well below its width cap — the same card reaches full size once a taller
+ * window, or a 75% zoom, hands it more height. To bring that full-size card to
+ * 100% without giving up the no-scroll layout, the intro rhythm and the
+ * timeline are tightened here so more of the height goes to the card. The card
+ * grows only where it was height-bound; on a tall window it was already at its
+ * width cap and is unaffected.
+ *
+ * Scoped to the locked layout, and placed after the base rules on purpose: the
+ * base declarations sit later in the file and win at equal specificity, so the
+ * same overrides written into the lock query near the top of the file would
+ * silently lose (the reason `--locked` itself is declared as a base default). */
+@media (min-width: 900px) and (min-height: 760px) {
+  .screen {
+    padding-top: clamp(10px, 1.6vh, 20px);
+    padding-bottom: clamp(8px, 1.2vh, 16px);
+    gap: clamp(8px, 1.3vh, 14px);
+  }
+
+  .intro-role {
+    margin-top: 8px;
+  }
+
+  .intro-tagline {
+    margin-top: 10px;
+  }
+
+  .intro-skills-label {
+    margin-top: clamp(10px, 1.6vh, 18px);
+    margin-bottom: 8px;
+  }
+
+  .timeline {
+    margin: clamp(4px, 0.8vh, 8px) 0 6px;
+  }
+}
+
 /* ---------------------------------------------------------------------------
    Admin
 
