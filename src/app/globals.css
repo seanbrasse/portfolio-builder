@@ -566,10 +566,20 @@ a:hover {
   touch-action: pan-y;
 }
 
-.carousel:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 6px;
-  border-radius: var(--radius);
+/* Only where there is a keyboard to earn it. iOS focuses this `tabindex`
+   container on a plain tap and matches `:focus-visible`, so an orange box
+   sprang up around the whole carousel every time a finger touched it and stayed
+   until something else took focus — the component reading as permanently
+   "selected". A touch device has no Tab key, so the ring guides nobody there;
+   gating it to hover-capable pointers keeps the keyboard affordance on the
+   desktop, where it is real, and takes the box off the phone, where it was
+   only noise. */
+@media (hover: hover) {
+  .carousel:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 6px;
+    border-radius: var(--radius);
+  }
 }
 
 /* The carousel's tunables live here rather than in the component, because all
@@ -1400,6 +1410,20 @@ a:hover {
   object-fit: contain;
 }
 
+/* A light plate behind a supplied logo in the dark theme.
+   Many marks are dark artwork on a transparent ground — the Avarint wordmark is
+   navy — and on a near-black page they simply disappear. A cream chip gives
+   them back the light ground they were drawn for. A mark that already carries
+   its own (a boxed crest, a coloured roundel) just fills the chip and is
+   unchanged. Scoped to `img.badge`, so the drawn monogram — which is styled for
+   the dark page — is left alone, and to anything but the light theme, where the
+   page is already the ground these logos expect. `box-sizing: border-box` is
+   global, so the padding insets the artwork without changing the badge's size. */
+:root:not([data-theme='light']) img.badge {
+  background: var(--ink);
+  padding: 2px;
+}
+
 .badge-mono {
   display: grid;
   place-items: center;
@@ -1430,26 +1454,21 @@ a:hover {
   border-radius: 5px;
 }
 
-/* A project. Ember when it is the card nearest the middle, which is what ties
-   the line to the carousel. */
+/* A project: a hairline tick on the rule, shorter and lighter than the ticks
+   that mark a job beginning (`.timeline-join::after`, 12px of full `--ink`). A
+   project is a smaller event than a role starting, and the mark should read as
+   one at a glance rather than as a row of dots competing with the badges above.
+   The ember cursor still rides over whichever project is showing, so the marks
+   themselves stay uniform and quiet. */
 .timeline-mark {
   position: absolute;
-  /* Centred on the rule: the box is 13px tall counting its border, so its
-     middle lands on the rule when its top sits 6px above it. */
-  top: calc(var(--stack) - 6px);
-  width: 9px;
-  height: 9px;
-  margin-left: -4px;
-  border-radius: 50%;
-  background: var(--paper);
-  border: 2px solid var(--ink-muted);
-  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), scale var(--dur) var(--ease);
-}
-
-.timeline-mark[data-active] {
-  background: var(--accent-a);
-  border-color: var(--accent-a);
-  scale: 1.3;
+  /* An 8px tick straddling the rule — a touch shorter than the 12px job tick. */
+  top: calc(var(--stack) - 4px);
+  width: 1px;
+  height: 8px;
+  margin-left: -0.5px;
+  background: var(--ink-muted);
+  transition: background var(--dur) var(--ease);
 }
 
 .timeline-now {
@@ -1732,6 +1751,10 @@ a:hover {
   font-size: 12.5px;
   font-weight: 600;
   letter-spacing: 0.06em;
+  /* One line. Squeezed into the controls row on a phone the flex parent handed
+     it a width that broke "All projects" across two lines; the label is short
+     enough to never need wrapping, so it should not. */
+  white-space: nowrap;
   padding: 8px 15px;
   border: 1px solid var(--rule-strong);
   border-radius: 999px;
@@ -1842,9 +1865,15 @@ a:hover {
 
   /* More air between the line, the card and the controls than the 6px the
      desktop stack uses. On a phone the three are the whole screen, and a little
-     space between them is what keeps the view from feeling tight. */
+     space between them is what keeps the view from feeling tight. The margin
+     opens the same room above and below the carousel as a whole — between it and
+     the timeline over it, and the footer under it — so the cards sit in a band
+     of their own rather than wedged between the two. The page scrolls freely at
+     this width, so the extra height costs nothing but a few pixels of scroll on
+     the shortest phones. */
   .carousel {
     gap: 12px;
+    margin-block: clamp(8px, 2vh, 16px);
   }
 
   /* Badges only. Tapping one still gives the company, the role and the dates,

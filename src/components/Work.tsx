@@ -161,11 +161,20 @@ export function Work({
     // The cursor sits between the two projects the position is between, which
     // is what makes it track the carousel rather than snap to whichever card
     // happens to be nearest.
+    //
+    // Wrapped, not clamped. `position.current` is unbounded — it runs negative
+    // past the first card and beyond the last, because the carousel is a cycle
+    // with no end (see `seek`). Clamping it to [0, n-1] pinned the cursor at an
+    // end the moment the reader scrolled off it, and it stayed pinned there
+    // even as the cards cycled back to the middle: the line lied about where the
+    // carousel was. Folding the position into [0, n) instead keeps the cursor on
+    // the card actually showing, wherever the endless scroll has wandered to.
     if (cursor.current && geometry.marks.length > 0) {
-      const clamped = Math.max(0, Math.min(position.current, geometry.marks.length - 1));
-      const lower = Math.floor(clamped);
-      const upper = Math.min(lower + 1, geometry.marks.length - 1);
-      const blend = clamped - lower;
+      const n = geometry.marks.length;
+      const wrapped = ((position.current % n) + n) % n;
+      const lower = Math.floor(wrapped) % n;
+      const upper = (lower + 1) % n;
+      const blend = wrapped - Math.floor(wrapped);
       const left =
         geometry.marks[lower].left + (geometry.marks[upper].left - geometry.marks[lower].left) * blend;
       cursor.current.style.left = `${left}%`;
