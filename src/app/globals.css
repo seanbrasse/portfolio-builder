@@ -1540,6 +1540,20 @@ a:hover {
   cursor: pointer;
 }
 
+/* On a phone the modal opens edge to edge with its media flush to the top, and
+   a video's controls are an overlay: iOS parks mute in the top-right, fullscreen
+   and picture-in-picture in the top-left, play in the middle. The close button
+   sat on top of that mute control. There is no free corner over the video, so
+   the fix is to stop overlaying at all — a short gutter drops the media below
+   the close, which now sits on the panel's own surface with nothing under it.
+   Desktop is untouched: there the browser lays the video's controls along the
+   bottom, so the top-right corner was never contested. */
+@media (max-width: 640px) {
+  .dialog-panel {
+    padding-top: 48px;
+  }
+}
+
 .dialog-title {
   font-size: 24px;
   letter-spacing: -0.02em;
