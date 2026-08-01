@@ -31,6 +31,13 @@ type Measured = {
 };
 
 /**
+ * A file waiting to be uploaded. It carries its own id — so React can key it
+ * and a Remove can name it — and its own alt text, because every file staged
+ * at once needs a description of its own.
+ */
+type Staged = Measured & { id: string; alt: string };
+
+/**
  * Intrinsic dimensions, measured rather than assumed.
  *
  * The card needs them to reserve the right box before the image loads, and
@@ -78,7 +85,13 @@ function keyFor(folder: string, file: File) {
 }
 
 /**
- * Drop a file, describe it, save it.
+ * Drop files, describe them, save them.
+ *
+ * More than one at a time: a project's screenshots usually arrive as a set, so
+ * the picker, a drop and a paste all take several files, each staged with its
+ * own preview and its own alt field and its own Remove. Nothing is written
+ * until Upload — a file added by mistake is taken back out of the queue, not
+ * deleted from storage after the fact.
  *
  * The bytes go from the browser straight to storage rather than through a
  * server action: a screenshot is several megabytes, and routing it through a
@@ -86,9 +99,10 @@ function keyFor(folder: string, file: File) {
  * authorises the upload and the bucket policy checks `is_admin()`, so the
  * shortcut costs nothing in access control.
  *
- * Alt text gates the save (MEDIA-3). It is the one hard block in here, and it
- * is justified: an image with no description is unusable to anyone who cannot
- * see it, and "add it later" has never once happened.
+ * Alt text gates the save (MEDIA-3), still — but it falls back to the hint, so
+ * a file left with an empty field saves with the suggestion rather than being
+ * blocked. An image with no description is unusable to anyone who cannot see
+ * it, and "add it later" has never once happened.
  */
 export function Upload({
   folder,
@@ -110,8 +124,7 @@ export function Upload({
   /** Narrowed where only a still makes sense — a company logo, for instance. */
   accept?: string;
 }) {
-  const [picked, setPicked] = useState<Measured | null>(null);
-  const [alt, setAlt] = useState('');
+  const [staged, setStaged] = useState<Staged[]>([]);
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
   const [pending, start] = useTransition();
@@ -119,47 +132,80 @@ export function Upload({
   const zone = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
-  async function choose(file: File | undefined) {
-    if (!file) return;
+  /**
+   * Measure and queue whatever was handed in — a picker selection, a drop, or a
+   * paste, any of which can carry several files. Each is checked against the
+   * size limit and read for its dimensions before it joins the queue; the ones
+   * that fail either test are named in the error and simply left out, so one bad
+   * file does not sink the rest of the batch.
+   */
+  async function choose(files: FileList | File[] | null | undefined) {
+    const list = Array.from(files ?? []);
+    if (!list.length) return;
     setError('');
-    // Caught here, before anything is measured or uploaded, so the limit is
-    // stated the moment the file is chosen rather than after the bytes have
-    // been sent and bounced.
-    if (file.size > MAX_UPLOAD_BYTES) {
-      setError(
-        `That file is ${formatBytes(file.size)} — the most that can be uploaded is ` +
-          `${formatBytes(MAX_UPLOAD_BYTES)}. A shorter clip or a lower-resolution export will fit.`,
-      );
-      return;
+
+    const measured: Staged[] = [];
+    const problems: string[] = [];
+
+    for (const file of list) {
+      if (file.size > MAX_UPLOAD_BYTES) {
+        problems.push(`${file.name} is ${formatBytes(file.size)}`);
+        continue;
+      }
+      try {
+        const m = await measure(file);
+        measured.push({ ...m, id: crypto.randomUUID(), alt: '' });
+      } catch {
+        problems.push(`${file.name} could not be read`);
+      }
     }
-    try {
-      setPicked(await measure(file));
-    } catch (problem) {
-      setError(problem instanceof Error ? problem.message : 'That file could not be read.');
+
+    if (measured.length) setStaged((current) => [...current, ...measured]);
+    if (problems.length) {
+      setError(
+        `Skipped ${problems.join('; ')} — the upload limit is ${formatBytes(MAX_UPLOAD_BYTES)} ` +
+          `and files have to be a readable image or video.`,
+      );
     }
   }
 
+  /** Take a file back out of the queue and release its preview. */
+  function removeStaged(id: string) {
+    setStaged((current) => {
+      const going = current.find((item) => item.id === id);
+      if (going) URL.revokeObjectURL(going.preview);
+      return current.filter((item) => item.id !== id);
+    });
+  }
+
+  function setAltFor(id: string, value: string) {
+    setStaged((current) =>
+      current.map((item) => (item.id === id ? { ...item, alt: value } : item)),
+    );
+  }
+
   /**
-   * Paste an image straight in. The clipboard carries files as `items`, so a
-   * screenshot copied with the OS shortcut or an image copied from a browser
-   * arrives here without ever touching the file picker.
+   * Paste files straight in. The clipboard carries files as `items`, and a
+   * paste can hold more than one, so all of them come through — a screenshot
+   * copied with the OS shortcut or images copied from a browser arrive here
+   * without ever touching the file picker.
    *
    * Bound while the zone holds focus rather than to the whole window: there can
-   * be more than one uploader on a page — a project's screenshots and, in
-   * future, other media — and a paste should land in the one the editor is
-   * actually working in, not in whichever mounted first.
+   * be more than one uploader on a page, and a paste should land in the one the
+   * editor is actually working in, not in whichever mounted first.
    */
   useEffect(() => {
     const node = zone.current;
     if (!node) return;
 
     const onPaste = (event: ClipboardEvent) => {
-      const file = [...(event.clipboardData?.items ?? [])]
-        .find((item) => item.kind === 'file')
-        ?.getAsFile();
-      if (file) {
+      const files = [...(event.clipboardData?.items ?? [])]
+        .filter((item) => item.kind === 'file')
+        .map((item) => item.getAsFile())
+        .filter((file): file is File => file !== null);
+      if (files.length) {
         event.preventDefault();
-        void choose(file);
+        void choose(files);
       }
     };
 
@@ -168,69 +214,140 @@ export function Upload({
   }, []);
 
   /**
-   * The description that will be saved: what was typed, or the hint if nothing
-   * was. The hint is written to read as usable alt text ("Avarint logo",
-   * "Cadence screenshot") precisely so it can stand in — an empty field
-   * defaulting to a prompt would be worse than the prompt. Alt text is still
-   * required; this only changes what "required" falls back to.
+   * Release every staged preview if the uploader unmounts mid-edit. The remove
+   * and upload paths revoke as they go; this catches the queue that was still
+   * open when the page navigated away. A ref, so the cleanup sees the current
+   * queue rather than the empty one it closed over at mount.
    */
-  const effectiveAlt = alt.trim() || altHint;
+  const stagedRef = useRef<Staged[]>([]);
+  useEffect(() => {
+    stagedRef.current = staged;
+  }, [staged]);
+  useEffect(
+    () => () => {
+      stagedRef.current.forEach((item) => URL.revokeObjectURL(item.preview));
+    },
+    [],
+  );
 
+  /**
+   * Upload the whole queue, one file after another. Each is sent to storage and
+   * then recorded through `onSave`; the ones that land are dropped from the
+   * queue and the ones that fail stay in it, named, so a retry is just pressing
+   * Upload again rather than re-adding everything.
+   */
   function save() {
-    if (!picked) return;
+    if (!staged.length) return;
 
     start(async () => {
       setError('');
       const supabase = supabaseBrowser();
-      const key = keyFor(folder, picked.file);
+      const batch = staged;
+      const doneIds: string[] = [];
+      const failures: string[] = [];
 
-      const upload = await supabase.storage
-        .from('media')
-        .upload(key, picked.file, { cacheControl: '31536000', upsert: false });
+      for (const item of batch) {
+        const key = keyFor(folder, item.file);
+        const upload = await supabase.storage
+          .from('media')
+          .upload(key, item.file, { cacheControl: '31536000', upsert: false });
 
-      if (upload.error) {
-        // The bucket's own size rejection reads "The object exceeded the
-        // maximum allowed size" and never names the size. Restate it with the
-        // number when that is what came back; pass anything else through as-is.
-        setError(
-          /maximum allowed size|payload too large|exceeded/i.test(upload.error.message)
-            ? `That file is larger than the ${formatBytes(MAX_UPLOAD_BYTES)} upload limit.`
-            : upload.error.message,
-        );
-        return;
+        if (upload.error) {
+          // The bucket's own size rejection reads "The object exceeded the
+          // maximum allowed size" and never names the size. Restate it with the
+          // number when that is what came back; pass anything else through.
+          const why = /maximum allowed size|payload too large|exceeded/i.test(upload.error.message)
+            ? `larger than the ${formatBytes(MAX_UPLOAD_BYTES)} limit`
+            : upload.error.message;
+          failures.push(`${item.file.name} (${why})`);
+          continue;
+        }
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from('media').getPublicUrl(key);
+
+        const result = await onSave({
+          src: publicUrl,
+          alt: item.alt.trim() || altHint,
+          width: item.width,
+          height: item.height,
+          media: item.media,
+        });
+
+        if (!result.ok) {
+          failures.push(`${item.file.name} (${result.error})`);
+          continue;
+        }
+
+        URL.revokeObjectURL(item.preview);
+        doneIds.push(item.id);
       }
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('media').getPublicUrl(key);
-
-      const result = await onSave({
-        src: publicUrl,
-        alt: effectiveAlt,
-        width: picked.width,
-        height: picked.height,
-        media: picked.media,
-      });
-
-      if (!result.ok) {
-        setError(result.error);
-        return;
+      setStaged((current) => current.filter((item) => !doneIds.includes(item.id)));
+      if (failures.length) {
+        setError(`Didn't upload: ${failures.join('; ')}.`);
+      } else if (input.current) {
+        input.current.value = '';
       }
-
-      URL.revokeObjectURL(picked.preview);
-      setPicked(null);
-      setAlt('');
-      if (input.current) input.current.value = '';
       router.refresh();
     });
   }
 
   return (
     <div className="admin-upload">
+      {/* The files waiting to go up, newest at the bottom, each with its own
+          description and its own way out of the queue. The add target sits
+          below them, so it is always under the thing most recently added. */}
+      {staged.length ? (
+        <ol className="admin-staged">
+          {staged.map((item) => (
+            <li key={item.id} className="admin-staged-item">
+              {item.media === 'video' ? (
+                <video className="admin-preview" src={item.preview} controls muted playsInline />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img className="admin-preview" src={item.preview} alt="" />
+              )}
+              <p className="admin-note">
+                {item.width} × {item.height}
+              </p>
+
+              <label className="field">
+                <span className="field-label">Alt text — defaults to the grey suggestion</span>
+                <input
+                  type="text"
+                  value={item.alt}
+                  onChange={(event) => setAltFor(item.id, event.target.value)}
+                  /**
+                   * Tabbing out of an empty field commits the suggestion, so the
+                   * value left is the value that saves — no difference between
+                   * "looked filled in" and "was filled in".
+                   */
+                  onBlur={() => {
+                    if (!item.alt.trim()) setAltFor(item.id, altHint);
+                  }}
+                  placeholder={altHint}
+                />
+              </label>
+
+              <button
+                type="button"
+                className="admin-button admin-quiet"
+                onClick={() => removeStaged(item.id)}
+                disabled={pending}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
       <span className="field-label">{label}</span>
 
       {/* One target for all three ways in. Clicking or pressing it opens the
-          file picker through the hidden input; a file dragged onto it drops in;
+          file picker through the hidden input; files dragged onto it drop in;
           a paste while it has focus lands too. It is a real button so the
           keyboard and a screen reader treat it as the control it looks like. */}
       <button
@@ -247,56 +364,30 @@ export function Upload({
         onDrop={(event) => {
           event.preventDefault();
           setDragging(false);
-          void choose(event.dataTransfer.files?.[0]);
+          void choose(event.dataTransfer.files);
         }}
       >
-        <span className="dropzone-lead">Drop a file, paste, or click to choose</span>
-        <span className="dropzone-sub">Image or video</span>
+        <span className="dropzone-lead">Drop files, paste, or click to choose</span>
+        <span className="dropzone-sub">Images or video · several at once</span>
       </button>
 
       <input
         ref={input}
         type="file"
         accept={accept}
+        multiple
         hidden
-        onChange={(event) => choose(event.target.files?.[0])}
+        onChange={(event) => choose(event.target.files)}
       />
 
-      {picked ? (
-        <>
-          {picked.media === 'video' ? (
-            <video className="admin-preview" src={picked.preview} controls muted playsInline />
-          ) : (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img className="admin-preview" src={picked.preview} alt="" />
-          )}
-          <p className="admin-note">
-            {picked.width} × {picked.height}
-          </p>
-
-          <label className="field">
-            <span className="field-label">Alt text — defaults to the grey suggestion</span>
-            <input
-              type="text"
-              value={alt}
-              onChange={(event) => setAlt(event.target.value)}
-              /**
-               * Tabbing out of an empty field commits the suggestion, so the
-               * value you leave is the value that saves — no difference between
-               * "looked filled in" and "was filled in". Uploading straight from
-               * an empty field does the same, via `effectiveAlt`.
-               */
-              onBlur={() => {
-                if (!alt.trim()) setAlt(altHint);
-              }}
-              placeholder={altHint}
-            />
-          </label>
-
-          <button type="button" className="admin-button" onClick={save} disabled={pending}>
-            {pending ? 'Uploading…' : 'Upload'}
-          </button>
-        </>
+      {staged.length ? (
+        <button type="button" className="admin-button" onClick={save} disabled={pending}>
+          {pending
+            ? 'Uploading…'
+            : staged.length > 1
+              ? `Upload ${staged.length} files`
+              : 'Upload'}
+        </button>
       ) : null}
 
       {error ? (
