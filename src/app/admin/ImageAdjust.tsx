@@ -14,19 +14,24 @@ import type { AdminImage } from './data';
  * the controls so the choice is made by looking rather than by guessing and
  * saving.
  *
- * Two controls:
- *   • Fit — cover fills the well and crops; contain shows the whole image
- *     letterboxed. Contain is the answer to "it doesn't fit" when nothing
- *     should be cut.
- *   • Focus — where the crop is anchored, and only shown under cover, because
- *     contain has nothing to crop. Set it by dragging on the preview or with
- *     the two sliders; the sliders are what make it reachable from a keyboard.
+ * Three controls:
+ *   • Fit — contain shows the whole image letterboxed (the default, so nothing
+ *     is cut before anyone looks); cover fills the well and crops the rest.
+ *   • Zoom — magnifies the image into the well past its fit and lets the frame
+ *     crop the edges. The dial for a slight crop that neither fit gives alone:
+ *     nudge it up a little to trim a border off a contained shot.
+ *   • Focus — the point kept in view: the anchor of a cover crop and the centre
+ *     a zoom pulls toward. Shown whenever it steers something — under cover, or
+ *     at any fit once the zoom is above 1. Set it by dragging on the preview or
+ *     with the sliders; the sliders are what make it reachable from a keyboard.
  *
  * A video is left alone: a clip is not cropped to a focal point, and its own
  * frame is the composition. The well shows it whole.
  */
 export function ImageAdjust({ image }: { image: AdminImage }) {
-  const [fit, setFit] = useState<'cover' | 'contain'>(image.fit ?? 'cover');
+  const photo = image.media !== 'video';
+  const [fit, setFit] = useState<'cover' | 'contain'>(image.fit ?? 'contain');
+  const [scale, setScale] = useState(image.scale ?? 1);
   const [x, setX] = useState(image.focal_x ?? 0.5);
   const [y, setY] = useState(image.focal_y ?? 0.5);
   const [state, setState] = useState<'idle' | 'saved' | 'error'>('idle');
@@ -36,9 +41,15 @@ export function ImageAdjust({ image }: { image: AdminImage }) {
   const dragging = useRef(false);
   const router = useRouter();
 
+  // The focal point matters when there is a crop to steer: under cover, or once
+  // a zoom is on. Under plain contain at scale 1 there is nothing to point at.
+  const focusable = photo && (fit === 'cover' || scale > 1);
+  const zoomed = photo && scale > 1;
+
   const dirty =
-    fit !== (image.fit ?? 'cover') ||
-    (fit === 'cover' && (x !== (image.focal_x ?? 0.5) || y !== (image.focal_y ?? 0.5)));
+    fit !== (image.fit ?? 'contain') ||
+    scale !== (image.scale ?? 1) ||
+    (focusable && (x !== (image.focal_x ?? 0.5) || y !== (image.focal_y ?? 0.5)));
 
   function pointTo(clientX: number, clientY: number) {
     const box = well.current?.getBoundingClientRect();
@@ -50,7 +61,7 @@ export function ImageAdjust({ image }: { image: AdminImage }) {
 
   function save() {
     start(async () => {
-      const result = await saveImageFraming(image.id, { fit, focalX: x, focalY: y });
+      const result = await saveImageFraming(image.id, { fit, focalX: x, focalY: y, scale });
       if (result.ok) {
         setState('saved');
         setMessage('');
@@ -63,17 +74,23 @@ export function ImageAdjust({ image }: { image: AdminImage }) {
   }
 
   const position = `${x * 100}% ${y * 100}%`;
+  const preview = {
+    objectFit: fit,
+    objectPosition: position,
+    transform: zoomed ? `scale(${scale})` : undefined,
+    transformOrigin: zoomed ? position : undefined,
+  } satisfies React.CSSProperties;
 
   return (
     <div className="admin-frame-editor">
-      {/* The well, at the card's ratio. Dragging sets the focal point under
-          cover; under contain there is nothing to point at, so it is inert. */}
+      {/* The well, at the card's ratio. Dragging sets the focal point whenever
+          the focal point does something — under cover, or under a zoom. */}
       <div
         ref={well}
         className="admin-frame"
-        data-focusable={fit === 'cover' ? '' : undefined}
+        data-focusable={focusable ? '' : undefined}
         onPointerDown={
-          fit === 'cover'
+          focusable
             ? (event) => {
                 dragging.current = true;
                 event.currentTarget.setPointerCapture(event.pointerId);
@@ -90,22 +107,14 @@ export function ImageAdjust({ image }: { image: AdminImage }) {
         }}
       >
         {image.media === 'video' ? (
-          <video
-            src={image.src}
-            muted
-            playsInline
-            loop
-            autoPlay
-            style={{ objectFit: fit, objectPosition: position }}
-          />
+          <video src={image.src} muted playsInline loop autoPlay style={preview} />
         ) : (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={image.src} alt="" style={{ objectFit: fit, objectPosition: position }} />
+          <img src={image.src} alt="" style={preview} />
         )}
 
-        {/* The anchor, drawn only under cover so contain does not imply a
-            control that does nothing. */}
-        {fit === 'cover' && image.media !== 'video' ? (
+        {/* The anchor, drawn only when the focal point is steering a crop. */}
+        {focusable ? (
           <span className="admin-frame-dot" style={{ left: `${x * 100}%`, top: `${y * 100}%` }} />
         ) : null}
       </div>
@@ -120,12 +129,28 @@ export function ImageAdjust({ image }: { image: AdminImage }) {
               setState('idle');
             }}
           >
-            <option value="cover">Cover — fill the frame, crop the rest</option>
             <option value="contain">Contain — show the whole image</option>
+            <option value="cover">Cover — fill the frame, crop the rest</option>
           </select>
         </label>
 
-        {fit === 'cover' && image.media !== 'video' ? (
+        {photo ? (
+          <label className="field">
+            <span className="field-label">Zoom — {Math.round(scale * 100)}%</span>
+            <input
+              type="range"
+              min={100}
+              max={250}
+              value={Math.round(scale * 100)}
+              onChange={(event) => {
+                setScale(Number(event.target.value) / 100);
+                setState('idle');
+              }}
+            />
+          </label>
+        ) : null}
+
+        {focusable ? (
           <div className="admin-frame-focus">
             <label className="field">
               <span className="field-label">Horizontal focus</span>

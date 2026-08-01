@@ -40,13 +40,21 @@ export type Asset = {
   kind: 'screenshot' | 'logo' | 'avatar' | 'document';
   /**
    * How the image sits in a fixed well. `cover` fills and crops, `contain`
-   * shows the whole image letterboxed. Undefined means cover — the historical
-   * behaviour, and the right default for a shot already the right shape.
+   * shows the whole image letterboxed. Undefined means contain — the safer
+   * default for a screenshot that is rarely the well's shape, since it shows the
+   * whole thing rather than silently cropping it.
    */
   fit?: 'cover' | 'contain';
   /**
-   * MEDIA-4: the point that must survive the crop, 0..1 in both axes. Applies
-   * under `cover` only — there is nothing to steer when the whole image shows.
+   * How far the image is zoomed into its well. 1 shows it at the chosen fit;
+   * above 1 magnifies it from the focal point and lets the well crop the edges —
+   * the slight crop that neither fit gives on its own. Undefined means 1.
+   */
+  scale?: number;
+  /**
+   * The point that must survive the crop, 0..1 in both axes. It anchors the
+   * `cover` crop and, at any fit, the point a `scale` above 1 zooms toward — so
+   * it is meaningful under `contain` too once the image is zoomed.
    */
   focalPoint?: { x: number; y: number };
   treatment?: AssetTreatment;

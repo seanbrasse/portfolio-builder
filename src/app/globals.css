@@ -731,14 +731,26 @@ a:hover {
   box-shadow: 0 22px 48px color-mix(in srgb, var(--matte-shade) 55%, transparent);
 }
 
-.project-shot {
-  aspect-ratio: 16 / 9;
+/* The well the shot sits in. It holds the 16:9 shape and clips, so a shot
+   zoomed past its own box (see `scale`) is cropped to the frame rather than
+   spilling onto the card body below it. At scale 1 it is geometrically the same
+   box the image used to be, so nothing about the un-zoomed card changes. */
+.project-shot-frame {
   flex: none;
+  display: block;
+  position: relative;
   width: 100%;
-  height: auto;
-  object-fit: cover;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
   background: var(--surface-sunk);
   border-bottom: 1px solid var(--rule);
+}
+
+.project-shot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* In the dialog, an empty well is capped. The 16:9 ratio exists so a real
