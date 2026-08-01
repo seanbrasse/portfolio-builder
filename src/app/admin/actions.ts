@@ -372,6 +372,11 @@ export async function addImage(
     height: image.height,
     kind: 'screenshot',
     media: image.media,
+    // A still starts on the column default, `contain`, so the whole of it shows
+    // before anyone frames it. A clip starts on `cover`: a recording is composed
+    // to its own edges, and letterboxing it inside a frame that is already a
+    // frame reads as a mistake.
+    fit: image.media === 'video' ? 'cover' : undefined,
     sort_order: count ?? 0,
   });
 
@@ -451,28 +456,30 @@ export async function moveImage(id: string, direction: 'up' | 'down'): Promise<R
 /**
  * How an already-uploaded image sits in the card's well.
  *
- * `contain` shows the whole image and makes the focal point moot, so it is
- * nulled rather than kept around as a value that steers nothing — the next edit
- * back to `cover` starts from centre, which is the honest default. Under
- * `cover` the fractions are clamped to 0..1, the range the column allows and
- * the range `object-position` means anything by.
+ * The focal point matters under `cover` (it anchors the crop) and at any fit
+ * once `scale` climbs above 1 (it is the point the zoom keeps in view). When it
+ * steers nothing — plain `contain` at scale 1 — it is nulled rather than kept
+ * as a value that means nothing, so the next edit that needs it starts from
+ * centre. Fractions clamp to 0..1 and the scale to the column's 1..3.
  */
 export async function saveImageFraming(
   id: string,
-  framing: { fit: 'cover' | 'contain'; focalX: number; focalY: number },
+  framing: { fit: 'cover' | 'contain'; focalX: number; focalY: number; scale: number },
 ): Promise<Result> {
   if (!(await isAdmin())) return DENIED;
   const supabase = await supabaseServer();
 
   const clamp = (n: number) => Math.min(1, Math.max(0, n));
-  const cover = framing.fit === 'cover';
+  const scale = Math.min(3, Math.max(1, framing.scale));
+  const steersCrop = framing.fit === 'cover' || scale > 1;
 
   const { error } = await supabase
     .from('project_images')
     .update({
       fit: framing.fit,
-      focal_x: cover ? clamp(framing.focalX) : null,
-      focal_y: cover ? clamp(framing.focalY) : null,
+      scale,
+      focal_x: steersCrop ? clamp(framing.focalX) : null,
+      focal_y: steersCrop ? clamp(framing.focalY) : null,
     })
     .eq('id', id);
 

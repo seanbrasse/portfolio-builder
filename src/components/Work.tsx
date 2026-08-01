@@ -1468,15 +1468,21 @@ function Media({
 
   /**
    * The per-image framing, as inline style so it wins over the stylesheet's
-   * default `cover`. `object-position` is only meaningful under `cover`; on
-   * `contain` it is harmless, and the focal point is nulled in the database
-   * there anyway, so it reads as centre and does nothing.
+   * default. `object-position` is only meaningful under `cover`; on `contain`
+   * it is harmless, and the focal point is nulled in the database there anyway
+   * unless a zoom is set. A `scale` past 1 magnifies the image toward that same
+   * focal point and the frame around it clips the overflow — that clip is the
+   * crop. Video is left whole: a clip is composed in its own frame.
    */
+  const focal = shot.focalPoint
+    ? `${shot.focalPoint.x * 100}% ${shot.focalPoint.y * 100}%`
+    : undefined;
+  const zoom = !isVideo && shot.scale && shot.scale > 1 ? shot.scale : undefined;
   const framing: React.CSSProperties = {
-    objectFit: shot.fit ?? 'cover',
-    objectPosition: shot.focalPoint
-      ? `${shot.focalPoint.x * 100}% ${shot.focalPoint.y * 100}%`
-      : undefined,
+    objectFit: shot.fit ?? (isVideo ? 'cover' : 'contain'),
+    objectPosition: focal,
+    transform: zoom ? `scale(${zoom})` : undefined,
+    transformOrigin: zoom ? (focal ?? 'center') : undefined,
   };
 
   if (isVideo) {
@@ -1494,48 +1500,52 @@ function Media({
      * clip that will not move on its own.
      */
     return (
-      <video
-        ref={video}
-        className="project-shot"
-        src={shot.src}
-        poster={shot.poster}
-        aria-label={shot.alt}
-        width={640}
-        height={360}
-        style={framing}
-        muted
-        playsInline
-        loop={!viewer}
-        controls={viewer || reduced}
-        preload="metadata"
-        /* Record and restore the playhead so a card clip resumes where it was
-           after scrolling out of the ring and back. The modal is exempt — it
-           starts its own viewing. */
-        onTimeUpdate={
-          viewer ? undefined : (event) => clipTime.set(shot.id, event.currentTarget.currentTime)
-        }
-        onLoadedMetadata={
-          viewer
-            ? undefined
-            : (event) => {
-                const el = event.currentTarget;
-                const at = clipTime.get(shot.id);
-                if (at && Number.isFinite(el.duration) && at < el.duration) el.currentTime = at;
-              }
-        }
-      />
+      <span className="project-shot-frame">
+        <video
+          ref={video}
+          className="project-shot"
+          src={shot.src}
+          poster={shot.poster}
+          aria-label={shot.alt}
+          width={640}
+          height={360}
+          style={framing}
+          muted
+          playsInline
+          loop={!viewer}
+          controls={viewer || reduced}
+          preload="metadata"
+          /* Record and restore the playhead so a card clip resumes where it was
+             after scrolling out of the ring and back. The modal is exempt — it
+             starts its own viewing. */
+          onTimeUpdate={
+            viewer ? undefined : (event) => clipTime.set(shot.id, event.currentTarget.currentTime)
+          }
+          onLoadedMetadata={
+            viewer
+              ? undefined
+              : (event) => {
+                  const el = event.currentTarget;
+                  const at = clipTime.get(shot.id);
+                  if (at && Number.isFinite(el.duration) && at < el.duration) el.currentTime = at;
+                }
+          }
+        />
+      </span>
     );
   }
 
   return (
-    <img
-      className="project-shot"
-      src={shot.src}
-      alt={shot.alt}
-      width={640}
-      height={360}
-      style={framing}
-    />
+    <span className="project-shot-frame">
+      <img
+        className="project-shot"
+        src={shot.src}
+        alt={shot.alt}
+        width={640}
+        height={360}
+        style={framing}
+      />
+    </span>
   );
 }
 

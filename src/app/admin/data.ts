@@ -70,6 +70,7 @@ export type AdminImage = {
   height: number;
   media: 'image' | 'video';
   fit: 'cover' | 'contain';
+  scale: number | null;
   focal_x: number | null;
   focal_y: number | null;
   sort_order: number;
