@@ -1434,6 +1434,31 @@ function useReducedMotion() {
  */
 const clipTime = new Map<string, number>();
 
+/** Speaker glyph for the card's mute toggle — waves when on, a cross when off. */
+function SpeakerIcon({ muted }: { muted: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M11 5 6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none" />
+      {muted ? (
+        <path d="m16 9 5 6M21 9l-5 6" />
+      ) : (
+        <>
+          <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+          <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 function Media({
   shot,
   viewer = false,
@@ -1448,6 +1473,15 @@ function Media({
   const isVideo = shot.media === 'video';
 
   /**
+   * A card clip starts muted — audio that begins on its own as a card drifts
+   * into place is exactly what nobody asked for, and muted is also what lets it
+   * autoplay at all. The corner toggle is the deliberate gesture that turns
+   * sound on, and the state resets when the card leaves the visible ring and its
+   * media unmounts, so scrolling back to a clip never surprises with audio.
+   */
+  const [muted, setMuted] = useState(true);
+
+  /**
    * A card video plays only while its card is the front one, and it is driven
    * from here rather than by the `autoPlay` attribute.
    *
@@ -1458,13 +1492,18 @@ function Media({
    * keeps it paused: a clip starting itself is exactly what that setting asks
    * not to happen. The modal drives its own playback through the native
    * controls, so this stands aside there.
+   *
+   * Mute is set on the element here too, not left to the attribute: React does
+   * not reliably reflect the `muted` prop to the DOM property, and the property
+   * is what actually silences a playing clip.
    */
   useEffect(() => {
     const el = video.current;
     if (!el || viewer || !isVideo) return;
+    el.muted = muted;
     if (play && !reduced) el.play().catch(() => {});
     else el.pause();
-  }, [play, viewer, isVideo, reduced]);
+  }, [play, viewer, isVideo, reduced, muted]);
 
   /**
    * The per-image framing, as inline style so it wins over the stylesheet's
@@ -1491,14 +1530,16 @@ function Media({
      *
      * Both start muted — a clip should never make noise on its own. The modal
      * carries the native controls, and its volume/unmute button is how a
-     * viewer turns the sound on when they want it; that is the answer to "how
-     * do I hear it", now behind a deliberate click rather than automatic.
-     * Neither surface autoplays through the attribute: the modal waits for a
-     * gesture, and the card's muted, looping preview is started by the effect
-     * above only when it is the front card. Controls also appear on the card
-     * under reduced motion, where a play button is the honest alternative to a
-     * clip that will not move on its own.
+     * viewer turns the sound on when they want it. The front card carries its
+     * own corner toggle instead (below), so a clip can be heard from the
+     * carousel without opening it. Neither surface autoplays through the
+     * attribute: the modal waits for a gesture, and the card's looping preview
+     * is started by the effect above only when it is the front card. Native
+     * controls appear on the card under reduced motion, where a play button is
+     * the honest alternative to a clip that will not move on its own — and they
+     * carry their own mute, so the corner toggle stands aside there.
      */
+    const showMute = !viewer && !reduced && play;
     return (
       <span className="project-shot-frame">
         <video
@@ -1510,7 +1551,7 @@ function Media({
           width={640}
           height={360}
           style={framing}
-          muted
+          muted={muted}
           playsInline
           loop={!viewer}
           controls={viewer || reduced}
@@ -1531,6 +1572,22 @@ function Media({
                 }
           }
         />
+        {showMute ? (
+          <button
+            type="button"
+            className="shot-mute"
+            aria-label={muted ? 'Unmute video' : 'Mute video'}
+            aria-pressed={!muted}
+            /* Sits above the card's invisible open-button, and stops the click
+               from reaching it — toggling sound must not also open the modal. */
+            onClick={(event) => {
+              event.stopPropagation();
+              setMuted((m) => !m);
+            }}
+          >
+            <SpeakerIcon muted={muted} />
+          </button>
+        ) : null}
       </span>
     );
   }

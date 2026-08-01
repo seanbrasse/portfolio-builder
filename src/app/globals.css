@@ -770,6 +770,42 @@ a:hover {
   object-fit: cover;
 }
 
+/* The card clip's mute toggle, in the top corner of the well. Above the card's
+   invisible open-button (z-index 2) so it takes the click itself, and only ever
+   drawn on the front card while it is actually playing. Translucent surface so
+   the clip stays the thing, the same treatment the modal's own controls get. */
+.shot-mute {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+.shot-mute:hover,
+.shot-mute:focus-visible {
+  background: var(--surface);
+  border-color: var(--ink-muted);
+}
+
+.shot-mute svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
 /* In the dialog, an empty well is capped. The 16:9 ratio exists so a real
    screenshot is never letterboxed; a placeholder has no shape to preserve, and
    at the dialog's width the honest ratio gives 585px of "no screenshot yet"
