@@ -155,10 +155,27 @@ a {
   color: var(--link);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
+  /* The ember does the marking, the ink does the reading. The link text stays
+     the body colour — the accent is under AA as text on both grounds, and
+     legibility was never colour's job here — but the underline is drawn in the
+     accent, so a link carries the one warm line the rest of the type does not.
+     It is the same idea as the timeline cursor and the focus ring: the ember
+     appears exactly where something is live or actionable. */
+  text-decoration-color: var(--accent-a);
 }
 
 a:hover {
   text-decoration-thickness: 2px;
+}
+
+/* The little launch arrow on a link that opens a new tab. Decorative — the tab
+   behaviour is the fact, the glyph is the flourish — so it is aria-hidden and
+   free to wear the accent at full strength. `inline-block` keeps the link's
+   underline from running under it, so the arrow reads as a mark beside the
+   label rather than part of the word. */
+.link-arrow {
+  display: inline-block;
+  color: var(--accent-a);
 }
 
 :focus-visible {

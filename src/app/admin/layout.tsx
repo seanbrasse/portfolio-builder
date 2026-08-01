@@ -28,7 +28,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <header className="admin-bar">
           <nav className="admin-nav">
             <Link href="/admin">Content</Link>
-            <Link href="/">View site ↗</Link>
+            <Link href="/">
+              View site{' '}
+              <span className="link-arrow" aria-hidden="true">
+                ↗
+              </span>
+            </Link>
           </nav>
 
           <form action={signOut}>
