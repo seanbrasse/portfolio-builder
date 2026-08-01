@@ -156,6 +156,8 @@ export type Project = {
   links: Link[];
   images: Asset[];
   date: string;
+  /** Pinned to the front of the carousel, ahead of the newest-first order. */
+  starred?: boolean;
 };
 
 export type Testimonial = {

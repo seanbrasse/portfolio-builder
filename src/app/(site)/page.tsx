@@ -35,10 +35,14 @@ export const revalidate = 300;
 
 export default async function Home() {
   const settings = await getSettings();
-  // Newest first: the carousel opens on the most recent project and scrolling
-  // forward walks back through time. The order is a presentation choice, so it
-  // is made here rather than baked into the content file.
-  const projects = [...(await getProjects())].sort((a, b) => b.date.localeCompare(a.date));
+  // Starred first, then newest: the carousel opens on the front card, so a
+  // starred project sits at index 0 and "always appears at the top"; the rest
+  // walk back through time. The order is a presentation choice, so it is made
+  // here rather than baked into the content file.
+  const projects = [...(await getProjects())].sort(
+    (a, b) =>
+      Number(b.starred ?? false) - Number(a.starred ?? false) || b.date.localeCompare(a.date),
+  );
   const experiences = await getExperiences();
   const education = await getEducation();
 

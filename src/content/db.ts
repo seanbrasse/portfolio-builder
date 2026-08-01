@@ -125,6 +125,7 @@ type ProjectRow = {
   tech: string[];
   links: Link[];
   date: string;
+  starred: boolean;
 };
 
 type TestimonialRow = {
@@ -243,6 +244,7 @@ function toProject(row: ProjectRow, images: Asset[]): Project {
     links: row.links ?? [],
     images,
     date: row.date,
+    starred: row.starred ?? false,
   };
 }
 
@@ -283,7 +285,13 @@ export async function readIssue(): Promise<Issue | null> {
       // "current" to surface.
       supabase.from('education').select('*').order('start_date', { ascending: true }),
       supabase.from('experiences').select('*').order('start_date', { ascending: false }),
-      supabase.from('projects').select('*').order('date', { ascending: false }),
+      // Starred first, then newest — a pinned project leads the carousel; the
+      // page re-applies the same order, this keeps the database's answer honest.
+      supabase
+        .from('projects')
+        .select('*')
+        .order('starred', { ascending: false })
+        .order('date', { ascending: false }),
       supabase.from('project_images').select('*').order('sort_order', { ascending: true }),
       supabase.from('testimonials').select('*'),
     ]);
