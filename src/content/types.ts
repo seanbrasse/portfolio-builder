@@ -78,6 +78,14 @@ export type SiteSettings = {
   resumeHref: string;
   links: Link[];
   ogTagline: string;
+  /**
+   * The line under the name on the social (Open Graph) card — the image a
+   * shared link unfurls into. Distinct from `ogTagline`, which is the text
+   * description beside that image; this is the subtitle drawn on the card
+   * itself. Stored in natural case and rendered uppercase like the card's
+   * other lines.
+   */
+  ogSubtitle: string;
 };
 
 /**
@@ -220,4 +228,10 @@ export const CAPS = {
    * the card cuts off before it is written for nobody.
    */
   ogTagline: 300,
+  /**
+   * The social card's subtitle line. Set at a large size on a fixed 1200px
+   * card, so unlike `ogTagline` this is a real layout limit — much past this
+   * and the line wraps or runs off the card's edge.
+   */
+  ogSubtitle: 48,
 } as const;

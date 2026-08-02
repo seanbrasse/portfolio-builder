@@ -5,6 +5,7 @@ import { adminEducations, adminExperiences, adminProjects, adminSettings } from 
 import { Form } from './Form';
 import { Grow } from './Grow';
 import { LinkRows } from './LinkRows';
+import { OgPreview } from './OgPreview';
 import { StarToggle } from './StarToggle';
 import { CAPS } from '@/content/types';
 
@@ -105,6 +106,28 @@ export default async function AdminHome() {
             max={CAPS.ogTagline}
             defaultValue={settings.og_tagline}
             hint="Shown when the site is pasted into a chat or a post. Most platforms stop displaying it around here."
+          />
+
+          <label className="field">
+            <span className="field-label">Social card subtitle — max {CAPS.ogSubtitle}</span>
+            <input
+              name="og_subtitle"
+              defaultValue={settings.og_subtitle}
+              maxLength={CAPS.ogSubtitle}
+              placeholder="Software Engineer · React · TypeScript"
+            />
+            <span className="admin-note">
+              The line under your name on the shared-link image. Drawn uppercase
+              on the card; the name and location on it come from the fields
+              above. The preview updates as you type — save to update the real
+              card.
+            </span>
+          </label>
+
+          <OgPreview
+            displayName={settings.display_name}
+            location={settings.location}
+            subtitle={settings.og_subtitle}
           />
 
           <LinkRows links={settings.links} />
