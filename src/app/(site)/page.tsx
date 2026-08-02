@@ -62,16 +62,24 @@ export default async function Home() {
               the title by construction rather than by matching two paddings. */}
           <ThemeToggle />
 
-          <h1>{settings.displayName}</h1>
-          <p className="intro-role">Software Engineer · {settings.location}</p>
-          <p className="intro-tagline">{settings.tagline}</p>
+          {/* The lede is a centred block, not centred text. It shrinks to its
+              widest line (the tagline's measure) and the auto side margins
+              centre that block on the same axis as the timeline and the card
+              below — while the name, role, tagline and skills stay left-aligned
+              within it. The toggle is left on `.intro`, which keeps the full
+              width, so it still holds the top-right corner. */}
+          <div className="intro-lede">
+            <h1>{settings.displayName}</h1>
+            <p className="intro-role">Software Engineer · {settings.location}</p>
+            <p className="intro-tagline">{settings.tagline}</p>
 
-          <h2 className="section-label intro-skills-label">Skills</h2>
-          <ul className="skills">
-            {settings.skills.map((skill) => (
-              <li key={skill}>{skill}</li>
-            ))}
-          </ul>
+            <h2 className="section-label intro-skills-label">Skills</h2>
+            <ul className="skills">
+              {settings.skills.map((skill) => (
+                <li key={skill}>{skill}</li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <section className="work" aria-labelledby="work-label">
