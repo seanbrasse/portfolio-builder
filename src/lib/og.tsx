@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { ImageResponse } from 'next/og';
 
-import { getSettings } from '@/content';
+import { siteUrl } from '@/lib/site';
 import { PALETTES } from '@/lib/tokens';
 
 export const OG_SIZE = { width: 1200, height: 630 };
@@ -39,9 +39,11 @@ export async function renderOgImage({
   title: string;
   subtitle: string;
 }) {
-  const settings = await getSettings();
   const palette = PALETTES.light;
   const font = await displayFont();
+  // The bare host, as the address the card opens — no protocol, uppercased to
+  // sit with the card's other lines.
+  const host = siteUrl().replace(/^https?:\/\//, '').toUpperCase();
 
   // One clean surface, no frame. The bold comic-cover border this used to carry
   // is gone — the card now reads as a plain, generously-padded panel in the
@@ -104,18 +106,21 @@ export async function renderOgImage({
 
         <div style={{ display: 'flex', flex: 1 }} />
 
+        {/* A call to action rather than the name and location again — both are
+            already above, in the title and the caption chip. The card is the
+            link, so this says where it goes: an invitation on the left and the
+            address it opens on the right. */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-end',
-            color: palette.ink,
             fontSize: 28,
             letterSpacing: 2,
           }}
         >
-          <div style={{ display: 'flex' }}>{settings.displayName.toUpperCase()}</div>
-          <div style={{ display: 'flex' }}>{settings.location.toUpperCase()}</div>
+          <div style={{ display: 'flex', color: palette.accentA }}>VIEW THE FULL PORTFOLIO →</div>
+          <div style={{ display: 'flex', color: palette.inkMuted }}>{host}</div>
         </div>
       </div>
     ),

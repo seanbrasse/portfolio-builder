@@ -34,7 +34,10 @@ export function OgPreview({
   subtitle: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const [values, setValues] = useState({ displayName, location, subtitle });
+  // `host` rides in the same state, filled on the first read after mount — the
+  // admin runs on the same host the card links to, so `window.location.host` is
+  // the address the real card shows.
+  const [values, setValues] = useState({ displayName, location, subtitle, host: '' });
   const [mode, setMode] = useState<Theme>('light');
   const p = PALETTES[mode];
 
@@ -52,6 +55,7 @@ export function OgPreview({
         displayName: field('display_name', displayName),
         location: field('location', location),
         subtitle: field('og_subtitle', subtitle),
+        host: window.location.host,
       });
 
     read();
@@ -100,9 +104,9 @@ export function OgPreview({
           {up(values.subtitle)}
         </span>
         <span className="og-card-spacer" />
-        <span className="og-card-foot" style={{ color: p.ink }}>
-          <span>{up(values.displayName)}</span>
-          <span>{up(values.location)}</span>
+        <span className="og-card-foot">
+          <span style={{ color: p.accentA }}>VIEW THE FULL PORTFOLIO →</span>
+          <span style={{ color: p.inkMuted }}>{up(values.host)}</span>
         </span>
       </div>
     </div>
