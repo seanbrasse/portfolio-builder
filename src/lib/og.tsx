@@ -21,13 +21,14 @@ async function displayFont(): Promise<ArrayBuffer> {
 }
 
 /**
- * TECH-2: the social card, styled as a comic cover.
+ * TECH-2: the social card, in the site's default palette.
  *
  * Recruiters share links and the preview is the first impression, so this is
  * the one surface that has to work with no CSS, no JavaScript, and no theme
- * switch. It reads colors from the four-color palette directly because Satori
- * has no cascade to resolve custom properties against — the values still come
- * from `tokens.ts`, so there is no second source of truth.
+ * switch. It reads colours from the light palette directly — the design
+ * system's default — because Satori has no cascade to resolve custom properties
+ * against; the values still come from `tokens.ts`, so there is no second source
+ * of truth, and the card previews in the same colours the site opens in.
  */
 export async function renderOgImage({
   caption,
@@ -39,7 +40,7 @@ export async function renderOgImage({
   subtitle: string;
 }) {
   const settings = await getSettings();
-  const palette = PALETTES.dark;
+  const palette = PALETTES.light;
   const font = await displayFont();
 
   return new ImageResponse(
@@ -76,7 +77,10 @@ export async function renderOgImage({
               alignSelf: 'flex-start',
               background: palette.accentC,
               border: `6px solid ${palette.ink}`,
-              color: palette.ink,
+              // Text sized for the accent fill, not the page ink — on the orange
+              // caption chip that is the light `onAccentC`, so it reads clearly
+              // rather than dark-on-orange.
+              color: palette.onAccentC,
               padding: '8px 20px',
               fontSize: 30,
               letterSpacing: 2,

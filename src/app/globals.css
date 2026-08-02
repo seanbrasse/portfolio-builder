@@ -25,7 +25,7 @@
 --------------------------------------------------------------------------- */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
   --font-body:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
@@ -91,6 +91,14 @@
      needs `--texture-blend: multiply` alongside it. */
   --texture: none;
   --texture-blend: multiply;
+}
+
+/* Dark is the explicit switch away from the light default now, so its
+   `color-scheme` is set on the attribute rather than on `:root`. The dark
+   texture blend already lives in `:root` and applies whenever the light
+   override above does not, so only the scheme needs saying here. */
+[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 * {
@@ -339,11 +347,12 @@ a:hover {
   font-size: clamp(15px, 1.5vw, 17px);
   line-height: 1.5;
   margin-top: 16px;
-  /* 30ch was sized for the one-line tagline this started with; the field now
-     holds up to 180 characters, and at 30ch that stacked into six cramped
-     lines under the name. 58ch keeps a readable measure while letting a long
-     tagline breathe across three or four lines instead of a narrow tower. */
-  max-width: 58ch;
+  /* A wide measure on purpose. The tagline is the one running sentence on the
+     page and it reads better spanning the width the skills row and the card use
+     than stacked into a narrow tower under the name — so it is given a generous
+     measure (a touch past the classic prose maximum) that lets a ~160-character
+     line settle into two lines rather than four. */
+  max-width: 74ch;
 }
 
 .intro-skills-label {
@@ -1569,10 +1578,11 @@ a:hover {
    them back the light ground they were drawn for. A mark that already carries
    its own (a boxed crest, a coloured roundel) just fills the chip and is
    unchanged. Scoped to `img.badge`, so the drawn monogram — which is styled for
-   the dark page — is left alone, and to anything but the light theme, where the
-   page is already the ground these logos expect. `box-sizing: border-box` is
-   global, so the padding insets the artwork without changing the badge's size. */
-:root:not([data-theme='light']) img.badge {
+   the dark page — is left alone, and to the dark theme only, where the page is
+   near-black; the light theme is already the ground these logos expect.
+   `box-sizing: border-box` is global, so the padding insets the artwork without
+   changing the badge's size. */
+[data-theme='dark'] img.badge {
   background: var(--ink);
   padding: 2px;
 }
@@ -2347,7 +2357,7 @@ a:hover {
 
   .intro-tagline {
     font-size: clamp(17px, 1.15vw, 24px);
-    max-width: 52ch;
+    max-width: 80ch;
   }
 
   .intro-skills-label {
@@ -2378,7 +2388,7 @@ a:hover {
 
   .intro-tagline {
     font-size: clamp(21px, 1.3vw, 30px);
-    max-width: 46ch;
+    max-width: 84ch;
     margin-top: clamp(12px, 1vw, 20px);
   }
 

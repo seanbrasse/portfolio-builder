@@ -8,7 +8,7 @@
  * Precedence, highest first:
  *   1. `?theme=` in the URL, so a shared link carries its mode.
  *   2. A stored explicit choice.
- *   3. Dark.
+ *   3. Light.
  *
  * `four-color` and `noir` are accepted and mapped across — they are the ids
  * this site shipped under while it was a comic, and a stored choice should
@@ -16,9 +16,9 @@
  * duplicated from `normalizeTheme` in tokens.ts because this is a string that
  * runs before any module has loaded.
  *
- * Dark is the design rather than a preference, so `prefers-color-scheme` does
- * not select it — it is already the default, and someone whose OS is light
- * should still see the site as drawn. The toggle is one click away.
+ * Light is the default rather than following `prefers-color-scheme`: the theme
+ * is a design choice, not an OS preference, and someone whose OS is dark should
+ * still open on the site as drawn. The toggle is one click away.
  */
 const SCRIPT = `(function(){
   var d = document.documentElement;
@@ -28,9 +28,9 @@ const SCRIPT = `(function(){
     theme = q || localStorage.getItem('comic-portfolio:theme');
     if (theme === 'four-color') theme = 'light';
     if (theme === 'noir') theme = 'dark';
-    if (theme !== 'light' && theme !== 'dark') theme = 'dark';
+    if (theme !== 'light' && theme !== 'dark') theme = 'light';
   } catch (e) {
-    theme = 'dark';
+    theme = 'light';
   }
   d.dataset.theme = theme;
 })();`;

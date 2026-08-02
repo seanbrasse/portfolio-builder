@@ -13,12 +13,13 @@ export const THEMES = ['dark', 'light'] as const;
 export type Theme = (typeof THEMES)[number];
 
 /**
- * Dark is the design, not a preference. The palette is two values — near-black
- * and cream — and the whole look depends on the ground being the dark one.
- * Light exists because some people need it, and it is a translation rather
- * than the original.
+ * Light is the default. Both themes are first-class two-tone translations of
+ * each other — warm off-white and near-black, or near-black and cream — and the
+ * site now opens in the light one, with the toggle one click from dark. The OG
+ * social card is rendered in this same default so a shared link previews in the
+ * design system's colours.
  */
-export const DEFAULT_THEME: Theme = 'dark';
+export const DEFAULT_THEME: Theme = 'light';
 
 export function isTheme(value: unknown): value is Theme {
   return typeof value === 'string' && (THEMES as readonly string[]).includes(value);
@@ -263,7 +264,10 @@ function declarations(palette: Palette): string {
  */
 export function themeStylesheet(): string {
   return [
-    `:root{${declarations(PALETTES.dark)}}`,
-    `[data-theme="light"]{${declarations(PALETTES.light)}}`,
+    // Light is the base on `:root`, so the default — and any no-JS or
+    // pre-script paint — is the light palette; dark is the explicit override the
+    // toggle and the theme script switch to.
+    `:root{${declarations(PALETTES.light)}}`,
+    `[data-theme="dark"]{${declarations(PALETTES.dark)}}`,
   ].join('');
 }
