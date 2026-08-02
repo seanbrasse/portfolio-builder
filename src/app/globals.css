@@ -1018,6 +1018,52 @@ a:hover {
   border-color: var(--ink-muted);
 }
 
+/* Chevrons flanking the card. The stage is exactly one card tall and the card
+   is centred in it, so 50% of the stage is the card's middle; they sit on its
+   left and right edges from there. Hidden by default and shown on the phone
+   (below), where the peeking neighbours are too slight to signal that the
+   carousel moves — the desktop stack says that on its own. */
+.carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 110;
+  display: none;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  font-size: 20px;
+  line-height: 1;
+  padding-bottom: 3px;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.carousel-nav:hover {
+  border-color: var(--ink-muted);
+}
+
+.carousel-nav-prev {
+  left: 2px;
+}
+
+.carousel-nav-next {
+  right: 2px;
+}
+
+@media (max-width: 640px) {
+  .carousel-nav {
+    display: grid;
+  }
+}
+
 .carousel-dots {
   display: flex;
   align-items: center;
@@ -2260,23 +2306,20 @@ a:hover {
  * without starving the card. Below this the base rules above keep the tighter
  * spacing, and the card stays a reasonable size. */
 @media (max-width: 640px) and (min-height: 760px) {
+  /* A little air above the line and around the card — but modest, because the
+     whole page has to fit one screen without scrolling and every pixel spent
+     here is a pixel the card's height budget loses (the card is capped to fit;
+     see `fit()`). Enough to separate the bands, not enough to shrink the card. */
   .timeline {
-    /* More air above the line, between it and the skills. */
-    margin: clamp(18px, 3.4vh, 30px) 0 6px;
+    margin: clamp(8px, 1.5vh, 14px) 0 6px;
   }
 
   .carousel {
-    /* Dropped lower on the page: a wider top margin sets the cards down from the
-       timeline and gives the whole band room to breathe. */
-    margin-block: clamp(22px, 4.5vh, 40px) clamp(8px, 2vh, 16px);
+    margin-block: clamp(10px, 2vh, 18px) clamp(8px, 1.6vh, 14px);
   }
 
-  /* The dots and "All projects" dropped further below the card, at the reader's
-     request, into the space between it and the footer — so the row reads as its
-     own line rather than sitting right under the card. Gated with the rest of
-     the roomier spacing: on a short phone the height goes to the card instead. */
   .carousel-controls {
-    margin-top: clamp(18px, 4vh, 36px);
+    margin-top: clamp(8px, 1.5vh, 14px);
   }
 }
 

@@ -280,27 +280,15 @@ export function Work({
        */
       if (!locked) {
         /**
-         * Fill mode: the card is a fixed fraction of the viewport width, full
-         * stop. On a phone the reader asked for a poster that is ~85% of the
-         * screen, and the height-budget sizing below cannot promise that — when
-         * the intro and the timeline push the card far enough down, the leftover
-         * height becomes the binding constraint and the card comes out narrow.
-         * The page already scrolls at this width, so there is no one-screen
-         * contract to keep; taking the width straight from the viewport and
-         * letting the height fall where it may is what makes the card the size
-         * that was asked for. Off on wider layouts, where `--card-vw` is unset.
+         * Fill width: on a phone the card is sized from the viewport width
+         * (`--card-vw`) rather than the stage's, so it reads as the near-full
+         * poster the reader asked for. It is still capped by the height budget
+         * below, so the whole page — contact details included — stays on one
+         * screen: when the height cannot hold the full-width card, the cap scales
+         * it down instead of letting the page scroll. Unset on wider layouts,
+         * where the width comes from the stage as before.
          */
         const fillVw = read('--card-vw', 0);
-        if (fillVw > 0) {
-          const only = toGrid(window.innerWidth * fillVw);
-          node.style.setProperty('--card-h', `${even(wellHeight(only) + chrome)}px`);
-          if (Math.abs(only - (parseFloat(node.style.getPropertyValue('--card-w')) || 0)) < 2) {
-            return;
-          }
-          node.style.setProperty('--card-w', `${only}px`);
-          paint();
-          return;
-        }
 
         const fromTop = stageBox.top + window.scrollY;
         /**
@@ -337,7 +325,10 @@ export function Work({
          */
         const room = Math.max(window.innerHeight - fromTop - beneath - chrome - 4, 78);
 
-        const only = toGrid(Math.min(byWidth, room * (16 / 9)));
+        // Fill width takes the target straight from the viewport; otherwise it
+        // is the stage-relative `byWidth`. Either way the height budget caps it.
+        const desiredWidth = fillVw > 0 ? window.innerWidth * fillVw : byWidth;
+        const only = toGrid(Math.min(desiredWidth, room * (16 / 9)));
         // No slack added: the card *is* this height now, so a margin here is
         // just height the page does not have, and `even` already rounds up.
         node.style.setProperty('--card-h', `${even(wellHeight(only) + chrome)}px`);
@@ -670,6 +661,33 @@ export function Work({
               </article>
             );
           })}
+
+          {/* Small chevrons flanking the card, so it reads as swipeable where a
+              stack of peeking neighbours is not obvious — chiefly the phone,
+              where the CSS shows them. Real controls too: each steps the
+              carousel, and the label is what a screen reader announces. */}
+          <button
+            type="button"
+            className="carousel-nav carousel-nav-prev"
+            aria-label="Previous project"
+            onClick={(event) => {
+              event.stopPropagation();
+              go(-1);
+            }}
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+          <button
+            type="button"
+            className="carousel-nav carousel-nav-next"
+            aria-label="Next project"
+            onClick={(event) => {
+              event.stopPropagation();
+              go(1);
+            }}
+          >
+            <span aria-hidden="true">›</span>
+          </button>
         </div>
 
         <div className="carousel-controls">
