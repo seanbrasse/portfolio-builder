@@ -91,6 +91,7 @@ export type AdminSettings = {
   resume_href: string;
   links: { label: string; url: string; type?: string }[];
   og_tagline: string;
+  og_subtitle: string;
 };
 
 export async function adminSettings(): Promise<AdminSettings | null> {

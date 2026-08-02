@@ -52,6 +52,7 @@ const settings: Issue['settings'] = {
     { label: 'GitHub', url: 'https://github.com/seanbrasse' },
   ],
   ogTagline: 'Software Engineer II at Intuit Mailchimp. React, TypeScript, and the parts of the stack nobody else will touch.',
+  ogSubtitle: 'Software Engineer · React · TypeScript',
 };
 
 const experiences: Issue['experiences'] = [

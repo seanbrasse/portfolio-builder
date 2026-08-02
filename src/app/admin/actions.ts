@@ -30,6 +30,10 @@ const DENIED: Result = { ok: false, error: 'Not signed in as the site owner.' };
 function republish() {
   revalidatePath('/', 'layout');
   revalidatePath('/admin');
+  // The social card is its own generated route and is not covered by the
+  // layout revalidation above, so a change to the name, location or subtitle it
+  // draws would otherwise keep serving the version built at deploy time.
+  revalidatePath('/opengraph-image');
 }
 
 /** A textarea of one-per-line values, as an array. Blank lines are not data. */
@@ -101,6 +105,7 @@ export async function saveSettings(form: FormData): Promise<Result> {
       resume_href: text(form, 'resume_href'),
       links: links(form),
       og_tagline: text(form, 'og_tagline'),
+      og_subtitle: text(form, 'og_subtitle'),
       updated_at: new Date().toISOString(),
     })
     .eq('id', true);

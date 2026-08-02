@@ -3135,6 +3135,78 @@ a:hover {
   font-size: clamp(14px, 0.9vw, 16px);
 }
 
+/* The social-card preview.
+ *
+ * A CSS replica of `src/lib/og.tsx`, not the rasterised PNG — every measurement
+ * is the same fraction of the card's width the generator uses, expressed in
+ * `cqw` against `.og-card` as the query container, so it scales to whatever
+ * width the preview is laid out at. Colours come from the light palette's
+ * custom properties, which is the palette the card is always rendered in. */
+.og-preview {
+  width: min(560px, 100%);
+  margin-top: 14px;
+}
+
+.og-card {
+  container-type: inline-size;
+  aspect-ratio: 1200 / 630;
+  width: 100%;
+  background: var(--paper);
+  padding: 3.33cqw;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.og-card-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-lit);
+  border: 0.83cqw solid var(--ink);
+  padding: 3.67cqw;
+  /* The card is set in a display face this cannot load, so the preview
+     approximates it with the heaviest body weight — the layout and colour are
+     exact, the letterforms are close. */
+  font-family: var(--font-body);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.og-card-caption {
+  align-self: flex-start;
+  background: var(--accent-c);
+  border: 0.5cqw solid var(--ink);
+  color: var(--on-accent-c);
+  padding: 0.67cqw 1.67cqw;
+  font-size: 2.5cqw;
+  letter-spacing: 0.167cqw;
+}
+
+.og-card-title {
+  color: var(--accent-b);
+  font-size: 8.67cqw;
+  margin-top: 2.33cqw;
+}
+
+.og-card-subtitle {
+  color: var(--accent-a);
+  font-size: 3.33cqw;
+  letter-spacing: 0.25cqw;
+  margin-top: 1.17cqw;
+}
+
+.og-card-spacer {
+  flex: 1;
+}
+
+.og-card-foot {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink);
+  font-size: 2.5cqw;
+  letter-spacing: 0.167cqw;
+}
+
 /* A project's state, when it is worth saying. `Status` renders nothing for the
    default, so this only ever marks work in progress or work put down. */
 .project-status {

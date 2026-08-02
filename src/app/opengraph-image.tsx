@@ -16,6 +16,8 @@ export default async function Image() {
   return renderOgImage({
     caption: settings.location.toUpperCase(),
     title: settings.displayName.toUpperCase(),
-    subtitle: 'SOFTWARE ENGINEER · REACT · TYPESCRIPT',
+    // Editable in the admin now, and stored in natural case; uppercased here
+    // like the caption and title so the card's lines read as one set.
+    subtitle: settings.ogSubtitle.toUpperCase(),
   });
 }

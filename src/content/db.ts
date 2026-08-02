@@ -65,6 +65,7 @@ type SettingsRow = {
   resume_href: string;
   links: Link[];
   og_tagline: string;
+  og_subtitle: string;
 };
 
 type EducationRow = {
@@ -150,6 +151,7 @@ function toSettings(row: SettingsRow): SiteSettings {
     resumeHref: row.resume_href,
     links: row.links ?? [],
     ogTagline: row.og_tagline,
+    ogSubtitle: row.og_subtitle,
   };
 }
 
