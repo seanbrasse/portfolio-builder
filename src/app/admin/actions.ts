@@ -303,10 +303,10 @@ export async function saveProject(form: FormData): Promise<Result> {
     tech: commas(form.get('tech')),
     links: links(form),
     date: text(form, 'date'),
-    // Pin to the front of the carousel. Like `published`, an edit-time choice —
-    // the create form does not show it (a brand-new draft is not on the site to
-    // pin), so on first save the checkbox is absent and this reads as false.
-    starred: form.get('starred') === 'on',
+    // `starred` is deliberately absent: pinning is toggled from the project
+    // list (see `setProjectStar`), not this form. A single-object upsert only
+    // writes the keys it names, so omitting it leaves an existing project's pin
+    // untouched on save, and a new project takes the column default (unpinned).
     /**
      * A brand-new project is always a draft, no matter what the form said.
      * A project cannot be finished at the instant it is named — it has no
@@ -340,6 +340,32 @@ export async function deleteProject(id: string): Promise<Result> {
 
   republish();
   redirect('/admin');
+}
+
+/**
+ * Pin (star) a project to the front of the carousel — and only one at a time.
+ *
+ * "At most one pinned" is enforced here rather than trusted from the client:
+ * pinning first clears every other star, then sets this one, so two projects
+ * can never both lead. Unpinning is just clearing this row. The list is the one
+ * surface for this now (a star per row), so there is no second place the two
+ * could disagree.
+ */
+export async function setProjectStar(id: string, starred: boolean): Promise<Result> {
+  if (!(await isAdmin())) return DENIED;
+  const supabase = await supabaseServer();
+
+  if (starred) {
+    // Clear any existing pin first, so this becomes the only one.
+    const cleared = await supabase.from('projects').update({ starred: false }).eq('starred', true);
+    if (cleared.error) return { ok: false, error: cleared.error.message };
+  }
+
+  const { error } = await supabase.from('projects').update({ starred }).eq('id', id);
+  if (error) return { ok: false, error: error.message };
+
+  republish();
+  return { ok: true };
 }
 
 /* -------------------------------------------------------------------------

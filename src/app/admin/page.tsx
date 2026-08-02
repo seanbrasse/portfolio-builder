@@ -5,6 +5,7 @@ import { adminEducations, adminExperiences, adminProjects, adminSettings } from 
 import { Form } from './Form';
 import { Grow } from './Grow';
 import { LinkRows } from './LinkRows';
+import { StarToggle } from './StarToggle';
 import { CAPS } from '@/content/types';
 
 /**
@@ -208,19 +209,19 @@ export default async function AdminHome() {
 
         <ul className="admin-list">
           {projects.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} className="admin-row-item">
               <Link href={`/admin/projects/${item.id}`} className="admin-row">
                 <span className="admin-row-main">
-                  <strong>
-                    {item.starred ? <span aria-label="Starred" title="Starred">★ </span> : null}
-                    {item.title}
-                  </strong>
+                  <strong>{item.title}</strong>
                   <span className="admin-note">
                     {item.date} · {item.experience_id ?? 'personal'}
                   </span>
                 </span>
                 {!item.published ? <span className="admin-flag">Draft</span> : null}
               </Link>
+              {/* The pin lives here, on the far right of the row, and toggling
+                  it never navigates — it sits outside the edit link. */}
+              <StarToggle id={item.id} starred={item.starred} />
             </li>
           ))}
           {projects.length === 0 ? <li className="admin-note">Nothing yet.</li> : null}
