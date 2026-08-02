@@ -2635,6 +2635,52 @@ a:hover {
   padding: 3px 9px;
 }
 
+/* The pin, on the far right of each project row. Overlaid on the row's card
+   rather than inside its edit link, so tapping the star pins and tapping the
+   rest of the row still opens the editor. */
+.admin-row-item {
+  position: relative;
+}
+
+.admin-row-item .admin-row {
+  /* Room so the title and the Draft flag never run under the star. */
+  padding-right: 52px;
+}
+
+.star-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  line-height: 1;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.star-toggle:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.star-toggle[data-on] {
+  color: var(--accent-a);
+}
+
+.star-toggle:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 .admin-upload {
   display: grid;
   gap: 12px;
