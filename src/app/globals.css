@@ -747,6 +747,15 @@ a:hover {
      frames that were there with it. */
 }
 
+/* Dark mode: a slightly brighter, still-hairline card edge. On the near-black
+   ground the default rule all but vanished — most of all on the dimmed
+   neighbour cards at the back of the stack, which read as edgeless blocks. A
+   thin cream-tinted border (still 1px) lifts that edge just enough to separate
+   the cards without drawing a hard outline on the front one. */
+[data-theme='dark'] .project-card {
+  border-color: color-mix(in srgb, var(--ink) 34%, transparent);
+}
+
 /* The front card, at full strength for the whole time it is the front card.
  *
  * The transition is asymmetric on purpose, and it is the whole trick. The
@@ -1719,8 +1728,12 @@ a:hover {
   transform: none;
 }
 
+/* `:focus-visible`, not `:focus`: a mouse click focuses the tick, and with
+   plain `:focus` the tooltip stayed pinned open after the pointer left. Keyboard
+   focus still shows it (that is what `:focus-visible` is), and a hover shows and
+   then hides it with the pointer. */
 .timeline-mark:hover .timeline-mark-tip,
-.timeline-mark:focus .timeline-mark-tip {
+.timeline-mark:focus-visible .timeline-mark-tip {
   opacity: 1;
   visibility: visible;
 }
