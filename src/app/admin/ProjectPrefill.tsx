@@ -60,14 +60,20 @@ export function ProjectPrefill() {
     setFilled(false);
 
     start(async () => {
-      const result = await prefillProject(url);
-      if (!result.ok) {
-        setError(result.error);
-        return;
+      try {
+        const result = await prefillProject(url);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        await applyPrefill(form, result.data);
+        setFilled(true);
+      } catch {
+        // The action returns errors as values, so reaching here means the call
+        // itself failed — a dropped request, a server crash. Without this the
+        // transition would just end and the click would look ignored again.
+        setError('Something went wrong reading that link. Please try again.');
       }
-
-      await applyPrefill(form, result.data);
-      setFilled(true);
     });
   }
 

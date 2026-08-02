@@ -302,26 +302,39 @@ export async function prefillFromUrl(raw: string): Promise<Prefill> {
   // prose we have to hope is JSON. Thinking is disabled because forcing a
   // specific tool and extended thinking are mutually exclusive, and this is
   // extraction the admin is waiting on rather than a reasoning task.
-  const message = await client().messages.create({
-    model: MODEL,
-    max_tokens: 4096,
-    thinking: { type: 'disabled' },
-    system: systemPrompt(),
-    tools: [
-      {
-        name: 'draft_project',
-        description: 'Record the drafted portfolio project fields.',
-        input_schema: SCHEMA,
-      },
-    ],
-    tool_choice: { type: 'tool', name: 'draft_project' },
-    messages: [
-      {
-        role: 'user',
-        content: `The link points to ${source.kind}. Draft a portfolio project from it.\n\n${source.text}`,
-      },
-    ],
-  });
+  let message;
+  try {
+    message = await client().messages.create({
+      model: MODEL,
+      max_tokens: 4096,
+      thinking: { type: 'disabled' },
+      system: systemPrompt(),
+      tools: [
+        {
+          name: 'draft_project',
+          description: 'Record the drafted portfolio project fields.',
+          input_schema: SCHEMA,
+        },
+      ],
+      tool_choice: { type: 'tool', name: 'draft_project' },
+      messages: [
+        {
+          role: 'user',
+          content: `The link points to ${source.kind}. Draft a portfolio project from it.\n\n${source.text}`,
+        },
+      ],
+    });
+  } catch (error) {
+    // Translate the SDK's own errors into a sentence the editor can act on,
+    // rather than passing through a raw "401 {...}" body. PrefillError is
+    // already friendly, so let it through unchanged.
+    if (error instanceof PrefillError) throw error;
+    const status = (error as { status?: number }).status;
+    if (status === 401) throw new PrefillError('The Anthropic API key was rejected — check ANTHROPIC_API_KEY.');
+    if (status === 404) throw new PrefillError(`The model "${MODEL}" was not found — check ANTHROPIC_MODEL.`);
+    if (status === 429) throw new PrefillError('Anthropic rate limit reached — try again in a moment.');
+    throw new PrefillError('Claude could not draft the project from that link — try again.');
+  }
 
   const call = message.content.find((block) => block.type === 'tool_use');
   if (!call || call.type !== 'tool_use') {
