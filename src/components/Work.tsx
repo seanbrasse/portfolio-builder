@@ -279,6 +279,29 @@ export function Work({
        * settling into a wobble.
        */
       if (!locked) {
+        /**
+         * Fill mode: the card is a fixed fraction of the viewport width, full
+         * stop. On a phone the reader asked for a poster that is ~85% of the
+         * screen, and the height-budget sizing below cannot promise that — when
+         * the intro and the timeline push the card far enough down, the leftover
+         * height becomes the binding constraint and the card comes out narrow.
+         * The page already scrolls at this width, so there is no one-screen
+         * contract to keep; taking the width straight from the viewport and
+         * letting the height fall where it may is what makes the card the size
+         * that was asked for. Off on wider layouts, where `--card-vw` is unset.
+         */
+        const fillVw = read('--card-vw', 0);
+        if (fillVw > 0) {
+          const only = toGrid(window.innerWidth * fillVw);
+          node.style.setProperty('--card-h', `${even(wellHeight(only) + chrome)}px`);
+          if (Math.abs(only - (parseFloat(node.style.getPropertyValue('--card-w')) || 0)) < 2) {
+            return;
+          }
+          node.style.setProperty('--card-w', `${only}px`);
+          paint();
+          return;
+        }
+
         const fromTop = stageBox.top + window.scrollY;
         /**
          * Heights, not positions.
