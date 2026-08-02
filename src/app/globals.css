@@ -2877,10 +2877,12 @@ a:hover {
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
-  padding: 12px 0;
+  padding: 18px 0 12px;
   margin-top: 4px;
-  background: var(--paper);
-  border-top: 1px solid var(--rule);
+  /* No band, no rule. A soft upward fade to the page colour keeps the button
+     and its message legible while the fields scroll out under them, instead of
+     a hard-edged rectangle sitting over the textured page. */
+  background: linear-gradient(to top, var(--paper) 62%, transparent);
 }
 
 /* A field that failed its own rule. The browser names the problem on the field
