@@ -314,10 +314,22 @@ a:hover {
   }
 }
 
-/* The toggle hangs off this block, top right, so it starts on the same line
-   the title does without either of them knowing the other's padding. */
+/* Full width, so the toggle it holds keeps the top-right corner. The intro's
+   copy is centred as a block by `.intro-lede` inside it, not by centring text —
+   see below. */
 .intro {
   position: relative;
+}
+
+/* The lede: a block sized to its widest line (the tagline's measure) and
+   centred by its own auto side margins, so the name, role, tagline and skills
+   sit on the same axis as the timeline and the card below while staying
+   left-aligned within the block. `max-width: 100%` so a narrow viewport cannot
+   push it past the column edge. */
+.intro-lede {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
 }
 
 .theme-toggle {
@@ -331,7 +343,7 @@ a:hover {
   /* Smaller than it was. The carousel is the subject of this page now, and on
      a screen that cannot scroll every point the name grows is a point the
      cards lose. */
-  font-size: clamp(32px, 4vw, 48px);
+  font-size: clamp(30px, 3.6vw, 44px);
   letter-spacing: -0.045em;
   line-height: 0.95;
 }
@@ -351,7 +363,8 @@ a:hover {
      page and it reads better spanning the width the skills row and the card use
      than stacked into a narrow tower under the name — so it is given a generous
      measure (a touch past the classic prose maximum) that lets a ~160-character
-     line settle into two lines rather than four. */
+     line settle into two lines rather than four. This measure is what sets the
+     width of the centred `.intro-lede` block around it. */
   max-width: 74ch;
 }
 
@@ -2348,15 +2361,15 @@ a:hover {
    below, where there is vertical room to spend. */
 @media (min-width: 1600px) {
   .intro h1 {
-    font-size: clamp(48px, 3.2vw, 68px);
+    font-size: clamp(44px, 2.8vw, 58px);
   }
 
   .intro-role {
-    font-size: clamp(17px, 1vw, 22px);
+    font-size: clamp(16px, 0.95vw, 20px);
   }
 
   .intro-tagline {
-    font-size: clamp(17px, 1.15vw, 24px);
+    font-size: clamp(16px, 1.05vw, 22px);
     max-width: 80ch;
   }
 
@@ -2410,16 +2423,16 @@ a:hover {
    height is there to absorb it. */
 @media (min-width: 1600px) and (min-height: 1150px) {
   .intro h1 {
-    font-size: clamp(68px, 3.6vw, 92px);
+    font-size: clamp(56px, 3vw, 78px);
   }
 
   .intro-role {
-    font-size: clamp(20px, 1.1vw, 26px);
+    font-size: clamp(18px, 1vw, 23px);
     margin-top: clamp(10px, 0.8vw, 16px);
   }
 
   .intro-tagline {
-    font-size: clamp(21px, 1.3vw, 30px);
+    font-size: clamp(19px, 1.15vw, 26px);
     max-width: 84ch;
     margin-top: clamp(12px, 1vw, 20px);
   }
