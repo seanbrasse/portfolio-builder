@@ -656,7 +656,12 @@ export function Work({
                   project={project}
                   employer={project.experienceId ? employers[project.experienceId] : undefined}
                   near={near}
-                  front={index === active}
+                  /* Plays only while this is the front card AND nothing is open
+                     over it: opening a project pauses its looping card preview
+                     so the clip is not running behind the modal while the
+                     modal's own copy plays. It resumes, from where it left off,
+                     when the modal closes. */
+                  playing={index === active && detail === null}
                 />
               </article>
             );
@@ -1586,7 +1591,20 @@ function Media({
    */
   useEffect(() => {
     const el = video.current;
-    if (!el || viewer || !isVideo) return;
+    if (!el || !isVideo) return;
+
+    // The modal's own copy picks up where the card left off: it autoplays the
+    // moment it opens rather than waiting for a press, so opening a card whose
+    // preview was running does not stop the video, it moves it into the modal.
+    // Muted so the browser allows the autoplay; the native controls carry the
+    // volume, so a viewer turns the sound on when they want it. Left paused
+    // under reduced motion, where the controls are the honest way to start it.
+    if (viewer) {
+      el.muted = true;
+      if (!reduced) el.play().catch(() => {});
+      return;
+    }
+
     el.muted = muted;
     if (play && !reduced) el.play().catch(() => {});
     else el.pause();
@@ -1819,12 +1837,12 @@ function CardFace({
   project,
   employer,
   near,
-  front,
+  playing,
 }: {
   project: Project;
   employer?: Experience;
   near: boolean;
-  front: boolean;
+  playing: boolean;
 }) {
   return (
     <>
@@ -1834,7 +1852,7 @@ function CardFace({
           media as they slide into view. The front card's video is the only one
           that plays; a neighbour holds on its first frame until it is next. */}
       {near ? (
-        <Shot project={project} play={front} />
+        <Shot project={project} play={playing} />
       ) : (
         <div className="project-shot-empty" aria-hidden="true" />
       )}

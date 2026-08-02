@@ -19,7 +19,10 @@ function subscribe(onChange: () => void) {
 }
 
 function readTheme(): Theme {
-  return document.documentElement.dataset.theme === 'light' ? 'light' : DEFAULT_THEME;
+  // Only `dark` is read as an explicit switch away from the default, so this is
+  // correct whichever theme `DEFAULT_THEME` is — reading for `light` instead
+  // would report the default for a `dark` attribute once light became default.
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : DEFAULT_THEME;
 }
 
 export function ThemeToggle() {
