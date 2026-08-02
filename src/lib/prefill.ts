@@ -42,7 +42,7 @@ export type Prefill = {
 /** Missing key is a configuration state, not a bug — say so in a sentence. */
 class PrefillError extends Error {}
 
-const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5';
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 
 /** README and page text are trimmed to this before going to the model. */
 const SOURCE_CAP = 12_000;
