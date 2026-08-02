@@ -599,6 +599,20 @@ a:hover {
   }
 }
 
+/* And taken off entirely where there is no keyboard to earn it. The block above
+   only *adds* the carousel's own wider ring on hover-capable pointers — it never
+   removed the global `:focus-visible` outline, which still matches this
+   `tabindex` container on a touch device. That leak is what put the box back:
+   iOS focuses the container on a tap, so opening a card records it as the
+   focused element, and closing the card's `<dialog>` restores focus to it and
+   re-shows the ring. Overriding it here at higher specificity than the global
+   rule takes it off touch in every case, including that focus restoration. */
+@media (hover: none) {
+  .carousel:focus-visible {
+    outline: none;
+  }
+}
+
 /* The carousel's tunables live here rather than in the component, because all
    four of them change at a breakpoint and a media query is the only place that
    can say so. `fit()` and `paint()` read them off this element.
