@@ -1,5 +1,16 @@
 @import 'tailwindcss';
 
+/* `--card-max` is read from JS (`fit()` parses it with `parseFloat`), so it has
+   to resolve to a real length — a bare `clamp()` custom property returns its
+   literal text there and `parseFloat` yields NaN. Registering it as a typed
+   property makes the browser compute the clamp to an absolute px that both CSS
+   and `getComputedStyle` hand back, so the fluid ceiling actually takes. */
+@property --card-max {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 700px;
+}
+
 /* ---------------------------------------------------------------------------
    Sean Brasse — portfolio
 
@@ -29,7 +40,11 @@
   /* One measure for prose, one for the page. Text that runs the width of a
      desktop window is text nobody finishes. */
   --measure: 62ch;
-  --page-max: 1140px;
+  /* Fluid, so the layout scales up on a large monitor instead of stranding a
+     fixed 1140px column in a sea of margin. The 1140px floor keeps typical
+     laptops (≤~1540px wide) exactly as they were; above that the column grows
+     with the viewport up to a 1900px ceiling so a 27"/4K screen fills out. */
+  --page-max: clamp(1140px, 74vw, 1900px);
   --gutter: clamp(20px, 5vw, 56px);
 
   /* Space is the design. The reference gives its hero most of a screen and
@@ -626,7 +641,11 @@ a:hover {
 .carousel-stage {
   --spacing: 0.62;
   --card-fraction: 0.62;
-  --card-max: 700px;
+  /* Fluid ceiling, matched to the fluid `--page-max`: 700px on typical laptops
+     (where the card is height-bound anyway) and growing with the viewport on a
+     large monitor so the card scales up with the widened column instead of
+     staying pinned at 700px in the middle of a big screen. */
+  --card-max: clamp(700px, 40vw, 1000px);
   /* Defaults to on, and the responsive block at the end of this file turns it
      off. The other way round did not work: `--locked: 1` lived in the
      one-screen media query near the top, and this base declaration is later at
@@ -2298,6 +2317,34 @@ a:hover {
   .timeline {
     margin-top: clamp(4px, 0.8vh, 8px);
     margin-bottom: 6px;
+  }
+}
+
+/* Large monitors: scale the intro type up with the widened column so the page
+   fills the screen instead of sitting small in the top-left. Gated above the
+   ~1540px where `--page-max` begins to grow, so typical laptops are untouched.
+   The card is sized by `fit()` from the height that is left, so a taller intro
+   simply hands it a little less — it never overflows the one-screen layout. */
+@media (min-width: 1600px) {
+  .intro h1 {
+    font-size: clamp(48px, 3.2vw, 68px);
+  }
+
+  .intro-role {
+    font-size: clamp(17px, 1vw, 22px);
+  }
+
+  .intro-tagline {
+    font-size: clamp(17px, 1.15vw, 24px);
+    max-width: 64ch;
+  }
+
+  .intro-skills-label {
+    font-size: clamp(13px, 0.8vw, 16px);
+  }
+
+  .skills li {
+    font-size: clamp(13px, 0.82vw, 17px);
   }
 }
 
