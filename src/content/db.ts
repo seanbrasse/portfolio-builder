@@ -120,6 +120,10 @@ type ProjectRow = {
   context: Project['context'];
   experience_id: string | null;
   summary: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
   impact: string;
   status: Project['status'];
   duration: string;
@@ -239,6 +243,10 @@ function toProject(row: ProjectRow, images: Asset[]): Project {
     context: row.context,
     experienceId: row.experience_id ?? undefined,
     summary: row.summary,
+    situation: row.situation ?? '',
+    task: row.task ?? '',
+    action: row.action ?? '',
+    result: row.result ?? '',
     impact: row.impact,
     status: row.status ?? 'shipped',
     duration: row.duration ?? '',

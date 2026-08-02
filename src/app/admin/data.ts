@@ -52,6 +52,10 @@ export type AdminProject = {
   context: 'professional' | 'personal';
   experience_id: string | null;
   summary: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
   impact: string;
   status: 'shipped' | 'building' | 'archived';
   duration: string;

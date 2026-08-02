@@ -1917,6 +1917,38 @@ function CardFace({
   );
 }
 
+/**
+ * The write-up in the opened card: the STAR breakdown when it has been filled
+ * in, and the plain summary otherwise. It sits in its own scroll area so the
+ * gallery and title above it stay put and the modal does not grow without bound
+ * — which is what lets the STAR sections be as long as they need to be.
+ */
+function ProjectStory({ project }: { project: Project }) {
+  const parts = (
+    [
+      ['Situation', project.situation],
+      ['Task', project.task],
+      ['Action', project.action],
+      ['Result', project.result],
+    ] as const
+  ).filter(([, body]) => body && body.trim());
+
+  if (parts.length === 0) {
+    return <p className="detail-summary">{project.summary}</p>;
+  }
+
+  return (
+    <div className="detail-story">
+      {parts.map(([label, body]) => (
+        <section className="detail-story-part" key={label}>
+          <h3 className="detail-story-label">{label}</h3>
+          <p>{body}</p>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function ProjectDetail({ project, employer }: { project: Project; employer?: Experience }) {
   return (
     <>
@@ -1930,7 +1962,7 @@ function ProjectDetail({ project, employer }: { project: Project; employer?: Exp
           <Status status={project.status} />
         </p>
         <h2 className="dialog-title">{project.title}</h2>
-        <p className="detail-summary">{project.summary}</p>
+        <ProjectStory project={project} />
         <p className="project-impact">{project.impact}</p>
 
         <ul className="tech-row">
