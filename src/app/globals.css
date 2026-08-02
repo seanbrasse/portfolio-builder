@@ -1996,11 +1996,12 @@ a:hover {
        as three cards printed on top of one another. */
     --spacing: 1.02;
     /* The card is sized straight off the viewport width here, not the height
-       budget — see the fill-mode note in `fit()`. 0.85 gives the ~85%-of-screen
-       poster the reader asked for; the neighbours still show a sliver past its
-       edges. `--card-fraction` stays as the fallback for the height-budget path,
-       which this overrides. */
-    --card-vw: 0.85;
+       budget — see the fill-mode note in `fit()`. 0.92 spends the width the
+       phone has (the tall-phone slack cannot go into a 16:9 card without making
+       it wider than the screen), while a thin margin each side keeps it reading
+       as an object with the neighbours peeking past its edges. `--card-fraction`
+       stays as the fallback for the height-budget path, which this overrides. */
+    --card-vw: 0.92;
     --card-fraction: 0.98;
   }
 
@@ -2185,15 +2186,15 @@ a:hover {
     font-size: 11px;
   }
 
-  /* At the bottom of the screen, with room around it.
-     `margin-top: auto` is what puts it against the bottom edge rather than
-     directly under the controls with the leftover screen below it. The card's
-     height budget adds up what is beneath the stage rather than measuring how
-     far down it sits, so pushing the footer down here cannot feed back into
-     it. */
+  /* Directly under the controls, at the same rhythm as the other bands —
+     not `margin-top: auto`. Pinning it to the screen's bottom pooled all the
+     leftover height of a tall phone into one wide gap above the footer; letting
+     it sit right after the controls keeps the spacing consistent top to bottom
+     and leaves any slack below the footer, where it reads as the page simply
+     ending rather than a hole in the layout. */
   .site-footer {
-    margin-top: auto;
-    padding-block: 16px 14px;
+    margin-top: 0;
+    padding-block: 8px 14px;
   }
 
   /* Two full-width rows, and the links spread across theirs. They used to bunch
