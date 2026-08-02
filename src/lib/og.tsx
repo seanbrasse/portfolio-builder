@@ -43,6 +43,10 @@ export async function renderOgImage({
   const palette = PALETTES.light;
   const font = await displayFont();
 
+  // One clean surface, no frame. The bold comic-cover border this used to carry
+  // is gone — the card now reads as a plain, generously-padded panel in the
+  // design system's colours, with room between each line rather than the tight
+  // stack it had.
   return new ImageResponse(
     (
       <div
@@ -51,83 +55,67 @@ export async function renderOgImage({
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          background: palette.paper,
-          padding: 40,
+          background: palette.paperLit,
+          padding: 72,
           fontFamily: 'Display',
         }}
       >
         <div
           style={{
             display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            border: `10px solid ${palette.ink}`,
-            // Flat, with no halftone: Satori has no radial-gradient, and the
-            // alternatives (a tiled data-URI, hundreds of dot elements) cost
-            // build time and legibility for a texture nobody sees at the size
-            // a social card is actually rendered.
-            background: palette.paperLit,
-            padding: 44,
-            position: 'relative',
+            alignSelf: 'flex-start',
+            background: palette.accentC,
+            // Text sized for the accent fill, not the page ink — on the orange
+            // caption chip that is the light `onAccentC`, so it reads clearly.
+            color: palette.onAccentC,
+            padding: '12px 24px',
+            borderRadius: 8,
+            fontSize: 30,
+            letterSpacing: 2,
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignSelf: 'flex-start',
-              background: palette.accentC,
-              border: `6px solid ${palette.ink}`,
-              // Text sized for the accent fill, not the page ink — on the orange
-              // caption chip that is the light `onAccentC`, so it reads clearly
-              // rather than dark-on-orange.
-              color: palette.onAccentC,
-              padding: '8px 20px',
-              fontSize: 30,
-              letterSpacing: 2,
-            }}
-          >
-            {caption}
-          </div>
+          {caption}
+        </div>
 
-          <div
-            style={{
-              display: 'flex',
-              color: palette.accentB,
-              fontSize: 104,
-              lineHeight: 1,
-              marginTop: 28,
-            }}
-          >
-            {title}
-          </div>
+        <div
+          style={{
+            display: 'flex',
+            color: palette.accentB,
+            fontSize: 96,
+            lineHeight: 1,
+            marginTop: 40,
+          }}
+        >
+          {title}
+        </div>
 
-          <div
-            style={{
-              display: 'flex',
-              color: palette.accentA,
-              fontSize: 40,
-              letterSpacing: 3,
-              marginTop: 14,
-            }}
-          >
-            {subtitle}
-          </div>
+        <div
+          style={{
+            display: 'flex',
+            color: palette.accentA,
+            fontSize: 34,
+            lineHeight: 1.25,
+            letterSpacing: 2,
+            marginTop: 26,
+          }}
+        >
+          {subtitle}
+        </div>
 
-          <div style={{ display: 'flex', flex: 1 }} />
+        <div style={{ display: 'flex', flex: 1 }} />
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-end',
-              color: palette.ink,
-              fontSize: 30,
-              letterSpacing: 2,
-            }}
-          >
-            <div style={{ display: 'flex' }}>{settings.displayName.toUpperCase()}</div>
-            <div style={{ display: 'flex' }}>{settings.location.toUpperCase()}</div>
-          </div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            color: palette.ink,
+            fontSize: 28,
+            letterSpacing: 2,
+          }}
+        >
+          <div style={{ display: 'flex' }}>{settings.displayName.toUpperCase()}</div>
+          <div style={{ display: 'flex' }}>{settings.location.toUpperCase()}</div>
         </div>
       </div>
     ),

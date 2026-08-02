@@ -3241,34 +3241,63 @@ a:hover {
  *
  * A CSS replica of `src/lib/og.tsx`, not the rasterised PNG — every measurement
  * is the same fraction of the card's width the generator uses, expressed in
- * `cqw` against `.og-card` as the query container, so it scales to whatever
- * width the preview is laid out at. Colours come from the light palette's
- * custom properties, which is the palette the card is always rendered in. */
+ * `cqw` against `.og-preview` as the query container, so it scales to whatever
+ * width the preview is laid out at. Colours are set inline by the component from
+ * the chosen palette (the light/dark toggle), which is why none appear here. */
 .og-preview {
+  container-type: inline-size;
   width: min(560px, 100%);
   margin-top: 14px;
 }
 
-.og-card {
-  container-type: inline-size;
-  aspect-ratio: 1200 / 630;
-  width: 100%;
-  background: var(--paper);
-  padding: 3.33cqw;
-  border-radius: 6px;
+.og-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.og-preview-head .field-label {
+  margin: 0;
+}
+
+/* The light/dark toggle — a small segmented control. */
+.og-preview-modes {
+  display: inline-flex;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
   overflow: hidden;
 }
 
-.og-card-inner {
-  height: 100%;
+.og-preview-mode {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.og-preview-mode[data-active] {
+  background: var(--accent-a);
+  color: var(--on-accent);
+}
+
+/* No frame — a plain, generously padded surface. Background is set inline per
+   the chosen palette. The display face cannot load in the browser, so the
+   preview approximates it with the heaviest body weight; layout and colour are
+   exact, the letterforms are close. */
+.og-card {
+  aspect-ratio: 1200 / 630;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--paper-lit);
-  border: 0.83cqw solid var(--ink);
-  padding: 3.67cqw;
-  /* The card is set in a display face this cannot load, so the preview
-     approximates it with the heaviest body weight — the layout and colour are
-     exact, the letterforms are close. */
+  padding: 6cqw;
+  border-radius: 8px;
+  overflow: hidden;
   font-family: var(--font-body);
   font-weight: 800;
   line-height: 1;
@@ -3276,25 +3305,22 @@ a:hover {
 
 .og-card-caption {
   align-self: flex-start;
-  background: var(--accent-c);
-  border: 0.5cqw solid var(--ink);
-  color: var(--on-accent-c);
-  padding: 0.67cqw 1.67cqw;
+  padding: 1cqw 2cqw;
+  border-radius: 0.67cqw;
   font-size: 2.5cqw;
   letter-spacing: 0.167cqw;
 }
 
 .og-card-title {
-  color: var(--accent-b);
-  font-size: 8.67cqw;
-  margin-top: 2.33cqw;
+  font-size: 8cqw;
+  margin-top: 3.33cqw;
 }
 
 .og-card-subtitle {
-  color: var(--accent-a);
-  font-size: 3.33cqw;
-  letter-spacing: 0.25cqw;
-  margin-top: 1.17cqw;
+  font-size: 2.83cqw;
+  line-height: 1.25;
+  letter-spacing: 0.167cqw;
+  margin-top: 2.17cqw;
 }
 
 .og-card-spacer {
@@ -3304,8 +3330,7 @@ a:hover {
 .og-card-foot {
   display: flex;
   justify-content: space-between;
-  color: var(--ink);
-  font-size: 2.5cqw;
+  font-size: 2.33cqw;
   letter-spacing: 0.167cqw;
 }
 

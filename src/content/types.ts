@@ -230,8 +230,8 @@ export const CAPS = {
   ogTagline: 300,
   /**
    * The social card's subtitle line. Set at a large size on a fixed 1200px
-   * card, so unlike `ogTagline` this is a real layout limit — much past this
-   * and the line wraps or runs off the card's edge.
+   * card; the card lets it wrap to a second line, so this is roomy rather than a
+   * hard one-line limit — enough for a title plus a few technologies.
    */
-  ogSubtitle: 48,
+  ogSubtitle: 64,
 } as const;
