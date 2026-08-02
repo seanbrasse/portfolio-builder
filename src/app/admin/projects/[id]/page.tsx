@@ -153,16 +153,6 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
       {!creating ? (
         <section className="admin-section">
           <h2>Images</h2>
-          <p className="admin-note">
-            The order is the order they appear in, and the first is what the
-            card shows — move one to the top to make it the card&rsquo;s picture.
-            Opening the project shows all of them as a gallery. The well is 16:9,
-            and each image chooses how it sits in it — Cover fills and crops,
-            Contain shows the whole thing letterboxed, and under Cover you set
-            which part stays in frame. An MP4 or WebM works too — a clip of the
-            thing running says more than a still, and it plays muted and looping
-            unless the visitor has asked for reduced motion.
-          </p>
 
           <ol className="admin-shots">
             {images.map((image, i) => (
@@ -187,7 +177,9 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
                   />
                 </div>
                 <ImageAdjust image={image} />
-                <span className="admin-note">{image.alt}</span>
+                <span className="admin-note">
+                  <span className="field-label">Alt text</span> {image.alt}
+                </span>
                 <DeleteButton
                   label="Remove"
                   confirm="Remove this image from the project?"
