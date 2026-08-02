@@ -2367,6 +2367,38 @@ a:hover {
   .skills li {
     font-size: clamp(13px, 0.82vw, 17px);
   }
+
+  /* The footer scales with the widened column too — it sits at the bottom of
+     the same `--page-max` span, so a fixed 14px cluster on a big screen reads
+     as tiny type stranded at the left while the copyright hangs far right. This
+     is width-gated (not height-gated like the intro's second tier) because the
+     footer has no bearing on the card's height budget — a wide 1920×1080 desk
+     should get the larger contact row just as much as a tall 4K one. */
+  .site-footer {
+    font-size: clamp(14px, 0.85vw, 19px);
+  }
+
+  .footer-col a {
+    font-size: clamp(14px, 0.85vw, 19px);
+  }
+
+  .footer-col ul {
+    gap: clamp(6px, 0.5vw, 12px) clamp(18px, 1.4vw, 34px);
+  }
+
+  .footer-fine {
+    font-size: clamp(12.5px, 0.75vw, 17px);
+  }
+
+  .footer-mark {
+    width: clamp(34px, 2.2vw, 46px);
+    height: clamp(34px, 2.2vw, 46px);
+    font-size: clamp(17px, 1.1vw, 23px);
+  }
+
+  .site-footer-inner {
+    gap: clamp(10px, 0.9vw, 18px) clamp(26px, 2vw, 44px);
+  }
 }
 
 /* Large monitors, second tier: a tall big screen — a 27"/4K/ultrawide at
