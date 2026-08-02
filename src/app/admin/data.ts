@@ -60,6 +60,8 @@ export type AdminProject = {
   date: string;
   published: boolean;
   starred: boolean;
+  /** Row creation time — drives the admin's "Recently added" sort. */
+  created_at: string;
 };
 
 export type AdminImage = {
