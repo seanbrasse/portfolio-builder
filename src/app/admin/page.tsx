@@ -6,7 +6,7 @@ import { Form } from './Form';
 import { Grow } from './Grow';
 import { LinkRows } from './LinkRows';
 import { OgPreview } from './OgPreview';
-import { StarToggle } from './StarToggle';
+import { ProjectsList } from './ProjectsList';
 import { CAPS } from '@/content/types';
 
 /**
@@ -226,25 +226,10 @@ export default async function AdminHome() {
           </Link>
         </div>
 
-        <ul className="admin-list">
-          {projects.map((item) => (
-            <li key={item.id} className="admin-row-item">
-              <Link href={`/admin/projects/${item.id}`} className="admin-row">
-                <span className="admin-row-main">
-                  <strong>{item.title}</strong>
-                  <span className="admin-note">
-                    {item.date} · {item.experience_id ?? 'personal'}
-                  </span>
-                </span>
-                {!item.published ? <span className="admin-flag">Draft</span> : null}
-              </Link>
-              {/* The pin lives here, on the far right of the row, and toggling
-                  it never navigates — it sits outside the edit link. */}
-              <StarToggle id={item.id} starred={item.starred} />
-            </li>
-          ))}
-          {projects.length === 0 ? <li className="admin-note">Nothing yet.</li> : null}
-        </ul>
+        {/* The list and its sort control are a client component: the rows are
+            reordered in place, so the sort is instant and the star toggles keep
+            working. */}
+        <ProjectsList projects={projects} />
       </section>
     </>
   );
