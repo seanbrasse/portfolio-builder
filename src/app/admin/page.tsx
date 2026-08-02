@@ -211,7 +211,10 @@ export default async function AdminHome() {
             <li key={item.id}>
               <Link href={`/admin/projects/${item.id}`} className="admin-row">
                 <span className="admin-row-main">
-                  <strong>{item.title}</strong>
+                  <strong>
+                    {item.starred ? <span aria-label="Starred" title="Starred">★ </span> : null}
+                    {item.title}
+                  </strong>
                   <span className="admin-note">
                     {item.date} · {item.experience_id ?? 'personal'}
                   </span>
