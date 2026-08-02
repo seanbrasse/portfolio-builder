@@ -35,12 +35,13 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
       </p>
       <h1>{creating ? 'Add project' : item!.title}</h1>
 
-      {/* Only on create: a blank form is where drafting from a link earns its
-          keep. Editing an existing project already has its fields filled, and
-          pouring a fresh draft over them would be a footgun, not a help. */}
-      {creating ? <ProjectPrefill /> : null}
-
       <Form action={saveProject}>
+        {/* Inside the form on purpose: the prefill box fills these very fields
+            by walking up to the form with `closest('form')`, so it has to live
+            within it. Only on create — editing a project already has its fields,
+            and pouring a fresh draft over them would be a footgun, not a help. */}
+        {creating ? <ProjectPrefill /> : null}
+
         <div className="admin-grid">
           <label className="field">
             <span className="field-label">Id — used in links, lowercase</span>

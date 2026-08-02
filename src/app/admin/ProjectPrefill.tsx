@@ -72,7 +72,7 @@ export function ProjectPrefill() {
   }
 
   return (
-    <div ref={root} className="admin-prefill">
+    <div ref={root} className="admin-prefill" aria-busy={pending}>
       <span className="field-label">Start from a link</span>
       <p className="admin-note">
         Paste a GitHub repo or a live URL and Claude drafts the fields below from
@@ -83,6 +83,7 @@ export function ProjectPrefill() {
         <input
           type="url"
           value={url}
+          disabled={pending}
           onChange={(event) => setUrl(event.target.value)}
           placeholder="https://github.com/you/project"
           aria-label="Link to fill the form from"
@@ -100,10 +101,22 @@ export function ProjectPrefill() {
           disabled={pending || !url.trim()}
           onClick={run}
         >
-          {pending ? 'Reading…' : 'Fetch & fill'}
+          {pending ? (
+            <>
+              <span className="admin-spinner" aria-hidden="true" />
+              Reading the link…
+            </>
+          ) : (
+            'Fetch & fill'
+          )}
         </button>
       </div>
-      {error ? (
+      {pending ? (
+        <p className="admin-note admin-prefill-status" role="status">
+          Fetching the source and drafting the fields — this can take a few
+          seconds.
+        </p>
+      ) : error ? (
         <p className="admin-error" role="status">
           {error}
         </p>
