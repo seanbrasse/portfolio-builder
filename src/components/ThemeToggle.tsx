@@ -4,7 +4,8 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 import { DEFAULT_THEME, type Theme } from '@/lib/tokens';
 
-const STORAGE_KEY = 'comic-portfolio:theme';
+/** A year, so the choice sticks like a preference rather than a session. */
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 /**
  * The theme is owned by the document, not by React — `ThemeScript` sets
@@ -33,11 +34,9 @@ export function ThemeToggle() {
   const toggle = useCallback(() => {
     const next: Theme = theme === 'light' ? 'dark' : 'light';
     document.documentElement.dataset.theme = next;
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // Private browsing. The choice still applies to this page.
-    }
+    // Stored in a cookie so the choice sticks across visits and is a preference
+    // the server could read too. `ThemeScript` reads it back before first paint.
+    document.cookie = `theme=${next}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
   }, [theme]);
 
   return (

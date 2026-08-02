@@ -1623,15 +1623,93 @@ a:hover {
    one at a glance rather than as a row of dots competing with the badges above.
    The ember cursor still rides over whichever project is showing, so the marks
    themselves stay uniform and quiet. */
+/* A project mark is a button now — click it to move the carousel to that
+   project. The tick itself stays the same hairline; the button around it is a
+   comfortable, transparent hit target centred on the tick's position, with the
+   visible tick drawn as a pseudo-element so making it clickable does not make it
+   wider. */
 .timeline-mark {
   position: absolute;
-  /* An 8px tick straddling the rule — a touch shorter than the 12px job tick. */
-  top: calc(var(--stack) - 4px);
+  /* A 14px hit box centred on the rule where the 8px tick used to sit. */
+  top: calc(var(--stack) - 7px);
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.timeline-mark::before {
+  content: '';
+  /* The 8px tick straddling the rule — a touch shorter than the 12px job tick. */
   width: 1px;
   height: 8px;
-  margin-left: -0.5px;
   background: var(--ink-muted);
-  transition: background var(--dur) var(--ease);
+  transition:
+    background var(--dur) var(--ease),
+    width var(--dur) var(--ease);
+}
+
+/* On hover, focus or the active project, the tick lights and thickens so the
+   one you are pointing at — or the one the carousel is on — reads as live. */
+.timeline-mark:hover::before,
+.timeline-mark:focus-visible::before,
+.timeline-mark[aria-current]::before {
+  width: 2px;
+  background: var(--accent-a);
+}
+
+.timeline-mark:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* The project's name and date, above the tick, on hover / focus / tap. Mirrors
+   the company tooltip's look; centred on the tick, and anchored to an edge near
+   the ends of the line so it cannot run off the screen. */
+.timeline-mark-tip {
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  white-space: nowrap;
+  padding: 5px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--matte-shade) 30%, transparent);
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 120ms var(--ease),
+    visibility 120ms var(--ease);
+}
+
+.timeline-mark-tip[data-edge='start'] {
+  left: 0;
+  transform: none;
+}
+
+.timeline-mark-tip[data-edge='end'] {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.timeline-mark:hover .timeline-mark-tip,
+.timeline-mark:focus .timeline-mark-tip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .timeline-now {
@@ -2771,19 +2849,30 @@ a:hover {
   gap: 8px;
 }
 
+/* A solid, raised card rather than a hairline outline. On the paper ground a
+   transparent row with only a faint rule reads as barely-there — the content
+   cards blended into the page. `--matte` is the raised-panel surface (white in
+   light, a lifted grey in dark), so with a stronger rule and a soft shadow each
+   row reads as a distinct, easily seen card in either theme. */
 .admin-row {
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 12px 14px;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
+  background: var(--matte);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--matte-shade) 10%, transparent);
   text-decoration: none;
   color: var(--ink);
+  transition:
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
 }
 
 .admin-row:hover {
   border-color: var(--ink-muted);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--matte-shade) 16%, transparent);
 }
 
 .admin-row-main {

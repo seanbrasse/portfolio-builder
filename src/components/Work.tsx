@@ -1235,14 +1235,31 @@ function Timeline({
           })}
         </ol>
 
-        {geometry.marks.map((mark) => (
-          <span
-            key={mark.id}
-            aria-hidden="true"
-            className="timeline-mark"
-            style={{ left: `${mark.left}%` }}
-          />
-        ))}
+        {/* Each project's mark is a control now, not decoration: clicking it
+            moves the carousel to that project, and hovering, focusing or tapping
+            it names the project and its date above the tick. These are the
+            accessible way into a project from the line, which is why the
+            screen-reader-only list that used to sit below is gone — it would be
+            the same buttons said twice. The tooltip flips to an edge anchor near
+            the ends of the line so it does not run off the screen. */}
+        {geometry.marks.map((mark) => {
+          const edge = mark.left < 10 ? 'start' : mark.left > 90 ? 'end' : undefined;
+          return (
+            <button
+              key={mark.id}
+              type="button"
+              className="timeline-mark"
+              style={{ left: `${mark.left}%` }}
+              aria-label={`${mark.title}, ${formatMonth(mark.date)}`}
+              aria-current={activeProject?.id === mark.id || undefined}
+              onClick={() => onPick(mark.index)}
+            >
+              <span className="timeline-mark-tip" data-edge={edge} aria-hidden="true">
+                {mark.title} · {formatMonth(mark.date)}
+              </span>
+            </button>
+          );
+        })}
 
           {/* Rides the carousel's continuous position, so it slides between two
               projects rather than snapping to whichever is nearest. Placed from
@@ -1250,18 +1267,6 @@ function Timeline({
           <span ref={cursorRef} aria-hidden="true" className="timeline-cursor" />
         </div>
       </div>
-
-      {/* Only the projects. The companies used to be listed here too, and are
-          now the buttons above — one set of facts, one place to change them. */}
-      <ol className="sr-only">
-        {geometry.marks.map((mark) => (
-          <li key={mark.id}>
-            <button type="button" onClick={() => onPick(mark.index)}>
-              {mark.title}, {formatMonth(mark.date)}
-            </button>
-          </li>
-        ))}
-      </ol>
 
       <p className="timeline-now" aria-live="polite">
         {activeProject ? `${activeProject.title} · ${formatMonth(activeProject.date)}` : ''}
