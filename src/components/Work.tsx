@@ -1691,16 +1691,16 @@ function Media({
           loop={!viewer}
           controls={viewer || reduced}
           preload="metadata"
-          /* The card records the playhead; the modal only reads it, so the
-             shared position is always the carousel's and reopening the modal
-             continues from the card rather than from wherever the last viewing
-             happened to stop. */
-          onTimeUpdate={
-            viewer ? undefined : (event) => clipTime.set(shot.id, event.currentTarget.currentTime)
-          }
-          /* Restore that playhead once the duration is known — on the card so a
-             clip scrolled out of the ring and back resumes, and on the modal so
-             it opens where the card was. */
+          /* Both surfaces record the playhead. The modal shows one image at a
+             time and swaps the element out to move between them, so without this
+             a clip would unmount when the reader steps to the next image and
+             remount at the start when they come back. Recording it means it
+             resumes where it was — the same way a card clip resumes after
+             scrolling out of the ring — whichever surface last played it. */
+          onTimeUpdate={(event) => clipTime.set(shot.id, event.currentTarget.currentTime)}
+          /* Restore that playhead once the duration is known: on the card after
+             it scrolls out of the ring and back, on the modal after opening or
+             stepping away to another image and returning. */
           onLoadedMetadata={(event) => {
             const el = event.currentTarget;
             const at = clipTime.get(shot.id);
