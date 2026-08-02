@@ -287,14 +287,18 @@ export type PrefillResult = { ok: true; data: Prefill } | { ok: false; error: st
  * gate and the error envelope around it.
  */
 export async function prefillProject(url: string): Promise<PrefillResult> {
-  if (!(await isAdmin())) return { ok: false, error: 'Not signed in as the site owner.' };
-
-  const clean = String(url ?? '').trim();
-  if (!/^https?:\/\//i.test(clean)) {
-    return { ok: false, error: 'Enter a full link starting with http:// or https://.' };
-  }
-
+  // Everything inside the try, including the admin check: the whole point of
+  // this action is to hand the editor a sentence they can act on, so an auth
+  // or infrastructure failure should read as a message, not a rejected call
+  // that leaves the button looking dead.
   try {
+    if (!(await isAdmin())) return { ok: false, error: 'Not signed in as the site owner.' };
+
+    const clean = String(url ?? '').trim();
+    if (!/^https?:\/\//i.test(clean)) {
+      return { ok: false, error: 'Enter a full link starting with http:// or https://.' };
+    }
+
     return { ok: true, data: await prefillFromUrl(clean) };
   } catch (error) {
     return {
