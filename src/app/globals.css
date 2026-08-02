@@ -2291,8 +2291,13 @@ a:hover {
     margin-bottom: 8px;
   }
 
+  /* Only the block margins — never the `margin` shorthand, which would reset
+     `margin-left` and kill the base rule's `calc(50% - 50vw)` full-bleed, so the
+     100vw timeline would keep its width but lose the pull-left and overflow to
+     the right. Top/bottom only, left/right untouched. */
   .timeline {
-    margin: clamp(4px, 0.8vh, 8px) 0 6px;
+    margin-top: clamp(4px, 0.8vh, 8px);
+    margin-bottom: 6px;
   }
 }
 
