@@ -1844,6 +1844,18 @@ a:hover {
   position: relative;
 }
 
+/* Each image's slide. `display: contents` so the frame inside lays out exactly
+   as it did when the gallery rendered a single image directly — the wrapper adds
+   no box of its own — and `display: none` hides the ones off screen while
+   keeping their elements (and any clip's playhead) mounted. */
+.gallery-slide {
+  display: contents;
+}
+
+.gallery-slide[hidden] {
+  display: none;
+}
+
 /* Arrows, sat over the image and out of the way of its middle. Circular so they
    read as controls on top of a photo, and translucent so the image is still
    the thing. */

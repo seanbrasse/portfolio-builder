@@ -1573,10 +1573,19 @@ function Media({
   shot,
   viewer = false,
   play = false,
+  active = true,
 }: {
   shot: Asset;
   viewer?: boolean;
   play?: boolean;
+  /**
+   * Modal only: whether this is the gallery image currently on screen. The
+   * gallery keeps every image's element mounted and toggles this rather than
+   * swapping the element out, so a clip's own playhead survives stepping to
+   * another image and back — it simply pauses while it is off screen and
+   * resumes from where it was, no seeking required.
+   */
+  active?: boolean;
 }) {
   const reduced = useReducedMotion();
   const video = useRef<HTMLVideoElement>(null);
@@ -1615,21 +1624,18 @@ function Media({
     const el = video.current;
     if (!el || !isVideo) return;
 
-    // The modal continues the card's playback rather than restarting it: same
-    // position (seek to the card's recorded playhead, also handled in
-    // onLoadedMetadata for when metadata is not in yet) and same sound (the
-    // `muted` state was seeded from the card's last choice). It autoplays the
-    // moment it opens, which is allowed because opening the modal is a user
-    // gesture — and when the card was unmuted, that is what lets the sound
-    // carry. Left paused under reduced motion, where the controls are the honest
-    // way to start it.
+    // The modal plays only the image on screen. The first seek — to the card's
+    // recorded playhead, so opening continues the carousel's clip — is done once
+    // in onLoadedMetadata; it is deliberately not repeated here, or stepping
+    // away to another image and back would snap the clip to that opening
+    // position instead of where the reader had watched to. Off screen the clip
+    // pauses and its element stays mounted, so its own playhead is preserved
+    // natively. Autoplay is allowed because opening the modal is a user gesture;
+    // reduced motion leaves it paused for the controls to start.
     if (viewer) {
       el.muted = muted;
-      const at = clipTime.get(shot.id);
-      if (at && el.readyState >= 1 && Number.isFinite(el.duration) && at < el.duration) {
-        el.currentTime = at;
-      }
-      if (!reduced) el.play().catch(() => {});
+      if (active && !reduced) el.play().catch(() => {});
+      else el.pause();
       return;
     }
 
@@ -1638,7 +1644,7 @@ function Media({
     clipMuted.set(shot.id, muted);
     if (play && !reduced) el.play().catch(() => {});
     else el.pause();
-  }, [play, viewer, isVideo, reduced, muted, shot.id]);
+  }, [play, viewer, isVideo, reduced, muted, shot.id, active]);
 
   /**
    * The per-image framing, as inline style so it wins over the stylesheet's
@@ -1804,7 +1810,14 @@ function ProjectGallery({ project }: { project: Project }) {
           : undefined
       }
     >
-      <Media key={images[index].id} shot={images[index]} viewer />
+      {/* Every image stays mounted; only the active one is shown. Swapping the
+          element out on navigation is what reset a playing clip — a persistent
+          element keeps its own playhead, so stepping away and back resumes it. */}
+      {images.map((image, i) => (
+        <div key={image.id} className="gallery-slide" hidden={i !== index}>
+          <Media shot={image} viewer active={i === index} />
+        </div>
+      ))}
 
       {many ? (
         <>
