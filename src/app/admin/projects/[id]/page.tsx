@@ -111,14 +111,46 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
         </div>
 
         <label className="field">
-          <span className="field-label">Summary — max {CAPS.projectSummary}</span>
+          <span className="field-label">Card summary — max {CAPS.projectSummary}</span>
           <textarea
             name="summary"
-            rows={5}
+            rows={3}
             maxLength={CAPS.projectSummary}
             defaultValue={item?.summary ?? ''}
           />
+          <span className="admin-note">
+            The short teaser on the carousel card. The full write-up goes in the
+            STAR sections below, which is what the opened card shows.
+          </span>
         </label>
+
+        {/* The fuller story, as STAR. Every part is optional — fill the ones
+            that fit — and each is roomy because the modal scrolls. A project
+            with none of these simply shows its summary when opened. */}
+        <fieldset className="admin-fieldset">
+          <legend className="field-label">Details — STAR (shown in the opened card)</legend>
+          {(
+            [
+              ['situation', 'Situation', 'The context — the problem or the state of things going in.'],
+              ['task', 'Task', 'What you were responsible for; the goal you owned.'],
+              ['action', 'Action', 'What you actually did — the work, the decisions, the trade-offs.'],
+              ['result', 'Result', 'What changed — outcomes, numbers, what shipped.'],
+            ] as const
+          ).map(([name, label, hint]) => (
+            <label className="field" key={name}>
+              <span className="field-label">
+                {label} — max {CAPS.projectStar}
+              </span>
+              <textarea
+                name={name}
+                rows={4}
+                maxLength={CAPS.projectStar}
+                defaultValue={item?.[name] ?? ''}
+              />
+              <span className="admin-note">{hint}</span>
+            </label>
+          ))}
+        </fieldset>
 
         <label className="field">
           <span className="field-label">Impact — the one number</span>

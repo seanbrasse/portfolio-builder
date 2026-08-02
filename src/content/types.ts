@@ -153,8 +153,17 @@ export type Project = {
   context: 'professional' | 'personal';
   /** Links a professional project back to the employer it was built at. */
   experienceId?: string;
-  /** Cap 200. */
+  /** The short teaser shown on the carousel card. Cap {@link CAPS.projectSummary}. */
   summary: string;
+  /**
+   * The fuller write-up, as a STAR breakdown, shown in the modal. Each part is
+   * optional; a project with none falls back to its summary. Rendered in a
+   * scroll area, so these are roomy (see {@link CAPS.projectStar}).
+   */
+  situation?: string;
+  task?: string;
+  action?: string;
+  result?: string;
   /** The one number. */
   impact: string;
   status: ProjectStatus;
@@ -207,6 +216,12 @@ export const CAPS = {
    * real paragraph about the project rather than a single sentence.
    */
   projectSummary: 500,
+  /**
+   * Each STAR section in the modal. Rendered in a scroll area rather than a
+   * fixed panel, so this is generous — room for a real paragraph per part
+   * without the layout being the thing that caps the writing.
+   */
+  projectStar: 1200,
   quote: 180,
   /**
    * The line under the name, on a page that does not scroll. It is set large
