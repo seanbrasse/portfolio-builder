@@ -59,6 +59,7 @@ export type AdminProject = {
   links: { label: string; url: string; type?: string }[];
   date: string;
   published: boolean;
+  starred: boolean;
 };
 
 export type AdminImage = {

@@ -143,10 +143,16 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
             when it&rsquo;s ready.
           </p>
         ) : (
-          <label className="admin-check">
-            <input type="checkbox" name="published" defaultChecked={item!.published} />
-            <span>Published — unchecked keeps it out of the carousel</span>
-          </label>
+          <>
+            <label className="admin-check">
+              <input type="checkbox" name="published" defaultChecked={item!.published} />
+              <span>Published — unchecked keeps it out of the carousel</span>
+            </label>
+            <label className="admin-check">
+              <input type="checkbox" name="starred" defaultChecked={item!.starred} />
+              <span>Starred — pins it to the front of the carousel</span>
+            </label>
+          </>
         )}
       </Form>
 

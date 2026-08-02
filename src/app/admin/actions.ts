@@ -303,6 +303,10 @@ export async function saveProject(form: FormData): Promise<Result> {
     tech: commas(form.get('tech')),
     links: links(form),
     date: text(form, 'date'),
+    // Pin to the front of the carousel. Like `published`, an edit-time choice —
+    // the create form does not show it (a brand-new draft is not on the site to
+    // pin), so on first save the checkbox is absent and this reads as false.
+    starred: form.get('starred') === 'on',
     /**
      * A brand-new project is always a draft, no matter what the form said.
      * A project cannot be finished at the instant it is named — it has no
