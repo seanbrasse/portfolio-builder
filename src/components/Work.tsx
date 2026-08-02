@@ -1526,10 +1526,23 @@ function useReducedMotion() {
  * restoring it on the way back is what turns "unmount" into "pause", which is
  * the difference between resuming and replaying. Module scope so it survives the
  * unmount; client-only and keyed by clip, so it holds a couple of numbers for
- * the life of the page. The modal is left out: opening a project to watch it is
- * a fresh viewing, not a continuation of the muted preview on the card.
+ * the life of the page.
+ *
+ * The modal shares this now, in both directions: opening a project's card seeks
+ * the modal's copy to where the card was and closing it hands the position back,
+ * so the same clip is one continuous playback across the two surfaces rather
+ * than two viewings of it.
  */
 const clipTime = new Map<string, number>();
+
+/**
+ * The last mute choice per clip, shared between the card and the modal the same
+ * way `clipTime` is. Unmuting the card and then opening it should keep the
+ * sound on in the modal — and a clip left muted should open muted — so the
+ * card writes its choice here and the modal reads it rather than always
+ * starting muted.
+ */
+const clipMuted = new Map<string, boolean>();
 
 /** Speaker glyph for the card's mute toggle — waves when on, a cross when off. */
 function SpeakerIcon({ muted }: { muted: boolean }) {
@@ -1575,8 +1588,12 @@ function Media({
    * autoplay at all. The corner toggle is the deliberate gesture that turns
    * sound on, and the state resets when the card leaves the visible ring and its
    * media unmounts, so scrolling back to a clip never surprises with audio.
+   *
+   * The modal is the exception: it seeds from the card's last mute choice
+   * (`clipMuted`), so opening a clip the reader had unmuted keeps the sound on,
+   * and one they left muted opens muted.
    */
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(() => (viewer ? (clipMuted.get(shot.id) ?? true) : true));
 
   /**
    * A card video plays only while its card is the front one, and it is driven
@@ -1598,22 +1615,30 @@ function Media({
     const el = video.current;
     if (!el || !isVideo) return;
 
-    // The modal's own copy picks up where the card left off: it autoplays the
-    // moment it opens rather than waiting for a press, so opening a card whose
-    // preview was running does not stop the video, it moves it into the modal.
-    // Muted so the browser allows the autoplay; the native controls carry the
-    // volume, so a viewer turns the sound on when they want it. Left paused
-    // under reduced motion, where the controls are the honest way to start it.
+    // The modal continues the card's playback rather than restarting it: same
+    // position (seek to the card's recorded playhead, also handled in
+    // onLoadedMetadata for when metadata is not in yet) and same sound (the
+    // `muted` state was seeded from the card's last choice). It autoplays the
+    // moment it opens, which is allowed because opening the modal is a user
+    // gesture — and when the card was unmuted, that is what lets the sound
+    // carry. Left paused under reduced motion, where the controls are the honest
+    // way to start it.
     if (viewer) {
-      el.muted = true;
+      el.muted = muted;
+      const at = clipTime.get(shot.id);
+      if (at && el.readyState >= 1 && Number.isFinite(el.duration) && at < el.duration) {
+        el.currentTime = at;
+      }
       if (!reduced) el.play().catch(() => {});
       return;
     }
 
     el.muted = muted;
+    // The card is the source of the shared mute choice the modal reads.
+    clipMuted.set(shot.id, muted);
     if (play && !reduced) el.play().catch(() => {});
     else el.pause();
-  }, [play, viewer, isVideo, reduced, muted]);
+  }, [play, viewer, isVideo, reduced, muted, shot.id]);
 
   /**
    * The per-image framing, as inline style so it wins over the stylesheet's
@@ -1666,21 +1691,21 @@ function Media({
           loop={!viewer}
           controls={viewer || reduced}
           preload="metadata"
-          /* Record and restore the playhead so a card clip resumes where it was
-             after scrolling out of the ring and back. The modal is exempt — it
-             starts its own viewing. */
+          /* The card records the playhead; the modal only reads it, so the
+             shared position is always the carousel's and reopening the modal
+             continues from the card rather than from wherever the last viewing
+             happened to stop. */
           onTimeUpdate={
             viewer ? undefined : (event) => clipTime.set(shot.id, event.currentTarget.currentTime)
           }
-          onLoadedMetadata={
-            viewer
-              ? undefined
-              : (event) => {
-                  const el = event.currentTarget;
-                  const at = clipTime.get(shot.id);
-                  if (at && Number.isFinite(el.duration) && at < el.duration) el.currentTime = at;
-                }
-          }
+          /* Restore that playhead once the duration is known — on the card so a
+             clip scrolled out of the ring and back resumes, and on the modal so
+             it opens where the card was. */
+          onLoadedMetadata={(event) => {
+            const el = event.currentTarget;
+            const at = clipTime.get(shot.id);
+            if (at && Number.isFinite(el.duration) && at < el.duration) el.currentTime = at;
+          }}
         />
         {showMute ? (
           <button
