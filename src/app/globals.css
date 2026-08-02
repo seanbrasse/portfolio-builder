@@ -2463,7 +2463,13 @@ a:hover {
 
 .admin {
   min-height: 100%;
-  max-width: 860px;
+  /* Fluid, like the public page. A form is not prose, so the ceiling is well
+     below the site's 2400px — inputs past ~1400px read as absurdly wide — but
+     the old fixed 860px stranded the editor in a sea of margin on anything
+     bigger than a laptop. The 860px floor keeps small screens as they were; the
+     extra width is spent by the field grid and the lists below, which tile into
+     more columns as the container grows. */
+  max-width: clamp(860px, 82vw, 1400px);
   margin: 0 auto;
   padding: 0 var(--gutter) 96px;
 }
@@ -2532,7 +2538,12 @@ a:hover {
 
 .admin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  /* `auto-fill`, not `auto-fit`. On a wide editor `auto-fit` collapses the
+     empty tracks and stretches the row's few fields to fill the whole width —
+     a two-field row (name, location) became two half-page inputs. `auto-fill`
+     keeps the tracks, so a field stays a field-sized ~240px and the leftover
+     width is simply empty rather than poured into the controls. */
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
 }
 
@@ -2556,6 +2567,11 @@ a:hover {
 .admin textarea,
 .admin select {
   width: 100%;
+  /* A readable cap on the control itself, so the wider container does not turn
+     a standalone field (the tagline, the summary, the impact line) into a
+     page-wide input nobody can scan. Inside the field grid a cell is already
+     narrower than this, so the cap only bites on the full-width fields. */
+  max-width: 680px;
   font: inherit;
   font-size: 14px;
   color: var(--ink);
@@ -2705,6 +2721,11 @@ a:hover {
   margin: 16px 0 0;
   padding: 0;
   display: grid;
+  /* Tiles into columns as the editor widens: one column on a laptop, two or
+     three on a wide monitor, so a long list of projects fills the width instead
+     of running down a narrow ribbon. `auto-fill` holds the track size, so the
+     rows stay a readable width rather than stretching edge to edge. */
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 8px;
 }
 
@@ -2904,6 +2925,11 @@ a:hover {
   margin: 16px 0 0;
   padding: 0;
   display: grid;
+  /* Two-up on a wide editor, one column otherwise. The 520px floor is set so a
+     tile is never narrower than the framing editor inside it needs to keep its
+     well beside its controls (`.admin-frame-editor` is ~480px at its tightest);
+     below that the shots stack full width as before. */
+  grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
   gap: 24px;
 }
 
@@ -3029,13 +3055,42 @@ a:hover {
   flex-wrap: wrap;
 }
 
+/* The sign-in card. Centred both ways so it sits in the middle of whatever
+   screen it lands on rather than clinging to the top-left of a wide monitor,
+   and scaled up a little there so it reads as a deliberate panel, not a stray
+   box. `min-height` on the wrapper is what lets the auto margins centre it
+   vertically; the admin layout has no header on this page to offset. */
 .admin-door {
-  max-width: 360px;
-  margin: clamp(60px, 18vh, 160px) auto 0;
+  max-width: clamp(360px, 30vw, 480px);
+  margin-inline: auto;
+  padding: clamp(24px, 3vw, 40px);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.admin-main:has(.admin-door) {
+  display: grid;
+  align-content: center;
+  justify-content: center;
+  /* Less the container's own bottom padding, so centring does not push the
+     card down far enough to open a scrollbar on a screen it otherwise fits. */
+  min-height: calc(100dvh - 96px);
+  padding-block: clamp(40px, 8vh, 96px);
 }
 
 .admin-door h1 {
-  font-size: 24px;
+  font-size: clamp(24px, 2.2vw, 36px);
+}
+
+/* The one action on the page gets the room. Full width of the card and a
+   little taller, so on a big screen it is plainly the thing to press. */
+.admin-door .admin-button {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding-block: clamp(10px, 0.8vw, 14px);
+  font-size: clamp(14px, 0.9vw, 16px);
 }
 
 /* A project's state, when it is worth saying. `Status` renders nothing for the
