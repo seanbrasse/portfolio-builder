@@ -33,7 +33,11 @@ export function StarToggle({ id, starred }: { id: string; starred: boolean }) {
       aria-label={
         optimistic ? 'Pinned to the front — tap to unpin' : 'Pin to the front of the carousel'
       }
-      title={optimistic ? 'Pinned to the front' : 'Pin to the front'}
+      title={
+        optimistic
+          ? 'Starred — this project always shows first in the carousel, regardless of project dates. Tap to unstar.'
+          : 'Star to pin: a starred project always shows first in the carousel, regardless of project dates.'
+      }
       disabled={pending}
       onClick={() => {
         const next = !starred;

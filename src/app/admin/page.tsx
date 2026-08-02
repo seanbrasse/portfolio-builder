@@ -202,10 +202,6 @@ export default async function AdminHome() {
             Add project
           </Link>
         </div>
-        <p className="admin-note">
-          The carousel, newest first. Summaries are capped at {CAPS.projectSummary}{' '}
-          characters because the card cannot hold more.
-        </p>
 
         <ul className="admin-list">
           {projects.map((item) => (
