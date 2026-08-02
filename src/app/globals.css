@@ -43,8 +43,13 @@
   /* Fluid, so the layout scales up on a large monitor instead of stranding a
      fixed 1140px column in a sea of margin. The 1140px floor keeps typical
      laptops (≤~1540px wide) exactly as they were; above that the column grows
-     with the viewport up to a 1900px ceiling so a 27"/4K screen fills out. */
-  --page-max: clamp(1140px, 74vw, 1900px);
+     with the viewport up to a 2400px ceiling so a 27"/4K/ultrawide screen fills
+     out. The wider column is what lets `fit()` grow the card past the point
+     where the old 1900px cap made it height-bound — see `--card-max`. The 74vw
+     slope holds the column at its 1140px floor until ~1540px wide, so typical
+     laptops are untouched; it reaches the 2400px ceiling around a 3240px-wide
+     ultrawide. */
+  --page-max: clamp(1140px, 74vw, 2400px);
   --gutter: clamp(20px, 5vw, 56px);
 
   /* Space is the design. The reference gives its hero most of a screen and
@@ -644,8 +649,12 @@ a:hover {
   /* Fluid ceiling, matched to the fluid `--page-max`: 700px on typical laptops
      (where the card is height-bound anyway) and growing with the viewport on a
      large monitor so the card scales up with the widened column instead of
-     staying pinned at 700px in the middle of a big screen. */
-  --card-max: clamp(700px, 40vw, 1000px);
+     staying pinned in the middle of a big screen. The ceiling is deliberately
+     high (1500px) so it stops being the binding cap on a big screen — there the
+     card is limited by the height that is left (`byHeight` in `fit()`) or by the
+     room its two neighbours need (`bySpan`), which is what makes it grow to fill
+     the vertical gap that used to open above the timeline on a tall monitor. */
+  --card-max: clamp(700px, 60vw, 1500px);
   /* Defaults to on, and the responsive block at the end of this file turns it
      off. The other way round did not work: `--locked: 1` lived in the
      one-screen media query near the top, and this base declaration is later at
@@ -2320,11 +2329,13 @@ a:hover {
   }
 }
 
-/* Large monitors: scale the intro type up with the widened column so the page
-   fills the screen instead of sitting small in the top-left. Gated above the
-   ~1540px where `--page-max` begins to grow, so typical laptops are untouched.
-   The card is sized by `fit()` from the height that is left, so a taller intro
-   simply hands it a little less — it never overflows the one-screen layout. */
+/* Large monitors, first tier: scale the intro type up with the widened column
+   so the page fills the screen instead of sitting small in the top-left. Gated
+   above the ~1540px where `--page-max` begins to grow, so typical laptops are
+   untouched. This tier is modest on purpose — it also covers a wide but short
+   screen (a 1920×1080 desktop), where every point the intro grows is a point the
+   card's height budget loses. The bigger jump lives in the tall-screen tier
+   below, where there is vertical room to spend. */
 @media (min-width: 1600px) {
   .intro h1 {
     font-size: clamp(48px, 3.2vw, 68px);
@@ -2336,7 +2347,7 @@ a:hover {
 
   .intro-tagline {
     font-size: clamp(17px, 1.15vw, 24px);
-    max-width: 64ch;
+    max-width: 52ch;
   }
 
   .intro-skills-label {
@@ -2345,6 +2356,71 @@ a:hover {
 
   .skills li {
     font-size: clamp(13px, 0.82vw, 17px);
+  }
+}
+
+/* Large monitors, second tier: a tall big screen — a 27"/4K/ultrawide at
+   ≥1150px of viewport height — has room to scale the whole page up rather than
+   leaving the card and its type stranded small above a wall of empty pixels.
+   Gated on height as well as width because the card is height-bound on the
+   locked one-screen layout: on a short wide screen (that 1920×1080) a larger
+   intro would just shrink the card, so the big jump is held back until the
+   height is there to absorb it. */
+@media (min-width: 1600px) and (min-height: 1150px) {
+  .intro h1 {
+    font-size: clamp(68px, 3.6vw, 92px);
+  }
+
+  .intro-role {
+    font-size: clamp(20px, 1.1vw, 26px);
+    margin-top: clamp(10px, 0.8vw, 16px);
+  }
+
+  .intro-tagline {
+    font-size: clamp(21px, 1.3vw, 30px);
+    max-width: 46ch;
+    margin-top: clamp(12px, 1vw, 20px);
+  }
+
+  .intro-skills-label {
+    font-size: clamp(14px, 0.75vw, 17px);
+  }
+
+  .skills {
+    gap: clamp(8px, 0.5vw, 14px);
+  }
+
+  .skills li {
+    font-size: clamp(15px, 0.85vw, 19px);
+    padding: clamp(6px, 0.35vw, 9px) clamp(14px, 0.7vw, 20px);
+  }
+
+  /* The company/school labels and year ticks on the line are set at a fixed
+     small size for a laptop; against the scaled-up card on a big screen they
+     read as tiny, so they grow with the viewport too. The collision and
+     row-stacking math in `Timeline` measures the rendered labels, so a larger
+     size is picked up rather than fought. */
+  .timeline-company .timeline-name {
+    font-size: clamp(14px, 0.8vw, 19px);
+  }
+
+  /* The mark you point at grows with its label. `--badge` is read by `.badge`;
+     the drawn monogram's glyph is scaled alongside so a crest-less school does
+     not become an empty square next to companies that have one. */
+  .timeline-company {
+    --badge: clamp(30px, 1.7vw, 44px);
+  }
+
+  .timeline-company .badge-mono {
+    font-size: clamp(16px, 0.9vw, 23px);
+  }
+
+  .timeline-year {
+    font-size: clamp(12px, 0.62vw, 15px);
+  }
+
+  .timeline-now {
+    font-size: clamp(14px, 0.75vw, 17px);
   }
 }
 
