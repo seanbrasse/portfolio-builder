@@ -6,6 +6,7 @@ import { adminExperiences, adminImages, adminProject } from '../../data';
 import { DeleteButton, Form } from '../../Form';
 import { ImageAdjust } from '../../ImageAdjust';
 import { LinkRows } from '../../LinkRows';
+import { ProjectPrefill } from '../../ProjectPrefill';
 import { Reorder } from '../../Reorder';
 import { Upload } from '../../Upload';
 import { CAPS } from '@/content/types';
@@ -33,6 +34,11 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
         <Link href="/admin">← Content</Link>
       </p>
       <h1>{creating ? 'Add project' : item!.title}</h1>
+
+      {/* Only on create: a blank form is where drafting from a link earns its
+          keep. Editing an existing project already has its fields filled, and
+          pouring a fresh draft over them would be a footgun, not a help. */}
+      {creating ? <ProjectPrefill /> : null}
 
       <Form action={saveProject}>
         <div className="admin-grid">

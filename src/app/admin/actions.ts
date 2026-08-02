@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { supabaseServer, isAdmin } from '@/lib/supabase/server';
+import { prefillFromUrl, type Prefill } from '@/lib/prefill';
 
 /**
  * Every write the admin can make.
@@ -271,6 +272,37 @@ export async function deleteExperience(id: string): Promise<Result> {
 /* -------------------------------------------------------------------------
    Projects — the cards
 ------------------------------------------------------------------------- */
+
+/** Like `Result`, but a success carries the drafted fields to fill the form. */
+export type PrefillResult = { ok: true; data: Prefill } | { ok: false; error: string };
+
+/**
+ * Draft a project from a pasted link.
+ *
+ * Read-adjacent, not a write — it touches no row and only reports a draft the
+ * editor then edits and saves — but it is an admin action all the same: it
+ * spends an API call and fetches an arbitrary URL server-side, so it re-checks
+ * `isAdmin()` like every other action here. The heavy lifting (fetching the
+ * source, asking the model, normalising) lives in `lib/prefill`; this is the
+ * gate and the error envelope around it.
+ */
+export async function prefillProject(url: string): Promise<PrefillResult> {
+  if (!(await isAdmin())) return { ok: false, error: 'Not signed in as the site owner.' };
+
+  const clean = String(url ?? '').trim();
+  if (!/^https?:\/\//i.test(clean)) {
+    return { ok: false, error: 'Enter a full link starting with http:// or https://.' };
+  }
+
+  try {
+    return { ok: true, data: await prefillFromUrl(clean) };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Could not read that link.',
+    };
+  }
+}
 
 export async function saveProject(form: FormData): Promise<Result> {
   if (!(await isAdmin())) return DENIED;
