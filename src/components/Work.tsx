@@ -1212,21 +1212,37 @@ function Timeline({
       for (const year of years) year.removeAttribute('data-crowded');
 
       const boxes = years.map((year) => year.getBoundingClientRect());
-      const lastIndex = years.length - 1;
-      const lastLeft = lastIndex >= 0 ? boxes[lastIndex].left : Infinity;
-      let occupied = -Infinity;
+      const count = years.length;
 
-      years.forEach((year, index) => {
-        // The latest year is reserved — it anchors the right end and always shows.
-        if (index === lastIndex) return;
-        const crowdsPrevious = boxes[index].left < occupied + YEAR_GAP;
-        const crowdsLast = boxes[index].right > lastLeft - YEAR_GAP;
-        if (crowdsPrevious || crowdsLast) {
-          year.setAttribute('data-crowded', '');
-        } else {
-          occupied = boxes[index].right;
+      if (count > 0) {
+        // Keep years from the right — the recent, dense end where the work is —
+        // so when a narrow band cannot hold every label it is the compressed old
+        // years that thin, never a recent one (2024, 2025). Both endpoints are
+        // pinned: the latest anchors the right, the first marks the start. With
+        // the two-digit labels on a phone this rarely has to drop anything.
+        const keep = new Array<boolean>(count).fill(false);
+        keep[0] = true;
+        keep[count - 1] = true;
+
+        // Walk right to left, keeping a year whenever it clears the last one kept.
+        let nextLeft = boxes[count - 1].left;
+        for (let index = count - 2; index >= 1; index -= 1) {
+          if (boxes[index].right <= nextLeft - YEAR_GAP) {
+            keep[index] = true;
+            nextLeft = boxes[index].left;
+          }
         }
-      });
+
+        // The pinned first year can still butt against whatever was kept just to
+        // its right; drop that neighbour so the start stays clean.
+        for (let index = 1; index < count - 1; index += 1) {
+          if (keep[index] && boxes[index].left < boxes[0].right + YEAR_GAP) keep[index] = false;
+        }
+
+        years.forEach((year, index) => {
+          if (!keep[index]) year.setAttribute('data-crowded', '');
+        });
+      }
     };
 
     stack();
@@ -1276,7 +1292,12 @@ function Timeline({
             className="timeline-year"
             style={{ left: `${tick.left}%` }}
           >
-            {tick.year}
+            {/* Full year on a roomy screen; two digits on a phone, where the
+                narrow band cannot hold nine four-digit labels without them
+                colliding — half the width lets every year stay on. Only one is
+                ever displayed, so the collision measurement reads the right one. */}
+            <span className="timeline-year-full">{tick.year}</span>
+            <span className="timeline-year-short">&rsquo;{String(tick.year).slice(-2)}</span>
           </span>
         ))}
 

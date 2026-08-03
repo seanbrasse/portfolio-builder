@@ -1431,6 +1431,23 @@ a:hover {
   line-height: 1;
 }
 
+/* Two-digit years on a narrow band, four-digit where there is room. Only one is
+   ever in the layout, so the collision measurement in `Timeline` reads the form
+   actually shown. The switch is at the same width the band gains its inset. */
+.timeline-year-full {
+  display: none;
+}
+
+@media (min-width: 641px) {
+  .timeline-year-full {
+    display: inline;
+  }
+
+  .timeline-year-short {
+    display: none;
+  }
+}
+
 /* A join: a label sitting on the rule with a tick through it.
  *
  * `--row` is written from JS. Row 0 rests on the rule; each row above it is
