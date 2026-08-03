@@ -1168,53 +1168,83 @@ function Timeline({
       const gutter =
         parseFloat(getComputedStyle(node).getPropertyValue('--join-gutter')) || GUTTER;
 
-      // The right edge of the last label placed in each row, in pixels.
-      const edges: number[] = [];
-      // A row has to be at least as tall as the tallest thing standing in it,
-      // or lifting a label by one row leaves it short of clearing the one
-      // below and overflowing the top of the track.
+      /**
+       * One row, always.
+       *
+       * The old version lifted a colliding label onto a second row and grew the
+       * timeline to fit it. But the desktop card is height-bound (see `fit()`),
+       * so every extra row came straight out of the card — and a single wide
+       * name ("Intuit Mailchimp" beside "PayPal") was enough to add one and
+       * shrink the card noticeably. So the timeline is held to a single row and
+       * a label that will not fit beside its neighbour drops its *name* instead
+       * of its *row*: it collapses to its badge, and the name stays in the
+       * tooltip and the accessible label. Wherever the line has room — which is
+       * most of a normal-width screen — the name shows; only genuinely
+       * time-adjacent jobs collapse.
+       *
+       * Three passes, never reading and writing in the same one: show every name
+       * so the measurement is of the full label, read all the geometry, then
+       * write the decisions — otherwise a later label is measured against a
+       * layout an earlier one already changed.
+       */
+      for (const join of joins) join.removeAttribute('data-compact');
+
+      const metrics = joins.map((join) => {
+        const label = join.querySelector<HTMLElement>('.timeline-company');
+        const badge = join.querySelector<HTMLElement>('.badge');
+        const box = label?.getBoundingClientRect();
+        return {
+          center: (parseFloat(join.style.left) / 100) * width,
+          half: (box?.width ?? 0) / 2,
+          height: box?.height ?? 0,
+          badgeHalf: (badge?.getBoundingClientRect().width ?? 0) / 2,
+        };
+      });
+
+      // The right edge of the last label that kept its name, in pixels.
+      let lastEnd = -Infinity;
+      // The row is as tall as the tallest label standing in it; at least one
+      // keeps its name, so this is the name-carrying height.
       let tallest = 0;
 
-      for (const join of joins) {
-        const label = join.querySelector<HTMLElement>('.timeline-company');
-        const box = label?.getBoundingClientRect();
-        const center = (parseFloat(join.style.left) / 100) * width;
-        const half = (box?.width ?? 0) / 2;
+      joins.forEach((join, index) => {
+        const { center, half, height, badgeHalf } = metrics[index];
 
         /**
-         * Keep the centred label on the track.
-         *
-         * Centred on its tick, the first label (at 0%) hangs half its width off
-         * the left edge and the last could hang off the right. `--nudge` is the
-         * push, in pixels, that brings a clipping label back inside — zero for
-         * the labels that already fit, which is most of them. The tick does not
-         * move with it, so a clamped label points slightly to one side of its
-         * mark rather than being cut in half, the honest trade at a line's ends.
+         * Keep the centred label on the track. Centred on its tick, the first
+         * label (at 0%) hangs half its width off the left edge and the last
+         * could hang off the right; `--nudge` pushes a clipping label back
+         * inside. The tick does not move, so a clamped label points slightly to
+         * one side of its mark rather than being cut off — the honest trade at a
+         * line's ends. Clamp against the track, not the band, since a centred
+         * label may use the band's own margin.
          */
-        // Clamp against the track, not the band: a centred label may use the
-        // band's own margin, so it only needs pushing when it would leave the
-        // track itself. `center + inset` is the label's centre in track space.
         let nudge = 0;
         const trackCenter = center + inset;
         if (trackCenter - half < 0) nudge = -(trackCenter - half);
         else if (trackCenter + half > node.clientWidth) nudge = node.clientWidth - (trackCenter + half);
 
-        // The label's real span after the nudge — this, not the centred span,
-        // is what can collide, because the nudge is exactly what moved a flush
-        // edge label off centre and into its neighbour's space.
         const start = center - half + nudge;
         const end = center + half + nudge + gutter;
 
-        let row = edges.findIndex((edge) => start >= edge);
-        if (row === -1) row = edges.length;
-        edges[row] = end;
-        tallest = Math.max(tallest, box?.height ?? 0);
+        // Fits beside the last named label → keep the name. Otherwise collapse
+        // to the badge, which is centred on its own tick and far narrower; step
+        // past it so the next name cannot overlap it.
+        const compact = start < lastEnd;
+        if (compact) {
+          lastEnd = Math.max(lastEnd, center + badgeHalf + gutter);
+        } else {
+          lastEnd = end;
+        }
 
-        join.style.setProperty('--row', String(row));
-        join.style.setProperty('--nudge', `${Math.round(nudge)}px`);
-      }
+        join.toggleAttribute('data-compact', compact);
+        join.style.setProperty('--row', '0');
+        // A collapsed badge is centred on its tick; only a full label is clamped.
+        join.style.setProperty('--nudge', `${compact ? 0 : Math.round(nudge)}px`);
+        tallest = Math.max(tallest, compact ? badgeHalf * 2 : height);
+      });
 
-      node.style.setProperty('--rows', String(edges.length));
+      node.style.setProperty('--rows', '1');
       node.style.setProperty('--row-h', `${Math.ceil(tallest) + 4}px`);
 
       /**
