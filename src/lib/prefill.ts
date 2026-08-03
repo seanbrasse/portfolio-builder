@@ -5,18 +5,20 @@ import Anthropic from '@anthropic-ai/sdk';
 import { CAPS } from '@/content/types';
 
 /**
- * Turn a link into a first draft of a project.
+ * Turn a source into a draft of a project — for a blank form or an existing one.
  *
- * The admin pastes a URL — usually a GitHub repo, sometimes a live site — and
- * this reads what the page can tell us (repo metadata and README, or the page's
- * own text) and asks Claude to map it onto the fields the project form has. What
- * comes back is a *draft*: every value lands in the form as an editable default,
- * so the editor's job becomes correcting rather than typing from a blank page.
+ * The admin pastes something: a URL (usually a GitHub repo, sometimes a live
+ * site), or notes, or a whole write-up. This reads what it can (repo metadata
+ * and README, a page's own text, or the pasted prose itself) and asks Claude to
+ * map it onto the fields the project form has, *given whatever those fields
+ * already hold*. Empty fields get drafted; fields with content get improved only
+ * when the source or the house voice clearly makes them better. What comes back
+ * is a set of proposed values the editor reviews field by field — so the same
+ * tool starts a new project and suggests edits to an old one.
  *
  * Nothing here is authoritative. The model can be wrong about a date or invent a
- * tidy STAR write-up from a thin README, which is exactly why the result is
- * poured into form fields the editor then reviews and saves, not written to the
- * database directly.
+ * tidy write-up from a thin README, which is exactly why the result is proposed
+ * to the editor to apply and save, not written to the database directly.
  */
 
 /** The shape the form fills from — one key per field the editor can prefill. */
@@ -36,6 +38,16 @@ export type Prefill = {
   story: string;
   links: { label: string; url: string; type: '' | 'live' | 'repo' | 'case_study' | 'press' }[];
 };
+
+/**
+ * The prose fields the editor reviews one at a time — the ones a card is shown
+ * for. The rest of `Prefill` (id, date, context, links) is structural scaffolding
+ * that only makes sense to fill on a brand-new project, where there is nothing to
+ * review it against; the form applies those directly rather than as suggestions.
+ */
+export const REVIEW_FIELDS = ['title', 'summary', 'story', 'impact', 'tech'] as const;
+
+export type ReviewField = (typeof REVIEW_FIELDS)[number];
 
 /** Missing key is a configuration state, not a bug — say so in a sentence. */
 class PrefillError extends Error {}
@@ -255,10 +267,15 @@ const VOICE = [
 
 function systemPrompt(): string {
   return [
-    'You draft entries for a software engineer\'s portfolio from a source they',
-    'pasted a link to. You are filling a form the person will review and edit, so',
-    'aim for a strong, honest first draft — never invent facts the source does not',
-    'support. If the source is thin, leave a field empty rather than padding it.',
+    'You draft and improve entries for a software engineer\'s portfolio from a',
+    'source they pasted — a GitHub repo or page link, notes, or a write-up. You',
+    'are given the fields the form currently holds (some may be empty) and the',
+    'source. Fill in empty fields from the source, and improve a field that',
+    'already has content only when the source or the voice below clearly makes it',
+    'better — otherwise return it unchanged. The person will review every field',
+    'and apply what they want, so aim for a strong, honest draft and never invent',
+    'facts the source does not support. If the source is thin, leave a field empty',
+    'rather than padding it.',
     '',
     ...VOICE,
     '',
@@ -373,120 +390,50 @@ async function callTool(
  * ones we trust for URLs, and the model's link list is kept only for any it
  * usefully labelled. The source's own links lead.
  */
-export async function prefillFromUrl(raw: string): Promise<Prefill> {
-  const source = await readSource(raw);
-  const input = await callTool(
-    systemPrompt(),
-    `The source is ${source.kind}. Draft a portfolio project from it.\n\n${source.text}`,
-    { name: 'draft_project', description: 'Record the drafted portfolio project fields.', input_schema: SCHEMA },
-  );
-  return normalise(input as Prefill, source);
-}
-
-/* -------------------------------------------------------------------------
-   Suggesting edits to an existing project
-------------------------------------------------------------------------- */
-
-/** The fields the suggest-edits flow may propose changes to. */
-export const SUGGEST_FIELDS = ['title', 'summary', 'story', 'impact', 'tech'] as const;
-
-export type SuggestField = (typeof SUGGEST_FIELDS)[number];
-
-/** A suggestion per field — only the fields the model recommends changing. */
-export type ProjectSuggestions = Partial<Record<SuggestField, string>>;
-
-const SUGGEST_SCHEMA: Anthropic.Tool.InputSchema = {
-  type: 'object',
-  additionalProperties: false,
-  // No `required`: the model includes only the fields it wants to change. `tech`
-  // is a comma-separated string here to match the form's single tech input.
-  properties: {
-    title: { type: 'string' },
-    summary: { type: 'string' },
-    story: { type: 'string' },
-    impact: { type: 'string' },
-    tech: { type: 'string' },
-  },
-};
-
-function suggestSystemPrompt(): string {
-  return [
-    'You suggest edits to an existing software engineer\'s portfolio project,',
-    'using a source they pasted — a document, notes, or a link. They will review',
-    'your suggestions field by field and apply the ones they want, so propose real',
-    'improvements, not churn.',
-    '',
-    ...VOICE,
-    '',
-    'Rules:',
-    '- Only include a field when you are recommending a change to it. Leave a field',
-    '  out entirely when its current text is already good or the source adds nothing.',
-    '- Base every change on the source, or on tightening the current text into the',
-    '  voice above. Never invent facts present in neither.',
-    '- Give the full replacement value for each field you include, not a diff.',
-    `- summary is at most ${CAPS.projectSummary} characters; tech is a comma-separated`,
-    '  list of short tags; story is a cohesive write-up of a paragraph or two (three',
-    '  at most) — the project told the way you would in an interview, moving through',
-    '  the situation, the goal, what you did and decided, and how it turned out, as',
-    '  flowing prose with no labels or headings.',
-  ].join('\n');
-}
-
-/** Format the current field values for the model, so it edits rather than invents. */
-function formatCurrent(current: ProjectSuggestions): string {
-  return SUGGEST_FIELDS.map((field) => {
+/** Format the current review fields for the model, so it edits rather than invents. */
+function formatCurrent(current: Partial<Record<ReviewField, string>>): string {
+  return REVIEW_FIELDS.map((field) => {
     const value = (current[field] ?? '').trim();
     return `${field}: ${value || '(empty)'}`;
   }).join('\n');
 }
 
-/** Keep only string suggestions for known fields, trimmed and capped. */
-function normaliseSuggestions(input: Record<string, unknown>): ProjectSuggestions {
-  const cap: Partial<Record<SuggestField, number>> = {
-    summary: CAPS.projectSummary,
-    story: CAPS.projectStory,
-  };
-  const out: ProjectSuggestions = {};
-  for (const field of SUGGEST_FIELDS) {
-    const raw = input[field];
-    if (typeof raw !== 'string') continue;
-    const value = raw.trim();
-    if (!value) continue;
-    const limit = cap[field];
-    out[field] = limit ? value.slice(0, limit) : value;
-  }
-  return out;
-}
-
 /**
- * Propose edits to an existing project from a pasted source.
+ * Draft a project from a source, given whatever the form currently holds.
  *
- * The current field values are sent alongside the source so the model edits what
- * is there rather than drafting from scratch, and it returns only the fields it
- * would change — which is what makes the reviewer's list short and honest.
+ * One call serves both jobs. For a new project the current fields are empty and
+ * the model drafts from scratch; for an existing one they carry its text, so the
+ * model improves what is there rather than reinventing it. Either way it returns
+ * the full field set — the form shows the prose fields as suggestions to review,
+ * and, for a new project, applies the structural ones (id, date, links) directly.
+ *
+ * Normalising matters because the form has its own rules the model is only asked
+ * to honour: the id must match `[a-z0-9-]+`, and the links the source gave are
+ * the ones we trust for URLs, keeping the model's list only for any it usefully
+ * labelled. The source's own links lead.
  */
-export async function suggestEdits(
-  current: ProjectSuggestions,
+export async function draftProject(
   raw: string,
-): Promise<ProjectSuggestions> {
+  current: Partial<Record<ReviewField, string>> = {},
+): Promise<Prefill> {
   const source = await readSource(raw);
   const userText = [
-    `The source is ${source.kind}. Suggest edits to the project below, using it.`,
+    `The source is ${source.kind}. Draft or improve a portfolio project from it.`,
     '',
-    'CURRENT FIELDS:',
+    'CURRENT FIELDS (empty means nothing there yet — draft it; non-empty means',
+    'keep it unless the source or the voice clearly improves it):',
     formatCurrent(current),
     '',
     'SOURCE:',
     source.text,
   ].join('\n');
 
-  const input = await callTool(suggestSystemPrompt(), userText, {
-    name: 'suggest_edits',
-    description: 'Record suggested edits, one entry per field you would change.',
-    input_schema: SUGGEST_SCHEMA,
+  const input = await callTool(systemPrompt(), userText, {
+    name: 'draft_project',
+    description: 'Record the drafted portfolio project fields.',
+    input_schema: SCHEMA,
   });
-
-  return normaliseSuggestions(input as Record<string, unknown>);
+  return normalise(input as Prefill, source);
 }
 
 /** Make the model's answer safe to pour into the form. */
