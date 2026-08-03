@@ -576,21 +576,51 @@ export function Work({
     return () => window.removeEventListener('keydown', onKey);
   }, [detail, gallery, go]);
 
-  // Drag scrubs rather than stepping. The carousel is the reader's to move
-  // now, so a half-drag should leave it half-way rather than snapping back.
+  /**
+   * A swipe is paged, not free.
+   *
+   * The card follows the finger for feedback, but only as far as the neighbour
+   * on either side — a gesture moves at most one card. On release it commits to
+   * that neighbour if the swipe passed the halfway mark, or bounces back to the
+   * card it started on; either way the target is a whole card, so the ease lands
+   * on one and the carousel never rests between two.
+   */
   const onPointerMove = (event: React.PointerEvent) => {
     const start = drag.current;
     if (!start) return;
-    if (Math.abs(event.clientX - start.x) > 6) dragged.current = true;
+    const dx = event.clientX - start.x;
+    if (!dragged.current) {
+      // Ignore jitter until the movement is clearly a drag, so a tap that
+      // wobbles a pixel still opens the card rather than nudging the carousel.
+      if (Math.abs(dx) <= 6) return;
+      dragged.current = true;
+      // Hold the gesture even if the finger wanders off the card — on a phone a
+      // horizontal swipe drifts vertically, and losing the pointer there would
+      // strand the carousel mid-slide with no release to settle it.
+      root.current?.setPointerCapture?.(event.pointerId);
+    }
     const width = stage.current?.clientWidth ?? 1;
-    seek(start.from - ((event.clientX - start.x) / width) * 2.2);
+    const delta = Math.max(-1, Math.min(1, ((event.clientX - start.x) / width) * 2.2));
+    seek(start.from - delta);
   };
 
-  const onPointerUp = () => {
+  const settleDrag = () => {
     if (!drag.current) return;
+    const from = drag.current.from;
+    const swiped = dragged.current; // left set for onClickCapture; not reset here
     drag.current = null;
-    // Settle on a card so the carousel never rests between two.
-    seek(Math.round(target.current));
+    // A tap that never became a drag just settles onto the whole card it is on
+    // (in case a wheel was mid-ease), and leaves the click to open the project.
+    if (!swiped) {
+      seek(from);
+      return;
+    }
+    // Past the halfway mark commits to the neighbour; short of it bounces back.
+    // `from` is a whole card and the step is at most one, so this always lands
+    // the carousel on a single card — never between two.
+    const moved = target.current - from;
+    const step = Math.abs(moved) >= 0.5 ? Math.sign(moved) : 0;
+    seek(from + step);
   };
 
   return (
@@ -626,7 +656,9 @@ export function Work({
           if (event.pointerType === 'mouse') event.preventDefault();
           window.clearTimeout(settle.current);
           dragged.current = false;
-          drag.current = { x: event.clientX, from: target.current };
+          // From a whole card, so paging is measured against a settled position
+          // even if a wheel or a previous swipe was still easing when this began.
+          drag.current = { x: event.clientX, from: Math.round(target.current) };
         }}
         // A drag has to swallow the click that follows it. Without this, pulling
         // the carousel sideways also counts as a click on whichever card the
@@ -638,8 +670,12 @@ export function Work({
           event.stopPropagation();
         }}
         onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={() => (drag.current = null)}
+        onPointerUp={settleDrag}
+        // A cancel (the browser taking the gesture for a vertical scroll, a
+        // system edge-swipe, an interrupted touch) must settle too — clearing
+        // the drag without snapping was what left the carousel parked between
+        // two cards on the phone.
+        onPointerCancel={settleDrag}
       >
         <div className="carousel-stage" ref={stage}>
           {projects.map((project, index) => {
