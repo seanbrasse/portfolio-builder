@@ -713,18 +713,33 @@ export function Work({
                 aria-roledescription="slide"
                 aria-label={`${index + 1} of ${count}`}
                 aria-hidden={!near || undefined}
-                inert={index !== active}
+                // The visible ring is interactive, the hidden stack is not.
+                // Gating on `active` alone made the two neighbours inert too,
+                // and `inert` swallows pointer events — so the dimmed cards
+                // beside the front one could not be clicked at all.
+                inert={!near}
               >
-                {/* The whole card opens the detail. A button rather than a
-                    click handler on the article, so it is reachable, announced
-                    and activated by keyboard without any of that being
-                    reimplemented. */}
+                {/* The front card opens the detail; a neighbour scrolls itself
+                    to the middle. A button rather than a click handler on the
+                    article, so it is reachable, announced and activated by
+                    keyboard without any of that being reimplemented.
+
+                    `offset` is the card's signed distance from the front (-1,
+                    0 or +1 for the visible three), so `go(offset)` steps the
+                    carousel the short way onto a neighbour and wraps at the
+                    ends, rather than seeking its raw index and scrolling the
+                    long way round. The neighbours are out of the tab order —
+                    the arrow keys and the dots already move the carousel, and a
+                    tab stop per side card would just say the same thing twice. */}
                 <button
                   type="button"
                   className="project-open"
-                  onClick={() => setDetail(project)}
+                  tabIndex={index === active ? undefined : -1}
+                  onClick={() => (index === active ? setDetail(project) : go(offset))}
                 >
-                  <span className="sr-only">Open {project.title}</span>
+                  <span className="sr-only">
+                    {index === active ? `Open ${project.title}` : `Show ${project.title}`}
+                  </span>
                 </button>
 
                 <CardFace
