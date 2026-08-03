@@ -45,9 +45,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   noHexLiterals,
-  // `chameleons/` is a separate application with its own toolchain and
-  // dependencies. It is checked by its own config, not this one.
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'chameleons/**']),
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts']),
 ]);
 
 export default eslintConfig;
