@@ -868,7 +868,7 @@ function wellHeight(cardWidth: number) {
 const GUTTER = 20;
 
 /** The same, for year ticks, which are shorter and can sit closer. */
-const YEAR_GAP = 10;
+const YEAR_GAP = 4;
 
 /** Months since epoch, for placing a date on a line. */
 function monthsOf(iso: string) {
@@ -943,25 +943,39 @@ function timelineGeometry(
     projectsInYear.set(year, (projectsInYear.get(year) ?? 0) + 1);
   }
 
-  // A quiet year is thin but never zero-width — the rule has to stay unbroken
-  // and its tick legible — and each project it holds widens it by one unit, so a
-  // four-project year runs several times longer than an empty one.
-  const YEAR_BASE = 0.5;
-  const yearWeight = (year: number) => YEAR_BASE + (projectsInYear.get(year) ?? 0);
+  // Warp by project density, but floor every year wide enough that its label
+  // fits even on a phone. Each year gets `MIN_YEAR` percent of the line outright
+  // — so a quiet year (a gap, or a job year that shipped nothing public, like
+  // 2023) still has room for its label — and the rest is shared out by how many
+  // projects the year holds, so a busy year still runs several times longer. The
+  // floor is capped so a very long career still leaves room to vary.
+  const yearCount = lastYear - firstYear + 1;
+  let countedProjects = 0;
+  for (let year = firstYear; year <= lastYear; year += 1) {
+    countedProjects += projectsInYear.get(year) ?? 0;
+  }
 
-  const weightBefore = new Map<number, number>();
+  const MIN_YEAR = Math.min(5.5, 70 / yearCount); // percent of the line per year
+  const densityBudget = Math.max(100 - MIN_YEAR * yearCount, 0);
+  const yearWidth = (year: number) =>
+    MIN_YEAR +
+    (countedProjects > 0
+      ? densityBudget * ((projectsInYear.get(year) ?? 0) / countedProjects)
+      : densityBudget / yearCount);
+
+  // Cumulative start of each year, in percent; the widths sum to 100.
+  const startBefore = new Map<number, number>();
   let acc = 0;
   for (let year = firstYear; year <= lastYear; year += 1) {
-    weightBefore.set(year, acc);
-    acc += yearWeight(year);
+    startBefore.set(year, acc);
+    acc += yearWidth(year);
   }
-  const totalWeight = acc || 1;
 
   const place = (t: number) => {
     const year = Math.min(Math.max(Math.floor(t / 12), firstYear), lastYear);
-    const before = weightBefore.get(year) ?? 0;
+    const before = startBefore.get(year) ?? 0;
     const monthFrac = Math.min(Math.max((t - year * 12) / 12, 0), 1);
-    return ((before + monthFrac * yearWeight(year)) / totalWeight) * 100;
+    return before + monthFrac * yearWidth(year);
   };
 
   const at = (iso: string) => place(monthsOf(iso));
