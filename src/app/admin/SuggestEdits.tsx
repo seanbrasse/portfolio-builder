@@ -96,25 +96,36 @@ export function SuggestEdits() {
   // Applying or dismissing closes that field's card. When the last one is
   // handled the list empties and the box is back to its paste-and-suggest state,
   // ready for another pass — no stale cards lingering until a refresh.
+  //
+  // Closing out the last suggestion also clears the pasted source: that pass is
+  // done, so the box should read empty and ready for the next doc, not still
+  // holding the text we just finished reviewing.
+  function closeOut() {
+    setNote(DONE_NOTE);
+    setInput('');
+  }
+
   function apply(name: SuggestField) {
     const item = items.find((entry) => entry.name === name);
     if (!item) return;
     setValue(fieldEl(name), item.suggested);
     const next = items.filter((entry) => entry.name !== name);
     setItems(next);
-    setNote(next.length === 0 ? DONE_NOTE : '');
+    if (next.length === 0) closeOut();
+    else setNote('');
   }
 
   function applyAll() {
     for (const item of items) setValue(fieldEl(item.name), item.suggested);
     setItems([]);
-    setNote(DONE_NOTE);
+    closeOut();
   }
 
   function dismiss(name: SuggestField) {
     const next = items.filter((entry) => entry.name !== name);
     setItems(next);
-    setNote(next.length === 0 ? DONE_NOTE : '');
+    if (next.length === 0) closeOut();
+    else setNote('');
   }
 
   return (
