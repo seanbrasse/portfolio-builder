@@ -972,17 +972,13 @@ function timelineGeometry(
   const careerStart = ordered.length > 0 ? monthsOf(ordered[0].startDate) : min;
   const lead = place(careerStart);
 
-  // A tick per whole year, but drop any that would overprint the last one kept —
-  // the density warp packs quiet years close together, and bunched labels read
-  // as noise. Busy years are spread wide enough that all of theirs survive.
+  // A tick per whole year. Which of these actually show is decided per-viewport
+  // by the pixel-measured thinning in `Timeline` (see `stack`), so every year is
+  // emitted here and the crowded ones are hidden where the line has no room —
+  // rather than dropped now against a width this code cannot see.
   const years = [];
-  const MIN_TICK_GAP = 5; // percent of the band
-  let lastLeft = -Infinity;
   for (let year = Math.ceil(min / 12); year * 12 <= max; year += 1) {
-    const left = place(year * 12);
-    if (left - lastLeft < MIN_TICK_GAP) continue;
-    years.push({ year, left });
-    lastLeft = left;
+    years.push({ year, left: place(year * 12) });
   }
 
   return {
@@ -1195,11 +1191,17 @@ function Timeline({
       /**
        * Years, thinned.
        *
-       * The warp crushes the pre-career years together — four of them into
-       * eighteen percent of the line — and four labels in fifty pixels is not a
-       * scale, it is a smudge. Any year that would collide with the last one
-       * kept is dropped, left to right, so what survives is a legible sample
-       * that gets denser where the line has room.
+       * The warp crushes the quiet years together — several into a narrow run —
+       * and a handful of labels in fifty pixels is not a scale, it is a smudge.
+       * Any year that would collide with the last one kept is dropped, left to
+       * right, so what survives is a legible sample that gets denser where the
+       * line has room.
+       *
+       * The latest year is always kept: it is the line's right anchor, and on a
+       * narrow band (the phone, where the band spans the whole width) it was the
+       * casualty of a plain left-to-right pass — 2026 fell to 2025 sitting a few
+       * pixels to its left. So the last label is reserved first, an earlier label
+       * that would touch it is dropped, and the first label always survives too.
        *
        * Measured in three passes rather than one: everything is un-hidden
        * first, then every box is read, then the decisions are written. Reading
@@ -1210,11 +1212,20 @@ function Timeline({
       for (const year of years) year.removeAttribute('data-crowded');
 
       const boxes = years.map((year) => year.getBoundingClientRect());
+      const lastIndex = years.length - 1;
+      const lastLeft = lastIndex >= 0 ? boxes[lastIndex].left : Infinity;
       let occupied = -Infinity;
 
       years.forEach((year, index) => {
-        if (boxes[index].left < occupied + YEAR_GAP) year.setAttribute('data-crowded', '');
-        else occupied = boxes[index].right;
+        // The latest year is reserved — it anchors the right end and always shows.
+        if (index === lastIndex) return;
+        const crowdsPrevious = boxes[index].left < occupied + YEAR_GAP;
+        const crowdsLast = boxes[index].right > lastLeft - YEAR_GAP;
+        if (crowdsPrevious || crowdsLast) {
+          year.setAttribute('data-crowded', '');
+        } else {
+          occupied = boxes[index].right;
+        }
       });
     };
 
@@ -1253,6 +1264,10 @@ function Timeline({
           className="timeline-rule"
           style={{ left: `${geometry.lead}%`, width: `${100 - geometry.lead}%` }}
         />
+
+        {/* An arrowhead capping the right end, in the accent, so the line reads
+            as pointing to now rather than simply stopping. Decoration. */}
+        <span aria-hidden="true" className="timeline-cap" />
 
         {geometry.ticks.map((tick) => (
           <span

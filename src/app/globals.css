@@ -1399,6 +1399,21 @@ a:hover {
   background: var(--rule);
 }
 
+/* The accent arrowhead capping the right end of the line, so the rule reads as
+   pointing to the present rather than stopping dead. Centred on the rule at the
+   band's right edge, in the same ember as the cursor. Decoration only. */
+.timeline-cap {
+  position: absolute;
+  right: 0;
+  top: var(--stack);
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid var(--accent-a);
+}
+
 /* A year the line has no room for. Hidden rather than removed, so the next
    measurement can put it back when the window grows. */
 .timeline-year[data-crowded] {
