@@ -1833,8 +1833,12 @@ a:hover {
   gap: 12px;
 }
 
+/* The brief lead in the opened card: the same teaser the carousel shows, in full
+   ink so it reads as the setup, with the muted STAR account flowing beneath. */
 .detail-summary {
-  color: var(--ink-muted);
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.55;
 }
 
 /* The STAR write-up, in its own scroll area so a long story does not push the
@@ -1852,21 +1856,13 @@ a:hover {
   margin-right: -8px;
 }
 
-.detail-story-part p {
-  margin: 4px 0 0;
+/* Each STAR part is a paragraph in the flowing description — no label. The
+   container's gap spaces them, so they read as one account. */
+.detail-story p {
+  margin: 0;
   color: var(--ink-muted);
   /* Preserve the paragraph breaks an editor types into the textarea. */
   white-space: pre-line;
-}
-
-/* The S/T/A/R label — small, spaced and accent-marked, so the four parts read
-   as a sequence without a heavy heading on each. */
-.detail-story-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent-a);
 }
 
 /* The modal's image carousel. The positioning parent for the arrows, dots and
