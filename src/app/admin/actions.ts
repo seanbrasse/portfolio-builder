@@ -4,7 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { supabaseServer, isAdmin } from '@/lib/supabase/server';
-import { prefillFromUrl, type Prefill } from '@/lib/prefill';
+import {
+  prefillFromUrl,
+  suggestEdits,
+  SUGGEST_FIELDS,
+  type Prefill,
+  type ProjectSuggestions,
+} from '@/lib/prefill';
 
 /**
  * Every write the admin can make.
@@ -304,6 +310,41 @@ export async function prefillProject(url: string): Promise<PrefillResult> {
     return {
       ok: false,
       error: error instanceof Error ? error.message : 'Could not read that link.',
+    };
+  }
+}
+
+/** Like `PrefillResult`, but carrying per-field suggestions to review. */
+export type SuggestResult = { ok: true; data: ProjectSuggestions } | { ok: false; error: string };
+
+/**
+ * Suggest edits to an existing project from a pasted doc or link.
+ *
+ * The client sends what is currently in the form's fields so the model edits
+ * what is there rather than drafting anew; the result is a set of per-field
+ * suggestions the editor reviews and applies one at a time. It writes nothing —
+ * like `prefillProject`, it is an admin-gated read that returns a draft.
+ */
+export async function suggestProjectEdits(
+  input: string,
+  current: Record<string, string>,
+): Promise<SuggestResult> {
+  try {
+    if (!(await isAdmin())) return { ok: false, error: 'Not signed in as the site owner.' };
+
+    const clean = String(input ?? '').trim();
+    if (!clean) return { ok: false, error: 'Paste a document or a link first.' };
+
+    const currentFields: ProjectSuggestions = {};
+    for (const field of SUGGEST_FIELDS) {
+      currentFields[field] = String(current?.[field] ?? '');
+    }
+
+    return { ok: true, data: await suggestEdits(currentFields, clean) };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Could not read that source.',
     };
   }
 }
