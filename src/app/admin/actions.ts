@@ -444,6 +444,28 @@ export async function saveProject(form: FormData): Promise<Result> {
 }
 
 /**
+ * Take a published project off the live site without deleting it.
+ *
+ * It becomes an ordinary unpublished project — its own row is the draft again —
+ * so any separate pending draft is folded away (deleted): a project that is not
+ * published has no published version to stage edits against. Republishes because
+ * the public site changes (the project leaves the carousel).
+ */
+export async function unpublishProject(id: string): Promise<Result> {
+  if (!(await isAdmin())) return DENIED;
+  const supabase = await supabaseServer();
+
+  const { error } = await supabase.from('projects').update({ published: false }).eq('id', id);
+  if (error) return { ok: false, error: error.message };
+
+  const cleared = await supabase.from('project_drafts').delete().eq('project_id', id);
+  if (cleared.error) return { ok: false, error: cleared.error.message };
+
+  republish();
+  return { ok: true, message: 'Unpublished — it is a draft now, off the live site.' };
+}
+
+/**
  * Throw away a published project's pending draft, reverting the editor to the
  * live version. Only the staged edits go; the live row is untouched, so the
  * site does not change and there is nothing to republish.
