@@ -290,6 +290,11 @@ export function Upload({
       } else if (input.current) {
         input.current.value = '';
       }
+      // A successful upload is a natural checkpoint: nudge the editor's autosave
+      // to flush any pending text edits now, so a refresh right after adding a
+      // clip keeps both the media (saved above) and the words. No-op where no
+      // autosave is listening (a logo uploader, say).
+      if (doneIds.length) window.dispatchEvent(new Event('admin-autosave-flush'));
       router.refresh();
     });
   }

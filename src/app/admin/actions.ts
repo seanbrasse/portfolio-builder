@@ -420,6 +420,62 @@ export async function saveProject(form: FormData): Promise<Result> {
 }
 
 /**
+ * Autosave the editor's in-progress edits to the one allowed draft.
+ *
+ * This is `saveProject`'s draft path, made safe to fire on a debounce while
+ * someone is still typing — so a page refresh doesn't wipe unsaved work. It only
+ * ever writes a draft, never publishes, and never touches the live site, so there
+ * is nothing to revalidate. It targets the same one-draft-per-project slot the
+ * manual "Save as draft" button does:
+ *
+ *  - Published project → the edits are stashed in `project_drafts`. That column is
+ *    jsonb with no constraints, so a half-typed field is fine to keep; the publish
+ *    path re-validates before anything goes live.
+ *  - Unpublished project → its own row is the draft, and the row has real column
+ *    constraints (a required, well-formed date; a company for a professional
+ *    project). Rather than let the database reject a value mid-edit, autosave
+ *    holds off and says why until the field is valid again.
+ *
+ * A project that does not exist yet (the create form) has no draft slot, so there
+ * is nothing to autosave into — the first manual save creates the row, and
+ * autosave takes over from its edit page.
+ */
+export async function autosaveProject(form: FormData): Promise<Result> {
+  if (!(await isAdmin())) return DENIED;
+  const supabase = await supabaseServer();
+
+  const id = text(form, 'id');
+  if (!id) return { ok: false, error: 'Nothing to autosave yet.' };
+
+  const fields = projectFields(form);
+
+  const existing = await supabase.from('projects').select('id, published').eq('id', id).maybeSingle();
+  if (existing.error) return { ok: false, error: existing.error.message };
+  if (!existing.data) return { ok: false, error: 'Save the project once before it can autosave.' };
+
+  if (existing.data.published) {
+    const { error } = await supabase
+      .from('project_drafts')
+      .upsert({ project_id: id, data: fields, updated_at: new Date().toISOString() });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, message: 'Draft autosaved.' };
+  }
+
+  // Unpublished: writing straight to the row, so honour the column constraints
+  // the form would otherwise catch on submit.
+  if (!/^\d{4}-\d{2}$/.test(fields.date)) {
+    return { ok: false, error: 'Autosave paused — finish the “Built” month (YYYY-MM).' };
+  }
+  if (fields.context === 'professional' && !fields.experience_id) {
+    return { ok: false, error: 'Autosave paused — a professional project needs a company.' };
+  }
+
+  const { error } = await supabase.from('projects').update({ ...fields, published: false }).eq('id', id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, message: 'Draft autosaved.' };
+}
+
+/**
  * Take a published project off the live site without deleting it.
  *
  * It becomes an ordinary unpublished project — its own row is the draft again —

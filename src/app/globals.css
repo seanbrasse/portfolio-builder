@@ -2774,6 +2774,37 @@ a:hover {
   }
 }
 
+/* The autosave status line under the draft box: a quiet one-liner that reports
+   what the editor's background saving is doing, so it reassures without stealing
+   attention. Sits right-aligned to read as chrome, not content. */
+.admin-autosave {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 18px;
+  margin-top: -4px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+/* The message itself names the reason ("Autosave paused — …"), so the error
+   state carries its own signal; it only darkens to full ink to be read, rather
+   than leaning on a colour that would be the sole cue. */
+.admin-autosave[data-state='error'] {
+  color: var(--ink);
+}
+
+/* The spinner here rides on a muted text line, not an accent button, so recolour
+   it from the button's on-accent default to the text ink around it. */
+.admin-autosave .admin-spinner {
+  width: 11px;
+  height: 11px;
+  margin-right: 0;
+  border-color: color-mix(in srgb, var(--ink) 22%, transparent);
+  border-top-color: color-mix(in srgb, var(--ink) 60%, transparent);
+}
+
 /* The suggest-edits box on an existing project: same solid card as the prefill
    box, then a review list of per-field before/after with apply controls. */
 .admin-suggest {

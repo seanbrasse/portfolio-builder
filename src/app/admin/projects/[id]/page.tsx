@@ -10,6 +10,7 @@ import {
   saveProject,
   unpublishProject,
 } from '../../actions';
+import { Autosave } from '../../Autosave';
 import { adminExperiences, adminImages, adminProject } from '../../data';
 import { DeleteButton, Form } from '../../Form';
 import { ImageAdjust } from '../../ImageAdjust';
@@ -89,6 +90,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
               <DeleteButton
                 label="Discard draft"
                 confirm="Discard the unpublished draft and revert to the published version?"
+                reloadOnDone
                 action={async () => {
                   'use server';
                   return discardDraft(id);
@@ -107,6 +109,11 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
             current copy, so it suggests edits. Prose fields are reviewed as
             cards; a new project's structural fields are filled directly. */}
         <ProjectDraft creating={creating} />
+
+        {/* Autosaves edits to the draft as you type, so a refresh doesn't lose
+            them. Only for an existing project — a new one has no draft slot until
+            its first save. */}
+        {!creating ? <Autosave /> : null}
 
         <div className="admin-grid">
           <label className="field">

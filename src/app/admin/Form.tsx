@@ -159,12 +159,21 @@ export function DeleteButton({
   label,
   confirm: question,
   tone = 'danger',
+  reloadOnDone = false,
 }: {
   action: () => Promise<Result>;
   label: string;
   confirm: string;
   /** 'danger' for irreversible removal; 'quiet' for a reversible action like unpublish. */
   tone?: 'danger' | 'quiet';
+  /**
+   * Do a full page reload on success instead of a soft refresh. The soft refresh
+   * re-renders the server tree but leaves the uncontrolled form inputs holding
+   * whatever they held — fine for a status flip, wrong for discarding a draft,
+   * where the fields must snap back to the live values the reverted page now
+   * serves (and the editor's autosave must not re-stage the old DOM values).
+   */
+  reloadOnDone?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState('');
@@ -180,8 +189,12 @@ export function DeleteButton({
           start(async () => {
             if (!window.confirm(question)) return;
             const result = await action();
-            if (result.ok) router.refresh();
-            else setError(result.error);
+            if (!result.ok) {
+              setError(result.error);
+              return;
+            }
+            if (reloadOnDone) window.location.reload();
+            else router.refresh();
           })
         }
       >
