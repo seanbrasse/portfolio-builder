@@ -916,57 +916,79 @@ function timelineGeometry(
   );
 
   /**
-   * The line is not to scale, on purpose.
+   * The line warps to project density: a year with more projects on it is drawn
+   * wider than a year with few.
    *
-   * Four years of a degree and five years of work are almost the same length in
-   * months, so an honest axis spends nearly half its width on a stretch with
-   * one mark on it — and crams every job, every project and the cursor's whole
-   * useful travel into the other half. The line is meant to show a career, and
-   * the years before it started are context rather than subject.
+   * A to-scale axis gives every calendar year the same width, so a year that
+   * shipped four projects looks no wider than an empty one and its marks crowd
+   * into the same span as the lone mark in a quiet year. Weighting each year by
+   * how many projects fall in it spends the line where the work is: busy years
+   * get the most room and their projects spread far enough apart to tell apart,
+   * while quiet stretches — a degree, a gap between jobs — compress to a thin run
+   * of context.
    *
-   * So the scale breaks once, at the first job. Everything before it shares
-   * `LEAD` percent; everything after shares the rest. Both halves stay linear,
-   * which keeps the mapping monotonic and reversible — this is a different
-   * scale, not a scrambled one, and a reader can still tell that later is
-   * further right.
-   *
-   * The break is signposted rather than hidden: the lead is drawn in a lighter
-   * rule, and the year ticks that no longer fit are dropped instead of being
-   * allowed to overprint each other. Bunched years under a faint rule read as
-   * "compressed", which is what has happened.
+   * Each year's weight is a small base, so an empty year still exists and the
+   * line stays unbroken, plus one for every project in it. The weights add up
+   * into the year boundaries, so a year's share of the line is its share of the
+   * total weight, and within a year a date interpolates by month. The mapping
+   * stays monotonic — later is always further right — so it is a warp, not a
+   * scramble.
    */
-  const careerStart = ordered.length > 0 ? monthsOf(ordered[0].startDate) : min;
+  const firstYear = Math.floor(min / 12);
+  const lastYear = Math.floor(max / 12);
 
-  /**
-   * Zero when there is nothing before the first job.
-   *
-   * The lead used to be an unconditional 18%, which was true as long as
-   * education was a single record that always existed and always came first.
-   * Now that schools are rows that can be deleted, an unconditional lead would
-   * hand a fifth of the line to an empty stretch and start the career a fifth
-   * of the way in. The compressed region only earns its width when something
-   * is actually in it.
-   */
-  const LEAD = careerStart > min ? 18 : 0;
-  const runway = Math.max(careerStart - min, 1);
-  const career = Math.max(max - careerStart, 1);
+  const projectsInYear = new Map<number, number>();
+  for (const project of projects) {
+    const year = Math.floor(monthsOf(project.date) / 12);
+    projectsInYear.set(year, (projectsInYear.get(year) ?? 0) + 1);
+  }
 
-  const place = (t: number) =>
-    t <= careerStart
-      ? ((t - min) / runway) * LEAD
-      : LEAD + ((t - careerStart) / career) * (100 - LEAD);
+  // A quiet year is thin but never zero-width — the rule has to stay unbroken
+  // and its tick legible — and each project it holds widens it by one unit, so a
+  // four-project year runs several times longer than an empty one.
+  const YEAR_BASE = 0.5;
+  const yearWeight = (year: number) => YEAR_BASE + (projectsInYear.get(year) ?? 0);
+
+  const weightBefore = new Map<number, number>();
+  let acc = 0;
+  for (let year = firstYear; year <= lastYear; year += 1) {
+    weightBefore.set(year, acc);
+    acc += yearWeight(year);
+  }
+  const totalWeight = acc || 1;
+
+  const place = (t: number) => {
+    const year = Math.min(Math.max(Math.floor(t / 12), firstYear), lastYear);
+    const before = weightBefore.get(year) ?? 0;
+    const monthFrac = Math.min(Math.max((t - year * 12) / 12, 0), 1);
+    return ((before + monthFrac * yearWeight(year)) / totalWeight) * 100;
+  };
 
   const at = (iso: string) => place(monthsOf(iso));
 
+  // Where the career (the first job) begins on the warped line. The years before
+  // it carry no projects, so the density warp already draws them thin; the
+  // lighter rule up to here just signposts that compressed run of context.
+  const careerStart = ordered.length > 0 ? monthsOf(ordered[0].startDate) : min;
+  const lead = place(careerStart);
+
+  // A tick per whole year, but drop any that would overprint the last one kept —
+  // the density warp packs quiet years close together, and bunched labels read
+  // as noise. Busy years are spread wide enough that all of theirs survive.
   const years = [];
+  const MIN_TICK_GAP = 5; // percent of the band
+  let lastLeft = -Infinity;
   for (let year = Math.ceil(min / 12); year * 12 <= max; year += 1) {
-    years.push({ year, left: place(year * 12) });
+    const left = place(year * 12);
+    if (left - lastLeft < MIN_TICK_GAP) continue;
+    years.push({ year, left });
+    lastLeft = left;
   }
 
   return {
-    /** Where the scale changes, as a percentage. The rule is drawn in two
-     *  pieces so the compressed stretch can be shown as one. */
-    lead: LEAD,
+    /** Where the career begins on the warped line, as a percentage. The rule is
+     *  drawn in two pieces so the pre-career context can be shown lighter. */
+    lead,
     ticks: years,
     /**
      * Schools and companies, as one list of the same thing.
