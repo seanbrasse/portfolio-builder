@@ -1,7 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { addImage, deleteProject, moveImage, removeImage, saveProject } from '../../actions';
+import {
+  addImage,
+  deleteProject,
+  discardDraft,
+  moveImage,
+  removeImage,
+  saveProject,
+} from '../../actions';
 import { adminExperiences, adminImages, adminProject } from '../../data';
 import { DeleteButton, Form } from '../../Form';
 import { ImageAdjust } from '../../ImageAdjust';
@@ -15,6 +22,13 @@ import { CAPS } from '@/content/types';
  * One card: its copy, its company, and its screenshots.
  *
  * As with a company, `new` is the absence of a row rather than a second form.
+ *
+ * Draft/publish: the form saves as a draft or saves and publishes (the two
+ * buttons `Form` renders when `publish` is set). A published project can hold
+ * one pending draft — staged edits that are not live. When it does, this page
+ * shows the draft's values (so you continue editing the draft), a status badge
+ * says so, and "Discard draft" reverts to the published version. The live site
+ * is untouched until you publish.
  */
 export default async function EditProject({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -28,6 +42,12 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
 
   if (!creating && !item) notFound();
 
+  // What the form shows: the pending draft's fields when there is one, otherwise
+  // the live row. Identity and lifecycle (`id`, `published`) always come from
+  // the live row.
+  const values = item ? { ...item, ...(item.draft ?? {}) } : null;
+  const draftPending = item?.has_draft ?? false;
+
   return (
     <>
       <p className="admin-crumb">
@@ -35,7 +55,38 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
       </p>
       <h1>{creating ? 'Add project' : item!.title}</h1>
 
-      <Form action={saveProject}>
+      {!creating && item ? (
+        <div className="admin-status">
+          {item.published ? (
+            draftPending ? (
+              <span className="admin-flag admin-flag-pending">Published · unpublished draft</span>
+            ) : (
+              <span className="admin-flag admin-flag-live">Published</span>
+            )
+          ) : (
+            <span className="admin-flag">Draft — not on the site yet</span>
+          )}
+
+          {draftPending ? (
+            <>
+              <p className="admin-note">
+                You&rsquo;re editing the unpublished draft. &ldquo;Save &amp; publish&rdquo;
+                replaces the live version; until then the published version stays as it is.
+              </p>
+              <DeleteButton
+                label="Discard draft"
+                confirm="Discard the unpublished draft and revert to the published version?"
+                action={async () => {
+                  'use server';
+                  return discardDraft(id);
+                }}
+              />
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      <Form action={saveProject} publish>
         {/* Inside the form on purpose: the prefill box fills these very fields
             by walking up to the form with `closest('form')`, so it has to live
             within it. Only on create — editing a project already has its fields,
@@ -58,14 +109,14 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
 
           <label className="field">
             <span className="field-label">Title</span>
-            <input name="title" defaultValue={item?.title ?? ''} required />
+            <input name="title" defaultValue={values?.title ?? ''} required />
           </label>
 
           <label className="field">
             <span className="field-label">Built — YYYY-MM</span>
             <input
               name="date"
-              defaultValue={item?.date ?? ''}
+              defaultValue={values?.date ?? ''}
               pattern="\d{4}-\d{2}"
               title="Four-digit year, a hyphen, two-digit month — for example 2023-04."
               required
@@ -75,7 +126,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
 
           <label className="field">
             <span className="field-label">Kind</span>
-            <select name="context" defaultValue={item?.context ?? 'personal'}>
+            <select name="context" defaultValue={values?.context ?? 'personal'}>
               <option value="personal">Personal</option>
               <option value="professional">Professional</option>
             </select>
@@ -85,7 +136,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
               site — a badge saying "shipped" on every card is wallpaper. */}
           <label className="field">
             <span className="field-label">State</span>
-            <select name="status" defaultValue={item?.status ?? 'shipped'}>
+            <select name="status" defaultValue={values?.status ?? 'shipped'}>
               <option value="shipped">Shipped</option>
               <option value="building">Still building</option>
               <option value="archived">Archived</option>
@@ -94,11 +145,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
 
           <label className="field">
             <span className="field-label">Took — free text, optional</span>
-            <input
-              name="duration"
-              defaultValue={item?.duration ?? ''}
-              placeholder="3 months"
-            />
+            <input name="duration" defaultValue={values?.duration ?? ''} placeholder="3 months" />
           </label>
 
           {/* A professional project must name its employer — the badge on the
@@ -106,7 +153,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
               constraint; this is so the choice is visible while making it. */}
           <label className="field">
             <span className="field-label">Company — required for professional</span>
-            <select name="experience_id" defaultValue={item?.experience_id ?? ''}>
+            <select name="experience_id" defaultValue={values?.experience_id ?? ''}>
               <option value="">None (personal)</option>
               {employers.map((employer) => (
                 <option key={employer.id} value={employer.id}>
@@ -123,7 +170,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
             name="summary"
             rows={3}
             maxLength={CAPS.projectSummary}
-            defaultValue={item?.summary ?? ''}
+            defaultValue={values?.summary ?? ''}
           />
           <span className="admin-note">
             The short teaser on the carousel card. The full write-up goes in the
@@ -152,7 +199,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
                 name={name}
                 rows={4}
                 maxLength={CAPS.projectStar}
-                defaultValue={item?.[name] ?? ''}
+                defaultValue={values?.[name] ?? ''}
               />
               <span className="admin-note">{hint}</span>
             </label>
@@ -161,37 +208,31 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
 
         <label className="field">
           <span className="field-label">Impact — the one number</span>
-          <input name="impact" defaultValue={item?.impact ?? ''} />
+          <input name="impact" defaultValue={values?.impact ?? ''} />
         </label>
 
         <label className="field">
           <span className="field-label">Tech — comma separated</span>
-          <input name="tech" defaultValue={(item?.tech ?? []).join(', ')} />
+          <input name="tech" defaultValue={(values?.tech ?? []).join(', ')} />
         </label>
 
-        <LinkRows links={item?.links ?? []} />
+        <LinkRows links={values?.links ?? []} />
 
-        {/* Publishing is an edit-time choice, not a create-time one. A new
-            project saves as a draft and lands on this same page in edit mode,
-            where its images can be added and this checkbox appears — so the
-            create form shows the promise instead of a control that would be
-            overridden anyway. */}
         {creating ? (
           <p className="admin-note">
-            Saves as a draft. Add screenshots on the next screen, then publish
-            when it&rsquo;s ready.
+            Save as a draft to keep working, or save &amp; publish to put it on the
+            site. Either way you land on the next screen to add screenshots.
           </p>
-        ) : (
-          <label className="admin-check">
-            <input type="checkbox" name="published" defaultChecked={item!.published} />
-            <span>Published — unchecked keeps it out of the carousel</span>
-          </label>
-        )}
+        ) : null}
       </Form>
 
       {!creating ? (
         <section className="admin-section">
           <h2>Images</h2>
+          <p className="admin-note">
+            Images are shared with the published version — changes here take
+            effect immediately, they are not part of the draft.
+          </p>
 
           <ol className="admin-shots">
             {images.map((image, i) => (

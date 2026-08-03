@@ -19,7 +19,7 @@ import { prefillFromUrl, type Prefill } from '@/lib/prefill';
  * the row from changing. Any one of them failing leaves two.
  */
 
-export type Result = { ok: true } | { ok: false; error: string };
+export type Result = { ok: true; message?: string } | { ok: false; error: string };
 
 const DENIED: Result = { ok: false, error: 'Not signed in as the site owner.' };
 
@@ -308,35 +308,12 @@ export async function prefillProject(url: string): Promise<PrefillResult> {
   }
 }
 
-export async function saveProject(form: FormData): Promise<Result> {
-  if (!(await isAdmin())) return DENIED;
-  const supabase = await supabaseServer();
-
-  const id = text(form, 'id');
-  if (!id) return { ok: false, error: 'An id is required.' };
-
-  const context = text(form, 'context');
-  const employer = text(form, 'experience_id');
-
-  // The same rule the database has a constraint for, checked here so the
-  // editor gets a sentence rather than a Postgres error string.
-  if (context === 'professional' && !employer) {
-    return { ok: false, error: 'A professional project has to name the company it was built at.' };
-  }
-
-  /**
-   * Is this the first save, or an edit of a row that already exists? The answer
-   * changes two things below, so it is asked once here. The admin's client sees
-   * drafts, so a row that exists is found whether or not it is published.
-   */
-  const existing = await supabase.from('projects').select('id').eq('id', id).maybeSingle();
-  const creating = !existing.data;
-
-  const { error } = await supabase.from('projects').upsert({
-    id,
+/** The editable fields of a project, gathered from the form once. */
+function projectFields(form: FormData) {
+  return {
     title: text(form, 'title'),
-    context,
-    experience_id: employer || null,
+    context: text(form, 'context'),
+    experience_id: text(form, 'experience_id') || null,
     summary: text(form, 'summary'),
     situation: text(form, 'situation'),
     task: text(form, 'task'),
@@ -348,32 +325,98 @@ export async function saveProject(form: FormData): Promise<Result> {
     tech: commas(form.get('tech')),
     links: links(form),
     date: text(form, 'date'),
-    // `starred` is deliberately absent: pinning is toggled from the project
-    // list (see `setProjectStar`), not this form. A single-object upsert only
-    // writes the keys it names, so omitting it leaves an existing project's pin
-    // untouched on save, and a new project takes the column default (unpinned).
+  };
+}
+
+/**
+ * Save a project as a draft, or save and publish it.
+ *
+ * Which one is the `intent` field the two form buttons set. The states:
+ *
+ *  - New project: publish creates it live, draft creates it unpublished. Either
+ *    way the first save lands on the row's own edit page, where images live.
+ *  - Published project, publish: the edits go straight onto the live row and any
+ *    pending draft is cleared — the live version now holds them.
+ *  - Published project, draft: the edits are *staged* in `project_drafts` and the
+ *    live row is left exactly as it is, so the site does not change. At most one
+ *    such draft exists per project (the table's primary key).
+ *  - Unpublished project, draft: its own row is the draft, so the edits go onto
+ *    it directly; it stays off the site.
+ */
+export async function saveProject(form: FormData): Promise<Result> {
+  if (!(await isAdmin())) return DENIED;
+  const supabase = await supabaseServer();
+
+  const id = text(form, 'id');
+  if (!id) return { ok: false, error: 'An id is required.' };
+
+  const fields = projectFields(form);
+
+  // The same rule the database has a constraint for, checked here so the editor
+  // gets a sentence rather than a Postgres error string.
+  if (fields.context === 'professional' && !fields.experience_id) {
+    return { ok: false, error: 'A professional project has to name the company it was built at.' };
+  }
+
+  const publish = text(form, 'intent') === 'publish';
+
+  // `starred` is deliberately never written here: pinning is toggled from the
+  // project list (see `setProjectStar`). A single-object upsert/update only
+  // touches the keys it names, so omitting it leaves an existing pin alone.
+  const existing = await supabase.from('projects').select('id, published').eq('id', id).maybeSingle();
+  const creating = !existing.data;
+
+  if (creating) {
+    const { error } = await supabase.from('projects').insert({ id, ...fields, published: publish });
+    if (error) return { ok: false, error: error.message };
+    republish();
     /**
-     * A brand-new project is always a draft, no matter what the form said.
-     * A project cannot be finished at the instant it is named — it has no
-     * screenshots yet, because those can only be added once the row exists to
-     * attach them to. Publishing is a deliberate later step, so creation does
-     * not offer it; an edit of an existing row respects the checkbox.
+     * After the first save, go to the row's own edit page — where images and
+     * the publish controls live — so "add a project, then add its screenshots"
+     * is one continuous flow rather than a save that appears to dead-end.
      */
-    published: creating ? false : form.get('published') === 'on',
-  });
+    redirect(`/admin/projects/${id}`);
+  }
 
+  if (publish) {
+    // Edits go live, and any pending draft is now redundant — the live row holds it.
+    const { error } = await supabase.from('projects').update({ ...fields, published: true }).eq('id', id);
+    if (error) return { ok: false, error: error.message };
+    const cleared = await supabase.from('project_drafts').delete().eq('project_id', id);
+    if (cleared.error) return { ok: false, error: cleared.error.message };
+    republish();
+    return { ok: true };
+  }
+
+  // Saving a draft.
+  if (existing.data!.published) {
+    // Stage the edits; leave the live row — and the site — untouched.
+    const { error } = await supabase
+      .from('project_drafts')
+      .upsert({ project_id: id, data: fields, updated_at: new Date().toISOString() });
+    if (error) return { ok: false, error: error.message };
+    // No republish: nothing the public site shows has changed.
+    return { ok: true, message: 'Draft saved. The published version is unchanged.' };
+  }
+
+  // An unpublished project is its own draft — write the edits onto it in place.
+  const { error } = await supabase.from('projects').update({ ...fields, published: false }).eq('id', id);
   if (error) return { ok: false, error: error.message };
-  republish();
+  return { ok: true, message: 'Draft saved.' };
+}
 
-  /**
-   * After the first save, go to the row's own edit page. That page is where
-   * images and the rest live — the create form cannot show them because there
-   * is no row to hang an image on yet — so landing there is what makes "add a
-   * project, then add its screenshots" one continuous flow rather than a save
-   * that appears to dead-end.
-   */
-  if (creating) redirect(`/admin/projects/${id}`);
-  return { ok: true };
+/**
+ * Throw away a published project's pending draft, reverting the editor to the
+ * live version. Only the staged edits go; the live row is untouched, so the
+ * site does not change and there is nothing to republish.
+ */
+export async function discardDraft(id: string): Promise<Result> {
+  if (!(await isAdmin())) return DENIED;
+  const supabase = await supabaseServer();
+
+  const { error } = await supabase.from('project_drafts').delete().eq('project_id', id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, message: 'Draft discarded.' };
 }
 
 export async function deleteProject(id: string): Promise<Result> {

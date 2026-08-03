@@ -18,10 +18,17 @@ export function Form({
   action,
   children,
   submit = 'Save',
+  publish = false,
 }: {
   action: (form: FormData) => Promise<Result>;
   children: React.ReactNode;
   submit?: string;
+  /**
+   * Render a draft/publish pair instead of a single Save button. The clicked
+   * button's `intent` (`draft` or `publish`) is read from the submit event and
+   * added to the form data, so one action handles both — see `saveProject`.
+   */
+  publish?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [state, setState] = useState<Result | null>(null);
@@ -77,6 +84,14 @@ export function Form({
         }
 
         const form = new FormData(element);
+        // Which button submitted decides draft vs publish. We build the
+        // FormData ourselves (see above), and a manually-built FormData does not
+        // include the submitter's name/value the way a native submit would — so
+        // read it off the event and set it here.
+        const submitter = (event.nativeEvent as SubmitEvent).submitter;
+        if (submitter instanceof HTMLButtonElement && submitter.name === 'intent') {
+          form.set('intent', submitter.value);
+        }
         start(async () => {
           const result = await action(form);
           setState(result);
@@ -93,13 +108,38 @@ export function Form({
           It is also where every failure is reported, so the message and the
           control that produced it stay together. */}
       <div className="admin-actions">
-        <button type="submit" className="admin-button" disabled={pending}>
-          {pending ? 'Saving…' : submit}
-        </button>
+        {publish ? (
+          <>
+            <button
+              type="submit"
+              name="intent"
+              value="draft"
+              className="admin-button admin-quiet"
+              disabled={pending}
+            >
+              {pending ? 'Saving…' : 'Save as draft'}
+            </button>
+            <button
+              type="submit"
+              name="intent"
+              value="publish"
+              className="admin-button"
+              disabled={pending}
+            >
+              {pending ? 'Saving…' : 'Save & publish'}
+            </button>
+          </>
+        ) : (
+          <button type="submit" className="admin-button" disabled={pending}>
+            {pending ? 'Saving…' : submit}
+          </button>
+        )}
 
         {state ? (
           <p className={state.ok ? 'admin-ok' : 'admin-error'} role="status">
-            {state.ok ? 'Saved. The live site has been rebuilt.' : state.error}
+            {state.ok
+              ? (state.message ?? 'Saved. The live site has been rebuilt.')
+              : state.error}
           </p>
         ) : null}
       </div>

@@ -71,7 +71,15 @@ export function ProjectsList({ projects }: { projects: AdminProject[] }) {
                   {item.date} · {item.experience_id ?? 'personal'}
                 </span>
               </span>
-              {!item.published ? <span className="admin-flag">Draft</span> : null}
+              {/* State at a glance: an unpublished project, a published one, or a
+                  published one carrying unpublished edits. */}
+              {!item.published ? (
+                <span className="admin-flag">Draft</span>
+              ) : item.has_draft ? (
+                <span className="admin-flag admin-flag-pending">Draft edits</span>
+              ) : (
+                <span className="admin-flag admin-flag-live">Published</span>
+              )}
             </Link>
             {/* The pin lives here, on the far right of the row, and toggling it
                 never navigates — it sits outside the edit link. */}
