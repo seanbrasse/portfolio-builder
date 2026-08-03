@@ -49,7 +49,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
                 </li>
               ))}
               <li>
-                <a href={settings.resumeHref}>Résumé</a>
+                <a href={settings.resumeHref}>Resume</a>
               </li>
             </ul>
           </div>
