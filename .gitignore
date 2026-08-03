@@ -42,3 +42,7 @@ next-env.d.ts
 
 # The example is documentation, not a secret.
 !.env.example
+
+# Claude Code: machine-local settings and transient agent worktrees.
+.claude/settings.local.json
+.claude/worktrees/
