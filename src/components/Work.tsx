@@ -1747,6 +1747,24 @@ function useClipMuted(id: string): [boolean, (value: boolean) => void] {
   return [muted, (value: boolean) => writeClipMuted(id, value)];
 }
 
+/** Arrow leaving a box — the "opens into a detail view" glyph for the card hint. */
+function OpenIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M7 17 17 7" />
+      <path d="M8 7h9v9" />
+    </svg>
+  );
+}
+
 /** Speaker glyph for the card's mute toggle — waves when on, a cross when off. */
 function SpeakerIcon({ muted }: { muted: boolean }) {
   return (
@@ -2127,6 +2145,18 @@ function CardFace({
         <div className="project-shot-empty" aria-hidden="true" />
       )}
       <div className="project-body">
+        {/* A visible cue that the card opens — the whole card is a click target
+            but nothing said so. Decorative: the full-card button already
+            announces "Open {title}", so repeating it here would be said twice.
+            Shown only on the front card (CSS keys it to `[data-centre]`), because
+            a click on a neighbour brings it to the middle rather than opening it
+            — see the open-button in the carousel. It stays in the layout on the
+            others (visibility, not display) so every card body is the same height
+            and `fit()` sizes them alike. */}
+        <span className="project-hint" aria-hidden="true">
+          <OpenIcon />
+          Click for details
+        </span>
         <p className="project-context">
           {employer ? <Badge name={employer.company} logo={employer.logo} /> : null}
           {employer ? employer.company : 'Personal project'}
