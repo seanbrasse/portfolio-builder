@@ -128,11 +128,21 @@ npm run build && npm start &
 npm run test:contrast
 ```
 
+## Documentation
+
+- **[CHANGELOG.md](CHANGELOG.md)** — a curated, thematic history of what shipped.
+- **[docs/HANDOFF.md](docs/HANDOFF.md)** — system design and feature reference for
+  anyone picking the project up, including where its single-tenant assumptions
+  live (written toward a possible template-based, multi-tenant "portfolio
+  builder" successor — see below).
+- **[docs/PRD.md](docs/PRD.md)** — the original product requirements.
+
 ## Future goals
 
-- **Media metadata.** Persist per-clip facts (such as whether a video has an
-  audio track) so the player can adapt — e.g. disabling the unmute control on a
-  silent clip instead of offering it.
+- **Portfolio builder.** The longer-term direction is to turn this single-owner
+  site into a builder: many users, a choice of templates (this portfolio being
+  the first), and each published to a short URL. `docs/HANDOFF.md` documents the
+  current design and the single-tenant assumptions such a rebuild would touch.
 - **Richer timeline.** Surface job and school detail inline on the timeline, not
   only as project marks.
 - **Analytics-informed ordering.** Use engagement to suggest which project to
