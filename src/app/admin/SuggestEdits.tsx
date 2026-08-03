@@ -46,8 +46,10 @@ type Item = {
   multiline: boolean;
   current: string;
   suggested: string;
-  applied: boolean;
 };
+
+/** Shown once every suggestion has been applied or dismissed. */
+const DONE_NOTE = 'Done — review the fields below, then save as a draft or publish.';
 
 export function SuggestEdits() {
   const root = useRef<HTMLDivElement>(null);
@@ -83,7 +85,7 @@ export function SuggestEdits() {
         const suggested = result.data[field.name];
         if (suggested === undefined) continue;
         if (suggested.trim() === (current[field.name] ?? '').trim()) continue;
-        next.push({ ...field, current: current[field.name] ?? '', suggested, applied: false });
+        next.push({ ...field, current: current[field.name] ?? '', suggested });
       }
 
       setItems(next);
@@ -91,31 +93,29 @@ export function SuggestEdits() {
     });
   }
 
+  // Applying or dismissing closes that field's card. When the last one is
+  // handled the list empties and the box is back to its paste-and-suggest state,
+  // ready for another pass — no stale cards lingering until a refresh.
   function apply(name: SuggestField) {
-    setItems((list) =>
-      list.map((item) => {
-        if (item.name !== name) return item;
-        setValue(fieldEl(name), item.suggested);
-        return { ...item, applied: true };
-      }),
-    );
+    const item = items.find((entry) => entry.name === name);
+    if (!item) return;
+    setValue(fieldEl(name), item.suggested);
+    const next = items.filter((entry) => entry.name !== name);
+    setItems(next);
+    setNote(next.length === 0 ? DONE_NOTE : '');
   }
 
   function applyAll() {
-    setItems((list) =>
-      list.map((item) => {
-        if (item.applied) return item;
-        setValue(fieldEl(item.name), item.suggested);
-        return { ...item, applied: true };
-      }),
-    );
+    for (const item of items) setValue(fieldEl(item.name), item.suggested);
+    setItems([]);
+    setNote(DONE_NOTE);
   }
 
   function dismiss(name: SuggestField) {
-    setItems((list) => list.filter((item) => item.name !== name));
+    const next = items.filter((entry) => entry.name !== name);
+    setItems(next);
+    setNote(next.length === 0 ? DONE_NOTE : '');
   }
-
-  const remaining = items.filter((item) => !item.applied).length;
 
   return (
     <div ref={root} className="admin-suggest" aria-busy={pending}>
@@ -149,9 +149,9 @@ export function SuggestEdits() {
             'Suggest edits'
           )}
         </button>
-        {items.length > 0 && remaining > 0 ? (
+        {items.length > 1 ? (
           <button type="button" className="admin-button admin-quiet" onClick={applyAll}>
-            Apply all ({remaining})
+            Apply all ({items.length})
           </button>
         ) : null}
       </div>
@@ -169,29 +169,25 @@ export function SuggestEdits() {
       {items.length > 0 ? (
         <ul className="admin-suggest-list">
           {items.map((item) => (
-            <li key={item.name} className="suggest-item" data-applied={item.applied || undefined}>
+            <li key={item.name} className="suggest-item">
               <div className="suggest-item-head">
                 <span className="field-label">{item.label}</span>
-                {item.applied ? (
-                  <span className="admin-flag admin-flag-live">Applied</span>
-                ) : (
-                  <span className="suggest-item-buttons">
-                    <button
-                      type="button"
-                      className="admin-button admin-button-sm"
-                      onClick={() => apply(item.name)}
-                    >
-                      Apply
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-button admin-button-sm admin-quiet"
-                      onClick={() => dismiss(item.name)}
-                    >
-                      Dismiss
-                    </button>
-                  </span>
-                )}
+                <span className="suggest-item-buttons">
+                  <button
+                    type="button"
+                    className="admin-button admin-button-sm"
+                    onClick={() => apply(item.name)}
+                  >
+                    Apply
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-button admin-button-sm admin-quiet"
+                    onClick={() => dismiss(item.name)}
+                  >
+                    Dismiss
+                  </button>
+                </span>
               </div>
               <div className="suggest-diff">
                 <div className="suggest-side">
