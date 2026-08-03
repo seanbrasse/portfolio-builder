@@ -52,10 +52,7 @@ export type AdminProject = {
   context: 'professional' | 'personal';
   experience_id: string | null;
   summary: string;
-  situation: string;
-  task: string;
-  action: string;
-  result: string;
+  story: string;
   impact: string;
   status: 'shipped' | 'building' | 'archived';
   duration: string;
@@ -86,10 +83,7 @@ export type ProjectDraftData = {
   context: 'professional' | 'personal';
   experience_id: string | null;
   summary: string;
-  situation: string;
-  task: string;
-  action: string;
-  result: string;
+  story: string;
   impact: string;
   status: 'shipped' | 'building' | 'archived';
   duration: string;

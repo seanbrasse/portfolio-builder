@@ -32,10 +32,8 @@ export type Prefill = {
   /** The one number, if the source states one — else ''. */
   impact: string;
   tech: string[];
-  situation: string;
-  task: string;
-  action: string;
-  result: string;
+  /** A cohesive story of the project, a paragraph or two — not a STAR breakdown. */
+  story: string;
   links: { label: string; url: string; type: '' | 'live' | 'repo' | 'case_study' | 'press' }[];
 };
 
@@ -213,10 +211,7 @@ const SCHEMA: Anthropic.Tool.InputSchema = {
     summary: { type: 'string' },
     impact: { type: 'string' },
     tech: { type: 'array', items: { type: 'string' } },
-    situation: { type: 'string' },
-    task: { type: 'string' },
-    action: { type: 'string' },
-    result: { type: 'string' },
+    story: { type: 'string' },
     links: {
       type: 'array',
       items: {
@@ -239,10 +234,7 @@ const SCHEMA: Anthropic.Tool.InputSchema = {
     'summary',
     'impact',
     'tech',
-    'situation',
-    'task',
-    'action',
-    'result',
+    'story',
     'links',
   ],
 };
@@ -281,12 +273,12 @@ function systemPrompt(): string {
     `  at most ${CAPS.projectSummary} characters. A teaser, not a spec.`,
     `- impact: a single concrete outcome or number if the source states one, else "".`,
     `- tech: the technologies actually named or clearly evidenced, as short tags.`,
-    '- situation / task / action / result: a brief STAR write-up. Keep each part to',
-    '  one or two sentences in the voice above — the context, what you set out to',
-    '  do, the decisions that mattered, and what actually shipped or changed. Cut',
-    '  anything that just restates another part or lists routine implementation',
-    '  steps. Leave a part "" when the source does not support it; a short honest',
-    '  draft beats a padded one.',
+    '- story: a cohesive write-up of the project — a paragraph or two (three at',
+    '  most), the way you would tell it in an interview. Move naturally through the',
+    '  situation, what you set out to do, what you did and the decisions that',
+    '  mattered, and how it turned out — as flowing prose. Do NOT label those parts',
+    '  or use headings; it is one story, not a STAR form. Base it on the source and',
+    '  leave "" when the source is too thin to tell it honestly.',
     '- links: carry through the links you are given; do not invent URLs.',
   ].join('\n');
 }
@@ -396,16 +388,7 @@ export async function prefillFromUrl(raw: string): Promise<Prefill> {
 ------------------------------------------------------------------------- */
 
 /** The fields the suggest-edits flow may propose changes to. */
-export const SUGGEST_FIELDS = [
-  'title',
-  'summary',
-  'situation',
-  'task',
-  'action',
-  'result',
-  'impact',
-  'tech',
-] as const;
+export const SUGGEST_FIELDS = ['title', 'summary', 'story', 'impact', 'tech'] as const;
 
 export type SuggestField = (typeof SUGGEST_FIELDS)[number];
 
@@ -420,10 +403,7 @@ const SUGGEST_SCHEMA: Anthropic.Tool.InputSchema = {
   properties: {
     title: { type: 'string' },
     summary: { type: 'string' },
-    situation: { type: 'string' },
-    task: { type: 'string' },
-    action: { type: 'string' },
-    result: { type: 'string' },
+    story: { type: 'string' },
     impact: { type: 'string' },
     tech: { type: 'string' },
   },
@@ -445,7 +425,10 @@ function suggestSystemPrompt(): string {
     '  voice above. Never invent facts present in neither.',
     '- Give the full replacement value for each field you include, not a diff.',
     `- summary is at most ${CAPS.projectSummary} characters; tech is a comma-separated`,
-    '  list of short tags; situation/task/action/result are one or two sentences each.',
+    '  list of short tags; story is a cohesive write-up of a paragraph or two (three',
+    '  at most) — the project told the way you would in an interview, moving through',
+    '  the situation, the goal, what you did and decided, and how it turned out, as',
+    '  flowing prose with no labels or headings.',
   ].join('\n');
 }
 
@@ -459,19 +442,18 @@ function formatCurrent(current: ProjectSuggestions): string {
 
 /** Keep only string suggestions for known fields, trimmed and capped. */
 function normaliseSuggestions(input: Record<string, unknown>): ProjectSuggestions {
-  const star = new Set<SuggestField>(['situation', 'task', 'action', 'result']);
+  const cap: Partial<Record<SuggestField, number>> = {
+    summary: CAPS.projectSummary,
+    story: CAPS.projectStory,
+  };
   const out: ProjectSuggestions = {};
   for (const field of SUGGEST_FIELDS) {
     const raw = input[field];
     if (typeof raw !== 'string') continue;
     const value = raw.trim();
     if (!value) continue;
-    out[field] =
-      field === 'summary'
-        ? value.slice(0, CAPS.projectSummary)
-        : star.has(field)
-          ? value.slice(0, CAPS.projectStar)
-          : value;
+    const limit = cap[field];
+    out[field] = limit ? value.slice(0, limit) : value;
   }
   return out;
 }
@@ -535,10 +517,7 @@ function normalise(draft: Prefill, source: Source): Prefill {
     summary: (draft.summary || '').slice(0, CAPS.projectSummary),
     impact: (draft.impact || '').trim(),
     tech: Array.isArray(draft.tech) ? draft.tech.map((t) => String(t).trim()).filter(Boolean) : [],
-    situation: (draft.situation || '').slice(0, CAPS.projectStar),
-    task: (draft.task || '').slice(0, CAPS.projectStar),
-    action: (draft.action || '').slice(0, CAPS.projectStar),
-    result: (draft.result || '').slice(0, CAPS.projectStar),
+    story: (draft.story || '').slice(0, CAPS.projectStory),
     links: [...seed, ...extra].map((link) => ({
       label: (link.label || '').trim(),
       url: link.url.trim(),
