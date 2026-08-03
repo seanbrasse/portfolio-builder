@@ -2861,11 +2861,6 @@ a:hover {
   gap: 10px;
 }
 
-/* An applied suggestion fades back — it is done, and the field now holds it. */
-.suggest-item[data-applied] {
-  opacity: 0.6;
-}
-
 .suggest-item-head {
   display: flex;
   align-items: center;
