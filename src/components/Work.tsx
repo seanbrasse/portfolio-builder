@@ -176,8 +176,25 @@ export function Work({
       const lower = Math.floor(wrapped) % n;
       const upper = (lower + 1) % n;
       const blend = wrapped - Math.floor(wrapped);
-      const left =
-        geometry.marks[lower].left + (geometry.marks[upper].left - geometry.marks[lower].left) * blend;
+
+      /**
+       * Between two adjacent projects the cursor glides, so it tracks the cards
+       * sliding past. But the step from the last project back to the first is a
+       * wrap, and on a linear line the two ends are the whole timeline apart —
+       * newest at one end, oldest at the other. Gliding across it drew the cursor
+       * sweeping all the way back over the line, which reads as the carousel
+       * running backwards to the start rather than cycling round to it.
+       *
+       * A cycle has no middle between its ends, so that seam is a jump, not a
+       * journey: the cursor snaps to whichever end the carousel has settled
+       * nearer to — the card actually coming to the centre — instead of tweening
+       * between them. Every other step still glides.
+       */
+      const seam = lower === n - 1 && upper === 0;
+      const left = seam
+        ? geometry.marks[blend < 0.5 ? lower : upper].left
+        : geometry.marks[lower].left +
+          (geometry.marks[upper].left - geometry.marks[lower].left) * blend;
       cursor.current.style.left = `${left}%`;
     }
   }, [count, geometry]);
