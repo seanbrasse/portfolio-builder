@@ -57,6 +57,13 @@ export type Asset = {
    * it is meaningful under `contain` too once the image is zoomed.
    */
   focalPoint?: { x: number; y: number };
+  /**
+   * Video only: whether the clip has an audio track. `false` marks a silent
+   * recording, so the player shows its mute toggle disabled and muted rather
+   * than offering an unmute that would do nothing. Undefined (and every still)
+   * is treated as having audio — the toggle stays live.
+   */
+  hasAudio?: boolean;
   treatment?: AssetTreatment;
 };
 

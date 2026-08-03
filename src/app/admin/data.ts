@@ -104,6 +104,7 @@ export type AdminImage = {
   scale: number | null;
   focal_x: number | null;
   focal_y: number | null;
+  has_audio: boolean;
   sort_order: number;
 };
 
