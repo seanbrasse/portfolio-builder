@@ -14,9 +14,8 @@ import { adminExperiences, adminImages, adminProject } from '../../data';
 import { DeleteButton, Form } from '../../Form';
 import { ImageAdjust } from '../../ImageAdjust';
 import { LinkRows } from '../../LinkRows';
-import { ProjectPrefill } from '../../ProjectPrefill';
+import { ProjectDraft } from '../../ProjectDraft';
 import { Reorder } from '../../Reorder';
-import { SuggestEdits } from '../../SuggestEdits';
 import { Upload } from '../../Upload';
 import { CAPS } from '@/content/types';
 
@@ -101,11 +100,13 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
       ) : null}
 
       <Form action={saveProject} publish>
-        {/* Inside the form on purpose: both boxes reach these fields by walking
-            up to the form with `closest('form')`. New project → the prefill box
-            fills a blank form. Existing project → the suggest-edits box proposes
-            changes to fields that already have content, applied one at a time. */}
-        {creating ? <ProjectPrefill /> : <SuggestEdits />}
+        {/* Inside the form on purpose: it reaches these fields by walking up to
+            the form with `closest('form')`. One tool for both jobs — paste a
+            link, notes, or a write-up and it proposes values. New project → the
+            fields are blank, so it drafts them; existing project → they carry the
+            current copy, so it suggests edits. Prose fields are reviewed as
+            cards; a new project's structural fields are filled directly. */}
+        <ProjectDraft creating={creating} />
 
         <div className="admin-grid">
           <label className="field">

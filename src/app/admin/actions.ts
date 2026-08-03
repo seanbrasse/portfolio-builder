@@ -5,11 +5,10 @@ import { redirect } from 'next/navigation';
 
 import { supabaseServer, isAdmin } from '@/lib/supabase/server';
 import {
-  prefillFromUrl,
-  suggestEdits,
-  SUGGEST_FIELDS,
+  draftProject as buildProjectDraft,
+  REVIEW_FIELDS,
   type Prefill,
-  type ProjectSuggestions,
+  type ReviewField,
 } from '@/lib/prefill';
 
 /**
@@ -280,19 +279,28 @@ export async function deleteExperience(id: string): Promise<Result> {
 ------------------------------------------------------------------------- */
 
 /** Like `Result`, but a success carries the drafted fields to fill the form. */
-export type PrefillResult = { ok: true; data: Prefill } | { ok: false; error: string };
+export type DraftResult = { ok: true; data: Prefill } | { ok: false; error: string };
 
 /**
- * Draft a project from a pasted link.
+ * Draft a project from a pasted source — a link, notes, or a write-up.
+ *
+ * One action for both jobs: starting a new project and suggesting edits to an
+ * existing one. The client sends whatever the reviewable fields currently hold,
+ * so the model drafts empty fields and improves ones that already have content;
+ * the full drafted field set comes back and the form shows the prose fields as
+ * suggestions to review (and, for a new project, applies the structural ones).
  *
  * Read-adjacent, not a write — it touches no row and only reports a draft the
- * editor then edits and saves — but it is an admin action all the same: it
+ * editor then applies and saves — but it is an admin action all the same: it
  * spends an API call and fetches an arbitrary URL server-side, so it re-checks
  * `isAdmin()` like every other action here. The heavy lifting (fetching the
  * source, asking the model, normalising) lives in `lib/prefill`; this is the
  * gate and the error envelope around it.
  */
-export async function prefillProject(url: string): Promise<PrefillResult> {
+export async function draftProject(
+  input: string,
+  current: Record<string, string> = {},
+): Promise<DraftResult> {
   // Everything inside the try, including the admin check: the whole point of
   // this action is to hand the editor a sentence they can act on, so an auth
   // or infrastructure failure should read as a message, not a rejected call
@@ -300,47 +308,15 @@ export async function prefillProject(url: string): Promise<PrefillResult> {
   try {
     if (!(await isAdmin())) return { ok: false, error: 'Not signed in as the site owner.' };
 
-    const clean = String(url ?? '').trim();
-    if (!/^https?:\/\//i.test(clean)) {
-      return { ok: false, error: 'Enter a full link starting with http:// or https://.' };
-    }
-
-    return { ok: true, data: await prefillFromUrl(clean) };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'Could not read that link.',
-    };
-  }
-}
-
-/** Like `PrefillResult`, but carrying per-field suggestions to review. */
-export type SuggestResult = { ok: true; data: ProjectSuggestions } | { ok: false; error: string };
-
-/**
- * Suggest edits to an existing project from a pasted doc or link.
- *
- * The client sends what is currently in the form's fields so the model edits
- * what is there rather than drafting anew; the result is a set of per-field
- * suggestions the editor reviews and applies one at a time. It writes nothing —
- * like `prefillProject`, it is an admin-gated read that returns a draft.
- */
-export async function suggestProjectEdits(
-  input: string,
-  current: Record<string, string>,
-): Promise<SuggestResult> {
-  try {
-    if (!(await isAdmin())) return { ok: false, error: 'Not signed in as the site owner.' };
-
     const clean = String(input ?? '').trim();
-    if (!clean) return { ok: false, error: 'Paste a document or a link first.' };
+    if (!clean) return { ok: false, error: 'Paste a document, notes, or a link first.' };
 
-    const currentFields: ProjectSuggestions = {};
-    for (const field of SUGGEST_FIELDS) {
+    const currentFields: Partial<Record<ReviewField, string>> = {};
+    for (const field of REVIEW_FIELDS) {
       currentFields[field] = String(current?.[field] ?? '');
     }
 
-    return { ok: true, data: await suggestEdits(currentFields, clean) };
+    return { ok: true, data: await buildProjectDraft(clean, currentFields) };
   } catch (error) {
     return {
       ok: false,

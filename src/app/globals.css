@@ -2746,44 +2746,6 @@ a:hover {
   grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 110px);
 }
 
-/* The "start from a link" box on the create form. Solid `--matte` and a soft
-   shadow lift it off the page as the first thing to reach for, the same solid
-   treatment the content cards got so it reads as its own surface rather than
-   dissolving into the background. */
-.admin-prefill {
-  background: var(--matte);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-top: 18px;
-  display: grid;
-  gap: 4px;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
-}
-
-.admin-prefill .admin-note {
-  margin-top: 0;
-}
-
-.admin-prefill-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-/* The URL takes the room; the button keeps its size. On a narrow editor the
-   button wraps under the input rather than crushing it. */
-.admin-prefill-row input {
-  flex: 1 1 320px;
-  min-width: 0;
-}
-
-.admin-prefill-row .admin-button {
-  flex: 0 0 auto;
-}
-
 /* A spinner inside the button while the draft is being fetched, so the wait
    reads as work-in-progress rather than a dead click. Drawn in the button's
    own on-accent colour. */
@@ -2797,10 +2759,6 @@ a:hover {
   border-top-color: var(--on-accent);
   border-radius: 50%;
   animation: admin-spin 0.6s linear infinite;
-}
-
-.admin-prefill-status {
-  margin-top: 10px;
 }
 
 @keyframes admin-spin {
