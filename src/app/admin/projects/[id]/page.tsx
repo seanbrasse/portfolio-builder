@@ -8,6 +8,7 @@ import {
   moveImage,
   removeImage,
   saveProject,
+  unpublishProject,
 } from '../../actions';
 import { adminExperiences, adminImages, adminProject } from '../../data';
 import { DeleteButton, Form } from '../../Form';
@@ -67,6 +68,18 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
           ) : (
             <span className="admin-flag">Draft — not on the site yet</span>
           )}
+
+          {item.published ? (
+            <DeleteButton
+              tone="quiet"
+              label="Unpublish"
+              confirm="Take this project off the live site? It becomes a draft you can republish anytime."
+              action={async () => {
+                'use server';
+                return unpublishProject(id);
+              }}
+            />
+          ) : null}
 
           {draftPending ? (
             <>

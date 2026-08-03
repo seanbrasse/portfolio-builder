@@ -158,10 +158,13 @@ export function DeleteButton({
   action,
   label,
   confirm: question,
+  tone = 'danger',
 }: {
   action: () => Promise<Result>;
   label: string;
   confirm: string;
+  /** 'danger' for irreversible removal; 'quiet' for a reversible action like unpublish. */
+  tone?: 'danger' | 'quiet';
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState('');
@@ -171,7 +174,7 @@ export function DeleteButton({
     <>
       <button
         type="button"
-        className="admin-button admin-danger"
+        className={`admin-button ${tone === 'quiet' ? 'admin-quiet' : 'admin-danger'}`}
         disabled={pending}
         onClick={() =>
           start(async () => {
