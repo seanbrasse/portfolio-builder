@@ -247,6 +247,20 @@ const SCHEMA: Anthropic.Tool.InputSchema = {
   ],
 };
 
+/** The house voice, shared by drafting and suggesting so both read the same. */
+const VOICE = [
+  'Voice — write like a good engineering portfolio, not a README or a press',
+  'release. A hiring manager skims this in a few seconds:',
+  '- Plain, concrete English. Short sentences. Say what it does and what changed.',
+  '- No buzzwords or hype: avoid words like leveraged, seamless, robust,',
+  '  cutting-edge, state-of-the-art, powerful, passionate, utilize.',
+  '- Talk at the product and decision level, not line by line. Name a technical',
+  '  choice only when it mattered to the result; skip setup, config, folder',
+  '  layout, and dependency detail nobody reviewing a portfolio needs.',
+  '- Favour outcomes and the one or two decisions that mattered over a full',
+  '  feature list. When the source gives a number, lead with it.',
+];
+
 function systemPrompt(): string {
   return [
     'You draft entries for a software engineer\'s portfolio from a source they',
@@ -254,16 +268,7 @@ function systemPrompt(): string {
     'aim for a strong, honest first draft — never invent facts the source does not',
     'support. If the source is thin, leave a field empty rather than padding it.',
     '',
-    'Voice — write like a good engineering portfolio, not a README or a press',
-    'release. A hiring manager skims this in a few seconds:',
-    '- Plain, concrete English. Short sentences. Say what it does and what changed.',
-    '- No buzzwords or hype: avoid words like leveraged, seamless, robust,',
-    '  cutting-edge, state-of-the-art, powerful, passionate, utilize.',
-    '- Talk at the product and decision level, not line by line. Name a technical',
-    '  choice only when it mattered to the result; skip setup, config, folder',
-    '  layout, and dependency detail nobody reviewing a portfolio needs.',
-    '- Favour outcomes and the one or two decisions that mattered over a full',
-    '  feature list. When the source gives a number, lead with it.',
+    ...VOICE,
     '',
     'Field rules:',
     `- id: a lowercase slug, letters/numbers/hyphens only, from the project name.`,
@@ -293,8 +298,83 @@ function client(): Anthropic {
   return new Anthropic();
 }
 
+/** Pasted documents are trimmed to this — longer than a README, since it's prose. */
+const DOC_CAP = 24_000;
+
+/** A whole-string URL, as opposed to prose that merely mentions one. */
+function looksLikeUrl(raw: string): boolean {
+  return /^https?:\/\/\S+$/i.test(raw.trim());
+}
+
 /**
- * The whole flow: read the link, ask the model, normalise the answer.
+ * Read whatever the editor pasted — a URL to fetch, or a document to use as-is.
+ *
+ * A single URL is fetched (a GitHub repo or a plain page); anything else is
+ * treated as the source text itself, which is what lets someone paste notes, a
+ * spec, or a write-up rather than only a link.
+ */
+export async function readSource(raw: string): Promise<Source> {
+  const input = raw.trim();
+  if (!input) throw new PrefillError('Paste a document or a link first.');
+
+  if (looksLikeUrl(input)) {
+    let url: URL;
+    try {
+      url = new URL(input);
+    } catch {
+      throw new PrefillError('That does not look like a valid URL.');
+    }
+    const repo = githubRepo(url);
+    return repo ? readGithub(repo.owner, repo.repo) : readPage(url);
+  }
+
+  return { kind: 'a pasted document', primaryLink: null, liveLink: null, text: input.slice(0, DOC_CAP) };
+}
+
+/**
+ * One forced tool call, with the SDK's own errors translated to a sentence.
+ *
+ * Structured output via a forced tool: the model must answer by calling the
+ * tool, so its `input` arrives validated rather than prose we hope is JSON.
+ * Thinking is disabled because forcing a specific tool and extended thinking are
+ * mutually exclusive, and this is extraction the admin is waiting on.
+ */
+async function callTool(
+  system: string,
+  userText: string,
+  tool: { name: string; description: string; input_schema: Anthropic.Tool.InputSchema },
+): Promise<unknown> {
+  let message;
+  try {
+    message = await client().messages.create({
+      model: MODEL,
+      max_tokens: 4096,
+      thinking: { type: 'disabled' },
+      system,
+      tools: [tool],
+      tool_choice: { type: 'tool', name: tool.name },
+      messages: [{ role: 'user', content: userText }],
+    });
+  } catch (error) {
+    // PrefillError is already friendly; let it through. Otherwise turn the SDK's
+    // raw "401 {...}" body into something the editor can act on.
+    if (error instanceof PrefillError) throw error;
+    const status = (error as { status?: number }).status;
+    if (status === 401) throw new PrefillError('The Anthropic API key was rejected — check ANTHROPIC_API_KEY.');
+    if (status === 404) throw new PrefillError(`The model "${MODEL}" was not found — check ANTHROPIC_MODEL.`);
+    if (status === 429) throw new PrefillError('Anthropic rate limit reached — try again in a moment.');
+    throw new PrefillError('Claude could not read that source — try again.');
+  }
+
+  const call = message.content.find((block) => block.type === 'tool_use');
+  if (!call || call.type !== 'tool_use') {
+    throw new PrefillError('The model returned nothing usable.');
+  }
+  return call.input;
+}
+
+/**
+ * The whole draft flow: read the source, ask the model, normalise the answer.
  *
  * Normalising matters because the form has its own rules the model is only asked
  * to honour: the id must match `[a-z0-9-]+`, the links the source gave are the
@@ -302,61 +382,129 @@ function client(): Anthropic {
  * usefully labelled. The source's own links lead.
  */
 export async function prefillFromUrl(raw: string): Promise<Prefill> {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    throw new PrefillError('That does not look like a valid URL.');
+  const source = await readSource(raw);
+  const input = await callTool(
+    systemPrompt(),
+    `The source is ${source.kind}. Draft a portfolio project from it.\n\n${source.text}`,
+    { name: 'draft_project', description: 'Record the drafted portfolio project fields.', input_schema: SCHEMA },
+  );
+  return normalise(input as Prefill, source);
+}
+
+/* -------------------------------------------------------------------------
+   Suggesting edits to an existing project
+------------------------------------------------------------------------- */
+
+/** The fields the suggest-edits flow may propose changes to. */
+export const SUGGEST_FIELDS = [
+  'title',
+  'summary',
+  'situation',
+  'task',
+  'action',
+  'result',
+  'impact',
+  'tech',
+] as const;
+
+export type SuggestField = (typeof SUGGEST_FIELDS)[number];
+
+/** A suggestion per field — only the fields the model recommends changing. */
+export type ProjectSuggestions = Partial<Record<SuggestField, string>>;
+
+const SUGGEST_SCHEMA: Anthropic.Tool.InputSchema = {
+  type: 'object',
+  additionalProperties: false,
+  // No `required`: the model includes only the fields it wants to change. `tech`
+  // is a comma-separated string here to match the form's single tech input.
+  properties: {
+    title: { type: 'string' },
+    summary: { type: 'string' },
+    situation: { type: 'string' },
+    task: { type: 'string' },
+    action: { type: 'string' },
+    result: { type: 'string' },
+    impact: { type: 'string' },
+    tech: { type: 'string' },
+  },
+};
+
+function suggestSystemPrompt(): string {
+  return [
+    'You suggest edits to an existing software engineer\'s portfolio project,',
+    'using a source they pasted — a document, notes, or a link. They will review',
+    'your suggestions field by field and apply the ones they want, so propose real',
+    'improvements, not churn.',
+    '',
+    ...VOICE,
+    '',
+    'Rules:',
+    '- Only include a field when you are recommending a change to it. Leave a field',
+    '  out entirely when its current text is already good or the source adds nothing.',
+    '- Base every change on the source, or on tightening the current text into the',
+    '  voice above. Never invent facts present in neither.',
+    '- Give the full replacement value for each field you include, not a diff.',
+    `- summary is at most ${CAPS.projectSummary} characters; tech is a comma-separated`,
+    '  list of short tags; situation/task/action/result are one or two sentences each.',
+  ].join('\n');
+}
+
+/** Format the current field values for the model, so it edits rather than invents. */
+function formatCurrent(current: ProjectSuggestions): string {
+  return SUGGEST_FIELDS.map((field) => {
+    const value = (current[field] ?? '').trim();
+    return `${field}: ${value || '(empty)'}`;
+  }).join('\n');
+}
+
+/** Keep only string suggestions for known fields, trimmed and capped. */
+function normaliseSuggestions(input: Record<string, unknown>): ProjectSuggestions {
+  const star = new Set<SuggestField>(['situation', 'task', 'action', 'result']);
+  const out: ProjectSuggestions = {};
+  for (const field of SUGGEST_FIELDS) {
+    const raw = input[field];
+    if (typeof raw !== 'string') continue;
+    const value = raw.trim();
+    if (!value) continue;
+    out[field] =
+      field === 'summary'
+        ? value.slice(0, CAPS.projectSummary)
+        : star.has(field)
+          ? value.slice(0, CAPS.projectStar)
+          : value;
   }
+  return out;
+}
 
-  const repo = githubRepo(url);
-  const source = repo ? await readGithub(repo.owner, repo.repo) : await readPage(url);
+/**
+ * Propose edits to an existing project from a pasted source.
+ *
+ * The current field values are sent alongside the source so the model edits what
+ * is there rather than drafting from scratch, and it returns only the fields it
+ * would change — which is what makes the reviewer's list short and honest.
+ */
+export async function suggestEdits(
+  current: ProjectSuggestions,
+  raw: string,
+): Promise<ProjectSuggestions> {
+  const source = await readSource(raw);
+  const userText = [
+    `The source is ${source.kind}. Suggest edits to the project below, using it.`,
+    '',
+    'CURRENT FIELDS:',
+    formatCurrent(current),
+    '',
+    'SOURCE:',
+    source.text,
+  ].join('\n');
 
-  // Structured output via a forced tool call: the model must answer by calling
-  // `draft_project`, so its `input` arrives as a validated object rather than
-  // prose we have to hope is JSON. Thinking is disabled because forcing a
-  // specific tool and extended thinking are mutually exclusive, and this is
-  // extraction the admin is waiting on rather than a reasoning task.
-  let message;
-  try {
-    message = await client().messages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      thinking: { type: 'disabled' },
-      system: systemPrompt(),
-      tools: [
-        {
-          name: 'draft_project',
-          description: 'Record the drafted portfolio project fields.',
-          input_schema: SCHEMA,
-        },
-      ],
-      tool_choice: { type: 'tool', name: 'draft_project' },
-      messages: [
-        {
-          role: 'user',
-          content: `The link points to ${source.kind}. Draft a portfolio project from it.\n\n${source.text}`,
-        },
-      ],
-    });
-  } catch (error) {
-    // Translate the SDK's own errors into a sentence the editor can act on,
-    // rather than passing through a raw "401 {...}" body. PrefillError is
-    // already friendly, so let it through unchanged.
-    if (error instanceof PrefillError) throw error;
-    const status = (error as { status?: number }).status;
-    if (status === 401) throw new PrefillError('The Anthropic API key was rejected — check ANTHROPIC_API_KEY.');
-    if (status === 404) throw new PrefillError(`The model "${MODEL}" was not found — check ANTHROPIC_MODEL.`);
-    if (status === 429) throw new PrefillError('Anthropic rate limit reached — try again in a moment.');
-    throw new PrefillError('Claude could not draft the project from that link — try again.');
-  }
+  const input = await callTool(suggestSystemPrompt(), userText, {
+    name: 'suggest_edits',
+    description: 'Record suggested edits, one entry per field you would change.',
+    input_schema: SUGGEST_SCHEMA,
+  });
 
-  const call = message.content.find((block) => block.type === 'tool_use');
-  if (!call || call.type !== 'tool_use') {
-    throw new PrefillError('The model returned nothing to fill the form with.');
-  }
-
-  return normalise(call.input as Prefill, source);
+  return normaliseSuggestions(input as Record<string, unknown>);
 }
 
 /** Make the model's answer safe to pour into the form. */

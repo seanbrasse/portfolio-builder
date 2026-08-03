@@ -15,6 +15,7 @@ import { ImageAdjust } from '../../ImageAdjust';
 import { LinkRows } from '../../LinkRows';
 import { ProjectPrefill } from '../../ProjectPrefill';
 import { Reorder } from '../../Reorder';
+import { SuggestEdits } from '../../SuggestEdits';
 import { Upload } from '../../Upload';
 import { CAPS } from '@/content/types';
 
@@ -87,11 +88,11 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
       ) : null}
 
       <Form action={saveProject} publish>
-        {/* Inside the form on purpose: the prefill box fills these very fields
-            by walking up to the form with `closest('form')`, so it has to live
-            within it. Only on create — editing a project already has its fields,
-            and pouring a fresh draft over them would be a footgun, not a help. */}
-        {creating ? <ProjectPrefill /> : null}
+        {/* Inside the form on purpose: both boxes reach these fields by walking
+            up to the form with `closest('form')`. New project → the prefill box
+            fills a blank form. Existing project → the suggest-edits box proposes
+            changes to fields that already have content, applied one at a time. */}
+        {creating ? <ProjectPrefill /> : <SuggestEdits />}
 
         <div className="admin-grid">
           <label className="field">
