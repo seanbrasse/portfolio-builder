@@ -152,10 +152,7 @@ export async function applyPrefill(form: HTMLFormElement, d: Prefill) {
   setValue(field('summary'), d.summary);
   setValue(field('impact'), d.impact);
   setValue(field('tech'), d.tech.join(', '));
-  setValue(field('situation'), d.situation);
-  setValue(field('task'), d.task);
-  setValue(field('action'), d.action);
-  setValue(field('result'), d.result);
+  setValue(field('story'), d.story);
 
   await fillLinks(form, d.links);
 }

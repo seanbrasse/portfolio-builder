@@ -156,14 +156,13 @@ export type Project = {
   /** The short teaser shown on the carousel card. Cap {@link CAPS.projectSummary}. */
   summary: string;
   /**
-   * The fuller write-up, as a STAR breakdown, shown in the modal. Each part is
-   * optional; a project with none falls back to its summary. Rendered in a
-   * scroll area, so these are roomy (see {@link CAPS.projectStar}).
+   * The fuller write-up shown under the summary in the opened card — a cohesive
+   * story of the project (a paragraph or two, the way you'd tell it in an
+   * interview), not a labelled breakdown. Optional; a project with none shows
+   * just its summary. Rendered in a scroll area, so it is roomy (see
+   * {@link CAPS.projectStory}).
    */
-  situation?: string;
-  task?: string;
-  action?: string;
-  result?: string;
+  story?: string;
   /** The one number. */
   impact: string;
   status: ProjectStatus;
@@ -217,11 +216,12 @@ export const CAPS = {
    */
   projectSummary: 500,
   /**
-   * Each STAR section in the modal. Rendered in a scroll area rather than a
-   * fixed panel, so this is generous — room for a real paragraph per part
-   * without the layout being the thing that caps the writing.
+   * The project story in the modal. Rendered in a scroll area rather than a
+   * fixed panel, so this is generous — room for a few real paragraphs without
+   * the layout being the thing that caps the writing. Matches the database
+   * check on the `story` column.
    */
-  projectStar: 1200,
+  projectStory: 5000,
   quote: 180,
   /**
    * The line under the name, on a page that does not scroll. It is set large

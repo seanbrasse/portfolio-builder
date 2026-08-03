@@ -22,10 +22,7 @@ import type { SuggestField } from '@/lib/prefill';
 const FIELDS: { name: SuggestField; label: string; multiline: boolean }[] = [
   { name: 'title', label: 'Title', multiline: false },
   { name: 'summary', label: 'Card summary', multiline: true },
-  { name: 'situation', label: 'Situation', multiline: true },
-  { name: 'task', label: 'Task', multiline: true },
-  { name: 'action', label: 'Action', multiline: true },
-  { name: 'result', label: 'Result', multiline: true },
+  { name: 'story', label: 'Story', multiline: true },
   { name: 'impact', label: 'Impact', multiline: false },
   { name: 'tech', label: 'Tech', multiline: false },
 ];

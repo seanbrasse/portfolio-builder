@@ -1977,26 +1977,17 @@ function CardFace({
  * — which is what lets the STAR sections be as long as they need to be.
  */
 function ProjectStory({ project }: { project: Project }) {
-  // The four STAR parts, in order, as one flowing description — the labels are
-  // how they are authored, not how they read. Each non-empty part becomes a
-  // paragraph, so situation → task → action → result reads as a single account
-  // rather than a form with four headings. The summary is shown above this by
-  // the caller, so a project with no STAR simply shows its summary.
-  const parts = (
-    [
-      ['situation', project.situation],
-      ['task', project.task],
-      ['action', project.action],
-      ['result', project.result],
-    ] as const
-  ).filter(([, body]) => body && body.trim());
+  // One cohesive write-up, split into paragraphs on blank lines. The summary is
+  // shown above this by the caller, so a project with no story shows only that.
+  const story = (project.story ?? '').trim();
+  if (!story) return null;
 
-  if (parts.length === 0) return null;
+  const paragraphs = story.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
 
   return (
     <div className="detail-story">
-      {parts.map(([name, body]) => (
-        <p key={name}>{body!.trim()}</p>
+      {paragraphs.map((paragraph, index) => (
+        <p key={index}>{paragraph}</p>
       ))}
     </div>
   );
