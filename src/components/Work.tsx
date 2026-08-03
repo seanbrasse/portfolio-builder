@@ -34,7 +34,29 @@ export function Work({
   education: Education[];
 }) {
   const count = projects.length;
-  const [active, setActive] = useState(0);
+
+  /**
+   * The carousel travels in date order, oldest to newest.
+   *
+   * The database pulls the starred project to the front of the list, ahead of
+   * the date sort. That made the carousel open on it — which is wanted — but it
+   * also made index order disagree with date order, so the timeline cursor
+   * jumped instead of sweeping cleanly from the first year to the last. Sorting
+   * by date here fixes the travel; the star is honoured separately, as the
+   * position the carousel *starts* on, so it still leads on load without bending
+   * the order the timeline reads.
+   */
+  const ordered = useMemo(
+    () => [...projects].sort((a, b) => a.date.localeCompare(b.date)),
+    [projects],
+  );
+  const start = useMemo(() => {
+    const starred = ordered.findIndex((project) => project.starred);
+    // No pin: open on the most recent, which is last in date order.
+    return starred >= 0 ? starred : Math.max(ordered.length - 1, 0);
+  }, [ordered]);
+
+  const [active, setActive] = useState(start);
   const [detail, setDetail] = useState<Project | null>(null);
   const [gallery, setGallery] = useState(false);
   const drag = useRef<{ x: number; from: number } | null>(null);
@@ -60,8 +82,8 @@ export function Work({
    * change is a transform string. Only the *rounded* position goes into state,
    * because that is the one thing anything else needs to know.
    */
-  const position = useRef(0);
-  const target = useRef(0);
+  const position = useRef(start);
+  const target = useRef(start);
   const stage = useRef<HTMLDivElement>(null);
   const cursor = useRef<HTMLSpanElement>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -82,8 +104,8 @@ export function Work({
    * come from one calculation rather than two.
    */
   const geometry = useMemo(
-    () => timelineGeometry(experiences, projects, education),
-    [experiences, projects, education],
+    () => timelineGeometry(experiences, ordered, education),
+    [experiences, ordered, education],
   );
 
   // Layout is a pure function of position, so it can be called from the frame
@@ -627,7 +649,7 @@ export function Work({
     <>
       <Timeline
         geometry={geometry}
-        activeProject={projects[active]}
+        activeProject={ordered[active]}
         cursorRef={cursor}
         onPick={seek}
       />
@@ -678,7 +700,7 @@ export function Work({
         onPointerCancel={settleDrag}
       >
         <div className="carousel-stage" ref={stage}>
-          {projects.map((project, index) => {
+          {ordered.map((project, index) => {
             let offset = (index - active + count) % count;
             if (offset > count / 2) offset -= count;
             const near = Math.abs(offset) <= 1;
@@ -750,7 +772,7 @@ export function Work({
 
         <div className="carousel-controls">
           <ol className="carousel-dots">
-            {projects.map((project, index) => (
+            {ordered.map((project, index) => (
               <li key={project.id}>
                 <button
                   type="button"
