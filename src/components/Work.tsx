@@ -1536,13 +1536,54 @@ function useReducedMotion() {
 const clipTime = new Map<string, number>();
 
 /**
- * The last mute choice per clip, shared between the card and the modal the same
- * way `clipTime` is. Unmuting the card and then opening it should keep the
- * sound on in the modal — and a clip left muted should open muted — so the
- * card writes its choice here and the modal reads it rather than always
- * starting muted.
+ * The mute choice per clip, shared *reactively* between a card and its modal so
+ * a change on either surface shows up on the other — mute in the opened card and
+ * it stays muted back in the carousel, unmute in the carousel and it opens
+ * unmuted, in both directions. It is a tiny external store rather than a plain
+ * Map so both `Media` instances (the card and the modal's copy) re-render when
+ * the value changes; `useClipMuted` subscribes to it.
+ *
+ * An entry is cleared when a card leaves the visible ring and unmounts, so a
+ * clip scrolled away and back starts muted again rather than surprising with
+ * audio — the modal, which shares a live card, keeps the card's current choice.
  */
 const clipMuted = new Map<string, boolean>();
+const clipMutedListeners = new Set<() => void>();
+
+function readClipMuted(id: string): boolean {
+  // Default muted: a clip must never make noise on its own.
+  return clipMuted.get(id) ?? true;
+}
+
+function writeClipMuted(id: string, value: boolean) {
+  if (clipMuted.get(id) === value) return;
+  clipMuted.set(id, value);
+  clipMutedListeners.forEach((notify) => notify());
+}
+
+/** Drop a clip's choice so it starts muted next time — called when a card unmounts. */
+function forgetClipMuted(id: string) {
+  if (!clipMuted.has(id)) return;
+  clipMuted.delete(id);
+  clipMutedListeners.forEach((notify) => notify());
+}
+
+function subscribeClipMuted(notify: () => void) {
+  clipMutedListeners.add(notify);
+  return () => {
+    clipMutedListeners.delete(notify);
+  };
+}
+
+/** The shared mute value for one clip, and a setter, both wired to the store. */
+function useClipMuted(id: string): [boolean, (value: boolean) => void] {
+  const muted = useSyncExternalStore(
+    subscribeClipMuted,
+    () => readClipMuted(id),
+    () => true,
+  );
+  return [muted, (value: boolean) => writeClipMuted(id, value)];
+}
 
 /** Speaker glyph for the card's mute toggle — waves when on, a cross when off. */
 function SpeakerIcon({ muted }: { muted: boolean }) {
@@ -1592,17 +1633,25 @@ function Media({
   const isVideo = shot.media === 'video';
 
   /**
-   * A card clip starts muted — audio that begins on its own as a card drifts
-   * into place is exactly what nobody asked for, and muted is also what lets it
-   * autoplay at all. The corner toggle is the deliberate gesture that turns
-   * sound on, and the state resets when the card leaves the visible ring and its
-   * media unmounts, so scrolling back to a clip never surprises with audio.
-   *
-   * The modal is the exception: it seeds from the card's last mute choice
-   * (`clipMuted`), so opening a clip the reader had unmuted keeps the sound on,
-   * and one they left muted opens muted.
+   * The mute choice is shared between this card and its modal through
+   * `useClipMuted`, so toggling on either surface holds on the other. It starts
+   * muted — audio that begins on its own as a card drifts into place is exactly
+   * what nobody asked for, and muted is what lets the card autoplay at all — and
+   * the choice is forgotten when the card unmounts (see below), so scrolling
+   * back to a clip never surprises with audio.
    */
-  const [muted, setMuted] = useState(() => (viewer ? (clipMuted.get(shot.id) ?? true) : true));
+  const [muted, setMuted] = useClipMuted(shot.id);
+
+  /**
+   * When the card leaves the ring its choice is dropped, so it comes back muted.
+   * Only the card does this; the modal shares a still-mounted card and must not
+   * wipe the choice when it closes — that is precisely the value the card needs
+   * to resume with.
+   */
+  useEffect(() => {
+    if (viewer) return;
+    return () => forgetClipMuted(shot.id);
+  }, [viewer, shot.id]);
 
   /**
    * A card video plays only while its card is the front one, and it is driven
@@ -1640,8 +1689,6 @@ function Media({
     }
 
     el.muted = muted;
-    // The card is the source of the shared mute choice the modal reads.
-    clipMuted.set(shot.id, muted);
     if (play && !reduced) el.play().catch(() => {});
     else el.pause();
   }, [play, viewer, isVideo, reduced, muted, shot.id, active]);
@@ -1712,6 +1759,12 @@ function Media({
             const at = clipTime.get(shot.id);
             if (at && Number.isFinite(el.duration) && at < el.duration) el.currentTime = at;
           }}
+          /* Catches mute changes the native controls make — the modal's, and the
+             card's own under reduced motion — and shares them, so a mute chosen
+             there holds on the other surface too. The corner toggle below writes
+             the same store, and our own `el.muted = muted` echoes back here as a
+             no-op (the shared setter ignores an unchanged value). */
+          onVolumeChange={(event) => setMuted(event.currentTarget.muted)}
         />
         {showMute ? (
           <button
@@ -1723,7 +1776,7 @@ function Media({
                from reaching it — toggling sound must not also open the modal. */
             onClick={(event) => {
               event.stopPropagation();
-              setMuted((m) => !m);
+              setMuted(!muted);
             }}
           >
             <SpeakerIcon muted={muted} />
