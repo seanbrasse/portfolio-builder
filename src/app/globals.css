@@ -1568,7 +1568,14 @@ a:hover {
    at the join's left edge; centring would put the mark half a label away from
    the date it marks. */
 .timeline-company {
-  --badge: 40px;
+  /* 28, not 40: the badge is the tallest thing in a timeline row, so it sets the
+     row height, and every row is subtracted from the carousel's height budget on
+     the one-screen layout. Sized so a wrapped two-line name's row is no taller
+     than a one-line name's row used to be at 40px — so wrapping never costs
+     height even when it does not save a row, and saves a row (and real height)
+     wherever a wide label was the thing forcing an extra one. The mark stays
+     clearly readable, real logos included. */
+  --badge: 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1668,6 +1675,20 @@ a:hover {
   text-transform: uppercase;
   color: var(--ink);
   line-height: 1.1;
+  /* Wrap a long name onto a second line rather than holding it on one wide one.
+     A wide single-line label ("Intuit Mailchimp", "University at Buffalo") is
+     what collides with its neighbour and gets bumped up a row — and every extra
+     row makes the timeline taller, which on the one-screen layout comes straight
+     out of the carousel's height budget (the card is height-bound; see `fit()`
+     in Work.tsx). Wrapping roughly halves the label's width so it clears its
+     neighbour and stays low, trading a row of height for a second line. The cap
+     is a little above the widest single word so those stay on one line and only
+     genuinely wide multi-word names break; the lines centre under the badge.
+     Below 640px the names are hidden entirely (badges only), so this is a
+     desktop concern. */
+  white-space: normal;
+  max-width: 110px;
+  text-align: center;
 }
 
 /* The badge.
