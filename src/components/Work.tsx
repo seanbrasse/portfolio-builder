@@ -1706,6 +1706,9 @@ function Media({
   const reduced = useReducedMotion();
   const video = useRef<HTMLVideoElement>(null);
   const isVideo = shot.media === 'video';
+  // A clip the editor marked as having no audio: it stays muted and its toggle
+  // is shown disabled, so nobody presses an unmute that would change nothing.
+  const silent = isVideo && shot.hasAudio === false;
 
   /**
    * The mute choice is shared between this card and its modal through
@@ -1757,16 +1760,16 @@ function Media({
     // natively. Autoplay is allowed because opening the modal is a user gesture;
     // reduced motion leaves it paused for the controls to start.
     if (viewer) {
-      el.muted = muted;
+      el.muted = silent || muted;
       if (active && !reduced) el.play().catch(() => {});
       else el.pause();
       return;
     }
 
-    el.muted = muted;
+    el.muted = silent || muted;
     if (play && !reduced) el.play().catch(() => {});
     else el.pause();
-  }, [play, viewer, isVideo, reduced, muted, shot.id, active]);
+  }, [play, viewer, isVideo, reduced, muted, silent, shot.id, active]);
 
   /**
    * The per-image framing, as inline style so it wins over the stylesheet's
@@ -1814,7 +1817,7 @@ function Media({
           width={640}
           height={360}
           style={framing}
-          muted={muted}
+          muted={silent || muted}
           playsInline
           loop={!viewer}
           controls={viewer || reduced}
@@ -1839,22 +1842,31 @@ function Media({
              there holds on the other surface too. The corner toggle below writes
              the same store, and our own `el.muted = muted` echoes back here as a
              no-op (the shared setter ignores an unchanged value). */
-          onVolumeChange={(event) => setMuted(event.currentTarget.muted)}
+          onVolumeChange={(event) => {
+            // A silent clip is held muted; its native control changing nothing
+            // must not write a mute choice back to the shared store.
+            if (!silent) setMuted(event.currentTarget.muted);
+          }}
         />
         {showMute ? (
           <button
             type="button"
             className="shot-mute"
-            aria-label={muted ? 'Unmute video' : 'Mute video'}
-            aria-pressed={!muted}
+            /* A silent clip shows the control disabled and in its muted state, so
+               it reads as "there is nothing to unmute" rather than a toggle that
+               does nothing when pressed. */
+            disabled={silent}
+            aria-label={silent ? 'This video has no audio' : muted ? 'Unmute video' : 'Mute video'}
+            aria-pressed={silent ? false : !muted}
             /* Sits above the card's invisible open-button, and stops the click
                from reaching it — toggling sound must not also open the modal. */
             onClick={(event) => {
               event.stopPropagation();
+              if (silent) return;
               setMuted(!muted);
             }}
           >
-            <SpeakerIcon muted={muted} />
+            <SpeakerIcon muted={silent || muted} />
           </button>
         ) : null}
       </span>

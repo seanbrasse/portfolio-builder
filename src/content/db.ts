@@ -112,6 +112,7 @@ type ImageRow = {
   scale: number | null;
   focal_x: number | null;
   focal_y: number | null;
+  has_audio: boolean | null;
 };
 
 type ProjectRow = {
@@ -230,6 +231,9 @@ function toAsset(row: ImageRow): Asset {
       row.focal_x === null || row.focal_y === null
         ? undefined
         : { x: row.focal_x, y: row.focal_y },
+    // Only a video carries this meaningfully; a null column (pre-migration rows)
+    // reads as having audio, which is the prior behaviour.
+    hasAudio: row.has_audio ?? true,
   };
 }
 

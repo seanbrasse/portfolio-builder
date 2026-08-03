@@ -595,6 +595,24 @@ export async function addImage(
   return { ok: true };
 }
 
+/**
+ * Mark a clip as having audio or not.
+ *
+ * A silent screen recording has no use for an unmute control, so this flag lets
+ * the carousel show that clip's toggle disabled and muted. Republishes because
+ * the public player's control changes with it.
+ */
+export async function setImageAudio(id: string, hasAudio: boolean): Promise<Result> {
+  if (!(await isAdmin())) return DENIED;
+  const supabase = await supabaseServer();
+
+  const { error } = await supabase.from('project_images').update({ has_audio: hasAudio }).eq('id', id);
+  if (error) return { ok: false, error: error.message };
+
+  republish();
+  return { ok: true };
+}
+
 export async function removeImage(id: string): Promise<Result> {
   if (!(await isAdmin())) return DENIED;
   const supabase = await supabaseServer();

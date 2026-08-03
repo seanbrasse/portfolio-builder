@@ -867,10 +867,17 @@ a:hover {
     border-color var(--dur) var(--ease);
 }
 
-.shot-mute:hover,
+.shot-mute:hover:not(:disabled),
 .shot-mute:focus-visible {
   background: var(--surface);
   border-color: var(--ink-muted);
+}
+
+/* A silent clip's control: present so the muted state is visible, but plainly
+   inert — dimmed, no hover lift, and the cursor says it will not respond. */
+.shot-mute:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .shot-mute svg {
@@ -3382,6 +3389,19 @@ a:hover {
   display: grid;
   gap: 8px;
   justify-items: start;
+}
+
+/* The per-clip "no audio" toggle in the shot list: checkbox and its note on one
+   line, aligned so the label reads as the checkbox's own. */
+.admin-audio-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.admin-audio-toggle .admin-note {
+  margin-top: 0;
 }
 
 /* The image's order label and its move controls, on one line above the

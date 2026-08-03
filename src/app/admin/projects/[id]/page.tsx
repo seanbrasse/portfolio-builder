@@ -10,6 +10,7 @@ import {
   saveProject,
   unpublishProject,
 } from '../../actions';
+import { AudioToggle } from '../../AudioToggle';
 import { Autosave } from '../../Autosave';
 import { adminExperiences, adminImages, adminProject } from '../../data';
 import { DeleteButton, Form } from '../../Form';
@@ -275,6 +276,9 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
                 <span className="admin-note">
                   <span className="field-label">Alt text</span> {image.alt}
                 </span>
+                {image.media === 'video' ? (
+                  <AudioToggle id={image.id} hasAudio={image.has_audio} />
+                ) : null}
                 <DeleteButton
                   label="Remove"
                   confirm="Remove this image from the project?"
