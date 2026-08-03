@@ -1977,26 +1977,26 @@ function CardFace({
  * — which is what lets the STAR sections be as long as they need to be.
  */
 function ProjectStory({ project }: { project: Project }) {
+  // The four STAR parts, in order, as one flowing description — the labels are
+  // how they are authored, not how they read. Each non-empty part becomes a
+  // paragraph, so situation → task → action → result reads as a single account
+  // rather than a form with four headings. The summary is shown above this by
+  // the caller, so a project with no STAR simply shows its summary.
   const parts = (
     [
-      ['Situation', project.situation],
-      ['Task', project.task],
-      ['Action', project.action],
-      ['Result', project.result],
+      ['situation', project.situation],
+      ['task', project.task],
+      ['action', project.action],
+      ['result', project.result],
     ] as const
   ).filter(([, body]) => body && body.trim());
 
-  if (parts.length === 0) {
-    return <p className="detail-summary">{project.summary}</p>;
-  }
+  if (parts.length === 0) return null;
 
   return (
     <div className="detail-story">
-      {parts.map(([label, body]) => (
-        <section className="detail-story-part" key={label}>
-          <h3 className="detail-story-label">{label}</h3>
-          <p>{body}</p>
-        </section>
+      {parts.map(([name, body]) => (
+        <p key={name}>{body!.trim()}</p>
       ))}
     </div>
   );
@@ -2015,6 +2015,9 @@ function ProjectDetail({ project, employer }: { project: Project; employer?: Exp
           <Status status={project.status} />
         </p>
         <h2 className="dialog-title">{project.title}</h2>
+        {/* The card's teaser leads the opened card too — a brief line to set the
+            project up — with the fuller STAR account flowing underneath it. */}
+        {project.summary ? <p className="detail-summary">{project.summary}</p> : null}
         <ProjectStory project={project} />
         <p className="project-impact">{project.impact}</p>
 
