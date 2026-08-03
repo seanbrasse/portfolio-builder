@@ -66,6 +66,36 @@ export type AdminProject = {
   starred: boolean;
   /** Row creation time — drives the admin's "Recently added" sort. */
   created_at: string;
+  /**
+   * True when this is a published project carrying a pending, unpublished draft
+   * variation (staged edits not yet live). A plain unpublished project — one
+   * whose own row is the draft — has this false; its state is `published:false`.
+   */
+  has_draft: boolean;
+};
+
+/**
+ * The editable text fields of a project, as staged in `project_drafts.data`.
+ *
+ * Everything the form writes except the identity and lifecycle bits (`id`,
+ * `published`, `starred`, `created_at`) and the images, which stay shared with
+ * the published version rather than being staged.
+ */
+export type ProjectDraftData = {
+  title: string;
+  context: 'professional' | 'personal';
+  experience_id: string | null;
+  summary: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+  impact: string;
+  status: 'shipped' | 'building' | 'archived';
+  duration: string;
+  tech: string[];
+  links: { label: string; url: string; type?: string }[];
+  date: string;
 };
 
 export type AdminImage = {
@@ -138,14 +168,33 @@ export async function adminExperience(id: string): Promise<AdminExperience | nul
 
 export async function adminProjects(): Promise<AdminProject[]> {
   const supabase = await supabaseServer();
-  const { data } = await supabase.from('projects').select('*').order('date', { ascending: false });
-  return (data as AdminProject[]) ?? [];
+  const [rows, drafts] = await Promise.all([
+    supabase.from('projects').select('*').order('date', { ascending: false }),
+    supabase.from('project_drafts').select('project_id'),
+  ]);
+  const pending = new Set((drafts.data ?? []).map((row) => row.project_id as string));
+  return ((rows.data as Omit<AdminProject, 'has_draft'>[]) ?? []).map((row) => ({
+    ...row,
+    has_draft: pending.has(row.id),
+  }));
 }
 
-export async function adminProject(id: string): Promise<AdminProject | null> {
+/** A single project, plus its pending draft edits if it has any. */
+export async function adminProject(
+  id: string,
+): Promise<(AdminProject & { draft: ProjectDraftData | null }) | null> {
   const supabase = await supabaseServer();
-  const { data } = await supabase.from('projects').select('*').eq('id', id).maybeSingle();
-  return (data as AdminProject) ?? null;
+  const [row, draft] = await Promise.all([
+    supabase.from('projects').select('*').eq('id', id).maybeSingle(),
+    supabase.from('project_drafts').select('data').eq('project_id', id).maybeSingle(),
+  ]);
+  if (!row.data) return null;
+  const draftData = (draft.data?.data as ProjectDraftData | undefined) ?? null;
+  return {
+    ...(row.data as Omit<AdminProject, 'has_draft'>),
+    has_draft: draftData !== null,
+    draft: draftData,
+  };
 }
 
 export async function adminImages(projectId: string): Promise<AdminImage[]> {
