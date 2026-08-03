@@ -2417,7 +2417,7 @@ a:hover {
     gap: 4px 14px;
   }
 
-  /* One row, not two. Tracking is what pushed "Résumé" onto a line of its own —
+  /* One row, not two. Tracking is what pushed "Resume" onto a line of its own —
      letter-spacing on four short uppercase labels costs more width than the
      labels gain from it at this size. */
   .footer-col a {
