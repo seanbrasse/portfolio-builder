@@ -667,7 +667,18 @@ a:hover {
                     not a constraint and the card is sized by width alone. */
 .carousel-stage {
   --spacing: 0.62;
-  --card-fraction: 0.62;
+  /* How much of the stage's width one card may take. This is the cap that binds
+     when the card has height to spare — a wide screen, or a short (one-row)
+     timeline that leaves a tall budget — and at 0.62 it stopped the card about a
+     tenth short of what the three-card layout can actually hold, so the leftover
+     height opened as dead space above the timeline instead of going into the
+     card. 0.7 lets `byWidth` reach `bySpan` (the real limit — the width past
+     which the two neighbours would run off the screen), so on those screens the
+     card grows to fill that gap. It changes nothing when the card is
+     height-bound instead (a narrow or short viewport with a taller timeline),
+     because there `byHeight` is already the smaller cap; see `fit()` in
+     Work.tsx. */
+  --card-fraction: 0.7;
   /* Fluid ceiling, matched to the fluid `--page-max`: 700px on typical laptops
      (where the card is height-bound anyway) and growing with the viewport on a
      large monitor so the card scales up with the widened column instead of
