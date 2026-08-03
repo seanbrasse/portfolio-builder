@@ -1833,8 +1833,27 @@ a:hover {
   gap: 12px;
 }
 
+/* Summary and story each sit in a labelled block, so the two are plainly
+   different things rather than two runs of text that differ for no visible
+   reason. The label stacks tight above its content. */
+.detail-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* The small heading over each block — the same uppercase label the admin uses,
+   so "Summary" and "The story" read as section markers, not body copy. */
+.detail-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
 /* The brief lead in the opened card: the same teaser the carousel shows, in full
-   ink so it reads as the setup, with the muted STAR account flowing beneath. */
+   ink so it reads as the setup, with the muted story account flowing beneath. */
 .detail-summary {
   margin: 0;
   color: var(--ink);

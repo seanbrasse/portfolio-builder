@@ -2037,11 +2037,17 @@ function ProjectStory({ project }: { project: Project }) {
 
   const paragraphs = story.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
 
+  // The label sits outside the scroll area so it stays put while the account
+  // scrolls under it — and names why this text is longer, muted and scrollable
+  // where the summary above is short, in full ink and fixed.
   return (
-    <div className="detail-story">
-      {paragraphs.map((paragraph, index) => (
-        <p key={index}>{paragraph}</p>
-      ))}
+    <div className="detail-block">
+      <span className="detail-label">The story</span>
+      <div className="detail-story">
+        {paragraphs.map((paragraph, index) => (
+          <p key={index}>{paragraph}</p>
+        ))}
+      </div>
     </div>
   );
 }
@@ -2060,8 +2066,15 @@ function ProjectDetail({ project, employer }: { project: Project; employer?: Exp
         </p>
         <h2 className="dialog-title">{project.title}</h2>
         {/* The card's teaser leads the opened card too — a brief line to set the
-            project up — with the fuller STAR account flowing underneath it. */}
-        {project.summary ? <p className="detail-summary">{project.summary}</p> : null}
+            project up — with the fuller story flowing underneath it. Each carries
+            a small label so it is clear why the two read differently: a short
+            fixed summary, then a longer scrollable account. */}
+        {project.summary ? (
+          <div className="detail-block">
+            <span className="detail-label">Summary</span>
+            <p className="detail-summary">{project.summary}</p>
+          </div>
+        ) : null}
         <ProjectStory project={project} />
         <p className="project-impact">{project.impact}</p>
 
