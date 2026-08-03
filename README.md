@@ -1,20 +1,29 @@
 # Portfolio
 
-Sean Brasse's engineering portfolio. One screen: name, what he does, what he
-knows, and a horizontally scrolling rail of what he has built. Contact is in
-the footer.
+Sean Brasse's developer portfolio — a single-screen showcase of selected work,
+built as a small content-managed app rather than a static page.
 
-The page does not scroll on a desktop viewport. That is the constraint the
-layout is built around, and it is why so little is on it — the career timeline,
-the headline metrics, the long intro and the call-to-action buttons were all
-cut because they could not earn a place in a single view.
+The public site is one view: name, what he does, what he knows, and a
+carousel of projects sitting on a career timeline that runs from the first
+school to the latest ship. Contact is in the footer. On a desktop viewport the
+page does not scroll — that constraint is what keeps the surface small and is
+why the work is a carousel rather than a grid.
 
-> **Note on the repo name.** This was a comic-book portfolio — an issue you
-> turned page by page, with panels, templates and a page-curl animation. That
-> presentation is gone as of the commit that added this file; the repo name and
-> the npm package name are the only things still carrying it, and renaming them
-> would break the Vercel link for no benefit. The history is in git if the comic
-> is ever wanted back.
+Behind it is an authenticated admin where the content is actually managed:
+projects, jobs, schools and site settings are edited live, screenshots and
+clips are uploaded, and changes move through a draft → publish workflow.
+Claude drafts and revises project copy from a pasted link or notes.
+
+Live at **[seanbrasse.vercel.app](https://seanbrasse.vercel.app)**.
+
+## Stack
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **Supabase** — Postgres with row-level security, Storage for media, and Auth
+  (Google OAuth) for the admin
+- **Anthropic API** (`@anthropic-ai/sdk`) for AI-assisted project drafting
+- **Vercel** for hosting; the public routes are statically generated and
+  revalidated when the admin saves
 
 ## Running it
 
@@ -24,155 +33,131 @@ npm run dev            # http://localhost:3000
 ```
 
 ```bash
-npm run build          # statically generated
+npm run build          # production build (public routes prerendered)
 npm run typecheck
 npm run lint
 npm run test:contrast  # needs a running server, see below
+npm run test:gaps
 ```
 
-`NEXT_PUBLIC_SITE_URL` sets the absolute origin used in OG tags, the sitemap
-and structured data. On Vercel it is inferred from the deployment, so it is
-only needed for a custom domain.
+### Environment
+
+Copy `.env.example` and fill in what you need. Nothing here is required just to
+boot the app — a missing variable degrades a feature rather than breaking the
+build.
+
+| Variable | What it does |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL. Without it the site falls back to the bundled content in `src/content/issue.ts` and `/admin` redirects home. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (paired with the URL above). |
+| `ANTHROPIC_API_KEY` | Enables the "start from a link / suggest edits" drafting in the editor. Without it that one control reports it is not configured; the rest of the admin is unaffected. |
+| `ANTHROPIC_MODEL` | Optional. Defaults to `claude-sonnet-5`. |
+| `GITHUB_TOKEN` | Optional. Lifts GitHub's 60-req/hr unauthenticated limit when Claude reads a pasted repo. A fine-grained token with public read is enough. |
+| `NEXT_PUBLIC_SITE_URL` | Absolute origin used in OG tags, the sitemap and structured data. On Vercel it is inferred from the deployment, so it is only needed for a custom domain. |
+
+### Database
+
+Schema lives in `supabase/migrations/` as ordered SQL. Apply it to a fresh
+Supabase project with the Supabase CLI (`supabase db push`) or by running the
+files in order. RLS is on for every table: public reads see only published
+rows, and every write is gated behind an `is_admin()` check, so the admin key is
+never trusted from the client alone.
+
+The admin is a single-owner allowlist — sign-in is Google OAuth and only the
+allowlisted email reaches `/admin`; everyone else is redirected. Middleware
+gates the pages, each server action re-checks `is_admin()`, and RLS gates the
+rows: three independent locks, any one of which failing still leaves two.
 
 ## What is where
 
-| Area | File |
+| Area | Path |
 |---|---|
-| All content | `src/content/issue.ts` |
-| Content shapes and field caps | `src/content/types.ts` |
-| Read API + build-time validation | `src/content/index.ts` |
-| Color, in one place | `src/lib/tokens.ts` |
-| The page | `src/app/page.tsx` |
+| Public page + layout | `src/app/(site)/`, `src/app/layout.tsx` |
+| The carousel + timeline | `src/components/Work.tsx` |
+| Admin editor (projects, jobs, schools, settings) | `src/app/admin/` |
+| Server actions (every write) | `src/app/admin/actions.ts` |
+| AI drafting / suggested edits | `src/lib/prefill.ts` |
+| Read layer + build-time validation | `src/content/` |
+| Supabase clients + auth | `src/lib/supabase/` |
+| Color, in one file | `src/lib/tokens.ts` |
 | Everything visual | `src/app/globals.css` |
+| Database schema | `supabase/migrations/` |
 
-## The decisions worth knowing about
+## Decisions worth knowing about
 
-**Content is a module, not markup.** Every fact lives in one typed file and
-reaches the page through `src/content/index.ts`. That is what makes the
-presentation replaceable — this is the third one, and none of them touched the
-content. Phase 2 swaps the module for Supabase queries returning the same
-shapes, and nothing in the rendering layer needs to change.
+**Content is data, edited live.** Facts live in Postgres and reach the page
+through a typed read layer (`src/content/`) that returns the same shapes the UI
+always used. `src/content/issue.ts` is a static fallback for when Supabase is
+not configured, so the site still renders with no database at all.
 
-**Field caps fail the build.** Character limits are checked at module load on
-the server, so `next build` fails with the offending field named. A test can be
-skipped; this cannot.
+**Draft and published are separate.** A published project can hold one pending
+draft — staged edits kept in a `project_drafts` overlay that the live site never
+sees. Saving as a draft leaves the public version untouched; Save & publish
+promotes it. Editing autosaves to that draft as you type, so a refresh never
+loses work in progress.
 
-**The scroll lock is conditional, and that is not a hedge.** Locking scroll
-makes anything that does not fit unreachable. At 400% zoom, on a short laptop,
-or on a phone, "no scrollbar" becomes "the projects do not exist" — which is
-exactly what happened when the lock keyed on height alone: a 390x844 phone
-passed the height check, the cards were clipped rather than scrolled, and
-everything past the second was gone. It now takes both `min-height: 760px` and
-`min-width: 900px`; below either, the page is an ordinary scrolling document.
+**Claude drafts, the editor decides.** Paste a GitHub repo, a URL, notes or a
+write-up and the model proposes values field by field — a first draft for a new
+project, or suggested edits to an existing one. It writes nothing itself:
+every suggestion is applied and saved by hand. Structured output comes from a
+forced tool call, not hoped-for JSON.
 
-**Sizing the screen is subtraction, not arithmetic.** `html`/`body` become the
-frame, header and footer are `flex: none`, and `main` takes what is left. The
-first attempt used `100dvh` on the content and had to know how tall the header
-and footer were; it did not, so the cards ran underneath the footer.
+**The carousel is hand-built, on purpose.** Three cards visible, the middle
+raised, positioned by transform and opacity only (both compositor properties,
+so moving cards costs no layout). It reimplements what a native scroll rail
+gives for free — arrow keys, prev/next, a paged pointer swipe that always lands
+on one card, and motion that vanishes under `prefers-reduced-motion` — because
+the overlap and the timeline coupling a scroll container cannot do. Positions
+wrap, so scrolling is an endless cycle; the timeline cursor tracks the centred
+card and jumps across the newest↔oldest seam rather than sweeping back.
 
-Both grid axes need `minmax(0, 1fr)`. A grid track's automatic minimum is its
-content's max-content size, so the column grew to the rail's full unwrapped
-width — about 1340px — and pushed the document sideways instead of letting the
-rail scroll. The tell was a rail reporting zero horizontal overflow while cards
-visibly ran off the screen: nothing was overflowing it, because it had been
-given room for everything.
+**Dark is the design, not a preference.** Two values — a warm near-black and a
+cream — plus a single ember for the primary action, focus and the metric
+numerals. Light exists as a translation, one toggle away, written before first
+paint so a visitor who chose dark never sees a light flash.
 
-**The projects carousel.** Three cards visible, the middle one raised over the
-two beside it. Cards are absolutely positioned in a stage and placed by
-transform, which is the only way to make them overlap — a flow layout can put
-them beside each other and nothing more. Transform and opacity only: both are
-compositor properties, so moving four cards costs no layout, where animating
-`left` or `width` would reflow the stage on every frame.
-
-This replaced a native `scroll-snap` rail, and that trade is worth being
-explicit about. A scroll container gets keyboard scrolling, touch momentum,
-scrollbar dragging and reduced-motion handling from the browser for free; a
-carousel has to implement all four itself and most do not. This one does —
-prev/next buttons, arrow keys plus Home and End, pointer swipe (one code path
-for finger, pen and mouse), and transitions that vanish under
-`prefers-reduced-motion`, where the cards still change places but do not travel.
-
-Only the centre card is in the tab order. The side cards are visible but partly
-covered, and sending focus to a link underneath another card is worse than not
-reaching it, so `inert` holds them out until they are brought to the middle.
-Positions wrap, so the middle is never empty at either end.
-
-**The card gives up its own height.** On a page that cannot scroll, a
-fixed-aspect image well is what pushes copy out of a card, so the well is
-`flex: 1 1 30%` and absorbs whatever is left instead of demanding a ratio. The
-summary is clamped to two lines and marked `flex: none` — the clamp decides its
-height and flex must not re-decide it, or the text is cut through the middle of
-a line instead of ending in an ellipsis. At this size the card shows three tech
-chips and drops the impact line: a visitor who does not yet know what the
-project is cannot use its outcome.
-
-**Dark is the design, not a preference.** The palette is two values — a warm
-near-black and a cream — plus a single ember used on the primary button, focus
-and the metric numerals, and nowhere decorative. Light exists because some
-people need it, and it is a translation rather than the original. The default
-is dark regardless of `prefers-color-scheme`: it is how the site is drawn, and
-the toggle is one click away.
-
-The ground carries a fine grain, at 0.035 opacity. That number is measured, not
-chosen — at 0.5 the brightest noise pixels lifted the background to about
-rgb(70,80,75) and put muted body copy at 2.7:1 against them. Grain sits behind
-every word on the page, so any value high enough to see plainly is a value that
-sets the contrast floor for the whole site.
-
-**Space is the design.** The hero takes most of a screen and the section
-rhythm is roughly double what a conventional layout uses. Halving those numbers
-is the fastest way to make this look like a generic template again.
-
-**Color exists in exactly one file.** `src/lib/tokens.ts` defines both
-palettes; the root layout emits them as custom properties. A lint rule fails on
-a hex literal anywhere else in `src/`, because a second theme is only a day's
-work for as long as that stays true. Two files are exempt: the token file
-itself, and the OG generator, which rasterises through Satori and has no
-cascade to resolve variables against.
-
-The theme is written to `data-theme` by a blocking inline script before first
-paint, so a visitor who chose dark never sees a light flash. The toggle reads
-it back with `useSyncExternalStore` rather than keeping its own copy, so React
-state cannot disagree with the attribute.
+**Color exists in exactly one file.** `src/lib/tokens.ts` defines both palettes;
+a lint rule fails on a hex literal anywhere else in `src/`.
 
 **Contrast was measured, not assumed.** `tests/contrast.mjs` loads the page in
-both themes, makes all text transparent, screenshots, and samples the real
-composited pixel behind each glyph. 188 text elements pass AA in both themes.
-
-It captures full-page and works in document coordinates, because the site is
-one long scroll — a viewport-sized capture measures the hero and silently skips
-everything below the fold, which is most of the site. The sticky header is
-pinned to `static` for the capture, or it paints its own background across text
-it does not actually cover.
-
-Three things it has found, all invisible by eye: 11.5px tech chips set in
-`--ink-muted`, `--ink-muted` itself on dark surfaces at body size, and the
-background grain at the opacity it was first written with.
+both themes, makes text transparent, screenshots, and samples the real
+composited pixel behind each glyph — catching failures invisible by eye.
 
 ```bash
 npm run build && npm start &
 npm run test:contrast
 ```
 
-## Two things are deliberately missing
+## Future goals
 
-**Testimonials.** `src/content/issue.ts` ships zero of them. The `approved`
-flag exists precisely so an uncleared quote cannot reach the page, and
-inventing one would be the worst thing this project could ship. Park quotes you
-have asked for but not had confirmed as entries with `approved: false`.
+- **Media metadata.** Persist per-clip facts (such as whether a video has an
+  audio track) so the player can adapt — e.g. disabling the unmute control on a
+  silent clip instead of offering it.
+- **Richer timeline.** Surface job and school detail inline on the timeline, not
+  only as project marks.
+- **Analytics-informed ordering.** Use engagement to suggest which project to
+  lead with, rather than a single manual pin.
+- **Testimonials.** The schema and an `approved` flag already exist so an
+  uncleared quote can never reach the page; the surface to collect and show them
+  is still to build.
+- **Broader auth.** The admin is a single-owner allowlist today; opening it to
+  a small team would mean per-row ownership and an invite flow.
 
-**Project screenshots.** `images` is empty on every project, so the cards
-render a labelled "no screenshot yet" well rather than a broken frame. This is
-the one input that could not be derived from a resume.
+## Deliberately absent
 
-Worth knowing which ones are gettable: the three personal projects can be
-screenshotted freely. The LLM Knowledge Engine cannot — it is internal
-Mailchimp software, and a screenshot of it is not Sean's to publish. The same
-goes for any shot of the QBO form builder or PayPal's onboarding flow.
+**Testimonials** ship as zero rows — an `approved` flag exists precisely so an
+uncleared quote cannot reach the page.
 
-**Company logos** are supported on `Experience.logo` and render in the timeline
-and on project cards. None are set. Company logos are trademarks, and using
-them to indicate employment is normally accepted nominative use — but Intuit
-and PayPal both publish brand guidelines that restrict it, so it is worth a
-look before adding them. Wordmarks set in type, which is what renders today,
-carry no such question.
+**Some screenshots can't be shown.** Personal projects can be captured freely;
+internal Mailchimp/Intuit/PayPal software cannot, and those cards stand on their
+write-up alone.
+
+**Company logos** are supported on jobs and schools and render in the timeline
+and on cards, but wordmarks set in type are the default — trademarked logos
+carry brand-guideline questions worth checking before use.
+
+> **On the repo name.** This began as a comic-book portfolio — panels,
+> templates, a page-curl animation. That presentation is long gone; the repo and
+> npm package names are the only things still carrying it, and renaming them
+> would break the Vercel link for no benefit. The history is in git if it is
+> ever wanted back.
