@@ -2444,6 +2444,18 @@ a:hover {
     gap: 3px;
   }
 
+  /* The cue is the arrow alone on a phone. "Click for details" is a wide run of
+     text that crowds the context row and wraps onto a second line; the icon
+     carries the same "this opens" meaning in a fraction of the width, so the
+     top row stays a single line and the card stays compact. */
+  .project-hint-label {
+    display: none;
+  }
+
+  .project-hint {
+    padding: 4px;
+  }
+
   .project-context {
     font-size: 10px;
     line-height: 1.3;

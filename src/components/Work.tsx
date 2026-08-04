@@ -260,7 +260,13 @@ export function Work({
     const fit = () => {
       if (!region || !head) return;
 
-      const chrome = body ? body.offsetHeight : 96;
+      // The tallest body, not the first one. `--card-h` is one value for every
+      // card, so it has to clear the tallest card's text — otherwise a card
+      // whose body runs a line longer than the first card's (a status badge, a
+      // summary that wraps) has its last line clipped by the fixed height. All
+      // the bodies are in the DOM, so this is the max over them.
+      const bodies = [...node.querySelectorAll<HTMLElement>('.project-body')];
+      const chrome = bodies.length ? Math.max(...bodies.map((el) => el.offsetHeight)) : 96;
 
       /**
        * The height budget, taken from the region rather than from the stage.
@@ -2197,7 +2203,7 @@ function CardFace({
           </p>
           <span className="project-hint" aria-hidden="true">
             <OpenIcon />
-            Click for details
+            <span className="project-hint-label">Click for details</span>
           </span>
         </div>
         <h3 className="project-title">{project.title}</h3>
