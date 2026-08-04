@@ -260,7 +260,13 @@ export function Work({
     const fit = () => {
       if (!region || !head) return;
 
-      const chrome = body ? body.offsetHeight : 96;
+      // The tallest body, not the first one. `--card-h` is one value for every
+      // card, so it has to clear the tallest card's text — otherwise a card
+      // whose body runs a line longer than the first card's (a status badge, a
+      // summary that wraps) has its last line clipped by the fixed height. All
+      // the bodies are in the DOM, so this is the max over them.
+      const bodies = [...node.querySelectorAll<HTMLElement>('.project-body')];
+      const chrome = bodies.length ? Math.max(...bodies.map((el) => el.offsetHeight)) : 96;
 
       /**
        * The height budget, taken from the region rather than from the stage.
@@ -322,10 +328,11 @@ export function Work({
          * Fill width: on a phone the card is sized from the viewport width
          * (`--card-vw`) rather than the stage's, so it reads as the near-full
          * poster the reader asked for. It is still capped by the height budget
-         * below, so the whole page — contact details included — stays on one
-         * screen: when the height cannot hold the full-width card, the cap scales
-         * it down instead of letting the page scroll. Unset on wider layouts,
-         * where the width comes from the stage as before.
+         * below so the whole page — contact details included — stays on one
+         * screen; the phone chrome is kept light (a compact intro, the timeline
+         * held to one row, the "opens" cue sharing the context row) so the card
+         * the budget allows is a wide one rather than a sliver. Unset on wider
+         * layouts, where the width comes from the stage as before.
          */
         const fillVw = read('--card-vw', 0);
 
@@ -365,7 +372,8 @@ export function Work({
         const room = Math.max(window.innerHeight - fromTop - beneath - chrome - 4, 78);
 
         // Fill width takes the target straight from the viewport; otherwise it
-        // is the stage-relative `byWidth`. Either way the height budget caps it.
+        // is the stage-relative `byWidth`. Either way the height budget caps it,
+        // so the page fits one screen.
         const desiredWidth = fillVw > 0 ? window.innerWidth * fillVw : byWidth;
         const only = toGrid(Math.min(desiredWidth, room * (16 / 9)));
         // No slack added: the card *is* this height now, so a margin here is
@@ -2175,23 +2183,29 @@ function CardFace({
         <div className="project-shot-empty" aria-hidden="true" />
       )}
       <div className="project-body">
-        {/* A visible cue that the card opens — the whole card is a click target
-            but nothing said so. Decorative: the full-card button already
-            announces "Open {title}", so repeating it here would be said twice.
-            Shown only on the front card (CSS keys it to `[data-centre]`), because
-            a click on a neighbour brings it to the middle rather than opening it
-            — see the open-button in the carousel. It stays in the layout on the
-            others (visibility, not display) so every card body is the same height
-            and `fit()` sizes them alike. */}
-        <span className="project-hint" aria-hidden="true">
-          <OpenIcon />
-          Click for details
-        </span>
-        <p className="project-context">
-          {employer ? <Badge name={employer.company} logo={employer.logo} /> : null}
-          {employer ? employer.company : 'Personal project'}
-          <Status status={project.status} />
-        </p>
+        {/* Top row: the company context on the left, the "opens" cue on the
+            right. They share one row rather than stacking, which keeps the body
+            a line shorter — height a phone needs to fit the whole page on one
+            screen.
+
+            The cue is decorative: the full-card button already announces
+            "Open {title}", so repeating it here would be said twice. It shows
+            only on the front card (CSS keys it to `[data-centre]`), because a
+            click on a neighbour brings it to the middle rather than opening it —
+            see the open-button in the carousel. It stays in the layout on the
+            others (visibility, not display) so every card body is the same
+            height and `fit()` sizes them alike. */}
+        <div className="project-context-row">
+          <p className="project-context">
+            {employer ? <Badge name={employer.company} logo={employer.logo} /> : null}
+            {employer ? employer.company : 'Personal project'}
+            <Status status={project.status} />
+          </p>
+          <span className="project-hint" aria-hidden="true">
+            <OpenIcon />
+            <span className="project-hint-label">Click for details</span>
+          </span>
+        </div>
         <h3 className="project-title">{project.title}</h3>
         <p className="project-summary">{project.summary}</p>
         <ul className="tech-row">

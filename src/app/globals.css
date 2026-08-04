@@ -963,12 +963,25 @@ a:hover {
   border: 0;
 }
 
-/* The "this opens" cue, top-left of the body. A pill in the ember accent, not
+/* The body's top row: the company context on the left, the "opens" cue on the
+   right. They share one row where there is room — which keeps the card a line
+   shorter — and the cue wraps to its own right-aligned line only when the
+   context (with a status badge, on a narrow card) would not leave space for it,
+   rather than overlapping it. */
+.project-context-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+/* The "this opens" cue, top-right of the body. A pill in the ember accent, not
    plain text, so it reads as a control — nothing else on the card said it was
-   one. `align-self: flex-start` keeps it hugging its own content rather than
-   stretching across the body. */
+   one. `margin-left: auto` pins it to the right whether it shares the context's
+   row or wraps to its own line below it. */
 .project-hint {
-  align-self: flex-start;
+  flex: none;
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1005,7 +1018,10 @@ a:hover {
 }
 
 .project-context {
-  flex: none;
+  /* Its natural width, shrinking only if it alone exceeds the row; the hint
+     wraps below it rather than forcing it to shrink. */
+  flex: 0 1 auto;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -2428,13 +2444,44 @@ a:hover {
     gap: 3px;
   }
 
+  /* The cue is the arrow alone on a phone. "Click for details" is a wide run of
+     text that crowds the context row and wraps onto a second line; the icon
+     carries the same "this opens" meaning in a fraction of the width, so the
+     top row stays a single line and the card stays compact. */
+  .project-hint-label {
+    display: none;
+  }
+
+  .project-hint {
+    padding: 4px;
+  }
+
+  /* One line, never wrapping. The arrow cue is tiny, so the row does not need to
+     wrap the way the full-text pill did on desktop — and a wrapped row makes
+     this card's body a line taller than its neighbours', which (since every card
+     shares one height) shrinks the whole carousel on a narrow phone. Keeping it
+     to one line keeps every body the same compact height. The company name gives
+     up its end to an ellipsis if it must, rather than pushing the row taller. */
+  .project-context-row {
+    flex-wrap: nowrap;
+  }
+
   .project-context {
     font-size: 10px;
     line-height: 1.3;
   }
 
+  /* One line on the card, the rest in the modal. A title that wraps to two
+     lines on one card and one on another makes the card bodies different
+     heights — and since every card shares one height, the tallest then sets it
+     for all, shrinking the card and leaving dead space on a short phone. Held
+     to a single line, every body is the same compact height, so the card stays
+     a wide poster at every phone size. The full title is a tap away. */
   .project-title {
     font-size: 17px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .project-summary {
