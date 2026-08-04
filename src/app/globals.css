@@ -963,12 +963,25 @@ a:hover {
   border: 0;
 }
 
-/* The "this opens" cue, top-left of the body. A pill in the ember accent, not
+/* The body's top row: the company context on the left, the "opens" cue on the
+   right. They share one row where there is room — which keeps the card a line
+   shorter — and the cue wraps to its own right-aligned line only when the
+   context (with a status badge, on a narrow card) would not leave space for it,
+   rather than overlapping it. */
+.project-context-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+/* The "this opens" cue, top-right of the body. A pill in the ember accent, not
    plain text, so it reads as a control — nothing else on the card said it was
-   one. `align-self: flex-start` keeps it hugging its own content rather than
-   stretching across the body. */
+   one. `margin-left: auto` pins it to the right whether it shares the context's
+   row or wraps to its own line below it. */
 .project-hint {
-  align-self: flex-start;
+  flex: none;
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1005,7 +1018,10 @@ a:hover {
 }
 
 .project-context {
-  flex: none;
+  /* Its natural width, shrinking only if it alone exceeds the row; the hint
+     wraps below it rather than forcing it to shrink. */
+  flex: 0 1 auto;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   gap: 7px;
