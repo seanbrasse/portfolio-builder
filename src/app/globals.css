@@ -897,6 +897,34 @@ a:hover {
   display: block;
 }
 
+/* The media well while its image or clip is still loading. It sits over the
+   sunk surface so the card reads as "coming" rather than blank on a slow
+   connection, and is removed the moment the media paints its first frame. */
+.shot-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  background: var(--surface-sunk);
+  pointer-events: none;
+}
+
+.shot-spinner {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--rule-strong);
+  border-top-color: var(--ink-muted);
+  animation: shot-spin 720ms linear infinite;
+}
+
+@keyframes shot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* In the dialog, an empty well is capped. The 16:9 ratio exists so a real
    screenshot is never letterboxed; a placeholder has no shape to preserve, and
    at the dialog's width the honest ratio gives 585px of "no screenshot yet"
