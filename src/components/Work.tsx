@@ -1833,6 +1833,7 @@ function Media({
   viewer = false,
   play = false,
   active = true,
+  near = true,
 }: {
   shot: Asset;
   viewer?: boolean;
@@ -1845,10 +1846,36 @@ function Media({
    * resumes from where it was, no seeking required.
    */
   active?: boolean;
+  /**
+   * Card only: whether the card is currently in the visible ring. The card
+   * keeps a clip's element mounted after it has been seen once — so scrolling
+   * back never re-fetches or re-buffers it — but the mute choice is still
+   * dropped the moment the card leaves the ring, so a clip that drifts back
+   * into place always returns muted (see below).
+   */
+  near?: boolean;
 }) {
   const reduced = useReducedMotion();
   const video = useRef<HTMLVideoElement>(null);
+  const image = useRef<HTMLImageElement>(null);
   const isVideo = shot.media === 'video';
+  /**
+   * Whether the media has painted something yet — the first frame of a clip, or
+   * the image itself. Until then the well shows a spinner rather than the empty
+   * surface, which on a slow connection is a card that looks blank. Once mounted
+   * the element and its buffer are kept (the card never unmounts a seen clip), so
+   * this latches true on first load and the spinner does not return on the way
+   * back. It is only ever false while genuinely waiting on the network. */
+  const [loaded, setLoaded] = useState(false);
+
+  /**
+   * A cached image can fire `load` before React attaches the handler, which
+   * would leave the spinner up for good. Catch that on mount by reading the
+   * element's own `complete` flag — true once it has finished, success or error.
+   */
+  useEffect(() => {
+    if (!isVideo && image.current?.complete) setLoaded(true);
+  }, [isVideo, shot.src]);
   // A clip the editor marked as having no audio: it stays muted and its toggle
   // is shown disabled, so nobody presses an unmute that would change nothing.
   const silent = isVideo && shot.hasAudio === false;
@@ -1865,14 +1892,16 @@ function Media({
 
   /**
    * When the card leaves the ring its choice is dropped, so it comes back muted.
-   * Only the card does this; the modal shares a still-mounted card and must not
-   * wipe the choice when it closes — that is precisely the value the card needs
-   * to resume with.
+   * The card now keeps a seen clip mounted rather than unmounting it — so the
+   * drop is keyed on leaving the ring (`!near`), not on unmount, which no longer
+   * fires as the card scrolls away. Only the card does this; the modal shares a
+   * still-mounted card and must not wipe the choice when it closes — that is
+   * precisely the value the card needs to resume with.
    */
   useEffect(() => {
-    if (viewer) return;
-    return () => forgetClipMuted(shot.id);
-  }, [viewer, shot.id]);
+    if (viewer || near) return;
+    forgetClipMuted(shot.id);
+  }, [viewer, near, shot.id]);
 
   /**
    * A card video plays only while its card is the front one, and it is driven
@@ -1979,7 +2008,16 @@ function Media({
             const el = event.currentTarget;
             const at = clipTime.get(shot.id);
             if (at && Number.isFinite(el.duration) && at < el.duration) el.currentTime = at;
+            // Metadata is here, so the network round trip is done and the poster
+            // (or first frame) can show — drop the spinner. This is the reliable
+            // signal: a paused neighbour with preload="metadata" may never fire
+            // `loadeddata`, so relying on that alone would strand the spinner.
+            setLoaded(true);
           }}
+          /* Belt and braces — the first frame is decoded, or the clip failed;
+             either way the spinner has no more to wait for. */
+          onLoadedData={() => setLoaded(true)}
+          onError={() => setLoaded(true)}
           /* Catches mute changes the native controls make — the modal's, and the
              card's own under reduced motion — and shares them, so a mute chosen
              there holds on the other surface too. The corner toggle below writes
@@ -1991,6 +2029,7 @@ function Media({
             if (!silent) setMuted(event.currentTarget.muted);
           }}
         />
+        {!viewer && !loaded ? <ShotLoading /> : null}
         {showMute ? (
           <button
             type="button"
@@ -2019,13 +2058,33 @@ function Media({
   return (
     <span className="project-shot-frame">
       <img
+        ref={image}
         className="project-shot"
         src={shot.src}
         alt={shot.alt}
         width={640}
         height={360}
         style={framing}
+        /* Drop the spinner once the image paints; `onError` too, so a broken
+           source shows the well rather than spinning forever. A cache hit fires
+           `onLoad` before paint, so returning to a seen card shows no spinner. */
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
       />
+      {!viewer && !loaded ? <ShotLoading /> : null}
+    </span>
+  );
+}
+
+/**
+ * The spinner shown over a media well while its image or clip is still loading.
+ * Decorative — a screen reader gets nothing from a spinner — and the animation
+ * is dropped under reduced motion by the stylesheet, leaving a static ring.
+ */
+function ShotLoading() {
+  return (
+    <span className="shot-loading" aria-hidden="true">
+      <span className="shot-spinner" />
     </span>
   );
 }
@@ -2035,7 +2094,15 @@ function Media({
  * shape in a moving carousel — it is a glance, not a viewer — so it shows the
  * one image the admin ordered to the front and leaves the rest to the modal.
  */
-function Shot({ project, play = false }: { project: Project; play?: boolean }) {
+function Shot({
+  project,
+  play = false,
+  near = true,
+}: {
+  project: Project;
+  play?: boolean;
+  near?: boolean;
+}) {
   const [shot] = project.images;
 
   if (!shot) {
@@ -2046,7 +2113,7 @@ function Shot({ project, play = false }: { project: Project; play?: boolean }) {
     );
   }
 
-  return <Media shot={shot} play={play} />;
+  return <Media shot={shot} play={play} near={near} />;
 }
 
 /**
@@ -2170,15 +2237,27 @@ function CardFace({
   near: boolean;
   playing: boolean;
 }) {
+  /**
+   * Media mounts when the card first enters the visible ring and then stays
+   * mounted — this latch never falls back to false. The point is the return
+   * trip: a card scrolled out of the ring and back keeps the same element and
+   * its buffer, so its image never re-fetches and its clip never re-buffers
+   * (the pain on a slow connection). Cost is bounded — one element per project,
+   * a handful in all — and only the front card's clip ever plays; the rest hold
+   * paused on their frame. A card that has never been seen still renders an
+   * empty well of the same shape, so nothing off screen fetches up front.
+   *
+   * The latch only ever goes false→true, set the render the card first enters
+   * the ring — React's documented "adjust state while rendering" pattern, so by
+   * the time `near` flips back to false `seen` is already true and the media
+   * stays mounted rather than unmounting for a beat. */
+  const [seen, setSeen] = useState(false);
+  if (near && !seen) setSeen(true);
+
   return (
     <>
-      {/* Media loads only for the cards in the visible ring. The ones stacked
-          out of sight render an empty well of the same shape instead — same
-          height, no image fetched and no video decoding — and mount their real
-          media as they slide into view. The front card's video is the only one
-          that plays; a neighbour holds on its first frame until it is next. */}
-      {near ? (
-        <Shot project={project} play={playing} />
+      {near || seen ? (
+        <Shot project={project} play={playing} near={near} />
       ) : (
         <div className="project-shot-empty" aria-hidden="true" />
       )}
